@@ -1,13 +1,13 @@
 import type { NextRequest } from 'next/server';
-import { AddonInput, CartError, setAddon } from '@/lib/cart';
+import { AddonInput, ensureCart, setAddon } from '@/lib/cart';
 import { cartId, cartResponse, fail, readJson } from '../_http';
 
 // PUT { addon_id, on, text? } → CartView. Add-on là của cả giỏ; lời chúc thiệp miễn phí (#7).
+// PDP lưu add-on trong lúc khách còn chờ AI, trước khi có dòng giỏ → tạo giỏ nếu chưa có; add-on hiện ra khi có dòng.
 export async function PUT(req: NextRequest) {
   try {
     const input = await readJson(req, AddonInput);
-    const id = cartId(req);
-    if (!id) throw new CartError(409, 'cart_empty', 'Add a portrait before choosing options.');
+    const id = ensureCart(cartId(req));
     setAddon(id, input);
     return cartResponse(req, id);
   } catch (e) { return fail(e); }

@@ -24,7 +24,7 @@ export default async function AccountPage() {
   const s = getSettings();
 
   return (
-    <div className="mx-auto max-w-6xl px-4 pb-16 pt-8 md:pt-10">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-16 pt-8 md:pt-10">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-4xl font-semibold md:text-5xl">Hi, {firstName(c)}</h1>
@@ -37,20 +37,20 @@ export default async function AccountPage() {
         <section aria-labelledby="orders">
           <h2 id="orders" className="text-3xl font-semibold">Orders</h2>
           {orders.length === 0 ? (
-            <div className="mt-5 rounded-[var(--radius)] border border-dashed border-border px-6 py-10 text-center" data-testid="orders-empty">
+            <div className="mt-5 rounded-lg border border-dashed border-border px-6 py-10 text-center" data-testid="orders-empty">
               <p className="text-xl font-semibold">No orders yet</p>
               <p className="mx-auto mt-2 max-w-md text-muted-foreground">Orders you place while signed in show up here, with the status of each portrait.</p>
               <div className="mt-6 flex flex-wrap justify-center gap-3">
-                <Link href="/collections/pet-portraits" className="inline-flex min-h-12 items-center gap-2 rounded-md bg-accent px-5 font-semibold text-on-accent hover:opacity-90">
+                <Link href="/collections/pet-portraits" className="inline-flex min-h-12 items-center gap-2 rounded-full bg-primary px-7 font-semibold text-on-primary transition-colors hover:bg-secondary">
                   Shop pet portraits <UiIcon name="chevronRight" size={18} />
                 </Link>
-                <Link href="/track-order" className="inline-flex min-h-12 items-center rounded-md border border-border px-5 font-medium hover:bg-muted">Track a guest order</Link>
+                <Link href="/track-order" className="inline-flex min-h-12 items-center rounded-full border border-input bg-background px-6 font-medium hover:bg-muted">Track a guest order</Link>
               </div>
             </div>
           ) : (
             <ul className="mt-5 grid gap-4">
               {orders.map((o) => (
-                <li key={o.number} className="relative rounded-[var(--radius)] border border-border bg-card p-4 transition-colors hover:border-foreground md:p-5" data-testid="order-row">
+                <li key={o.number} className="relative rounded-lg border border-border bg-card p-4 transition-colors hover:border-foreground md:p-5" data-testid="order-row">
                   <div className="flex gap-4">
                     <div className="flex shrink-0 -space-x-6">
                       {o.thumbnails.length ? o.thumbnails.map((t, i) => (
@@ -79,7 +79,7 @@ export default async function AccountPage() {
             </ul>
           )}
           <p className="mt-6 text-sm text-muted-foreground">
-            Placed an order as a guest? <Link href="/track-order" className="font-medium text-foreground underline underline-offset-4 hover:text-accent">Track it</Link> with the order number and email.
+            Placed an order as a guest? <Link href="/track-order" className="font-medium text-foreground underline underline-offset-4 hover:decoration-2">Track it</Link> with the order number and email.
           </p>
         </section>
 

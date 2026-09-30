@@ -18,7 +18,7 @@ export default async function LoginPage({ searchParams }: Props) {
       <p className="mt-2 text-muted-foreground">See your orders and whether each portrait’s preview is approved.</p>
       <div className="mt-8"><AuthForm mode="login" next={next} /></div>
       <p className="mt-10 border-t border-border pt-6 text-sm text-muted-foreground">
-        Ordered without an account? <Link href="/track-order" className="font-medium text-foreground underline underline-offset-4 hover:text-accent">Track your order</Link> with its number and your email.
+        Ordered without an account? <Link href="/track-order" className="font-medium text-foreground underline underline-offset-4 hover:decoration-2">Track your order</Link> with its number and your email.
       </p>
     </div>
   );

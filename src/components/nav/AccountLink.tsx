@@ -4,17 +4,17 @@ import { currentCustomer } from '@/lib/customer-session';
 import { UiIcon } from './icons';
 
 /**
- * Link tài khoản cho header (hợp đồng chung, UI-1 đặt vào header): đã đăng nhập → /account, chưa → /account/login.
- * Server component đọc cookie phiên; sau đăng nhập / đăng xuất client gọi router.refresh() để header render lại.
+ * Link tài khoản cho header (hợp đồng chung, UI-1 đặt cạnh giỏ): đã đăng nhập → /account, chưa → /account/login.
+ * Icon button 44px như giỏ (DESIGN.md › Icon button); đã đăng nhập thì có chấm mực nhỏ. Server component đọc cookie phiên;
+ * sau đăng nhập / đăng xuất client gọi router.refresh() để header render lại.
  */
 export async function AccountLink() {
   const c = await currentCustomer();
-  const label = c ? `Account, signed in as ${firstName(c)}` : 'Sign in';
   return (
-    <Link href={c ? '/account' : '/account/login'} aria-label={label} data-testid="account-link"
-      className="inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-md px-2 text-sm font-medium text-foreground hover:text-accent">
+    <Link href={c ? '/account' : '/account/login'} aria-label={c ? `Account, signed in as ${firstName(c)}` : 'Sign in'} data-testid="account-link"
+      className="relative inline-flex size-11 items-center justify-center rounded-md text-foreground transition-colors hover:bg-muted">
       <UiIcon name="user" size={22} />
-      <span className="hidden max-w-28 truncate lg:inline" aria-hidden="true">{c ? firstName(c) : 'Sign in'}</span>
+      {c && <span aria-hidden="true" className="absolute right-2 top-2 size-2 rounded-full bg-primary ring-2 ring-background" />}
     </Link>
   );
 }

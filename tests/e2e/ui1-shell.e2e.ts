@@ -31,7 +31,7 @@ test.describe('store shell', () => {
 
   test('search submits to /search?q=', async ({ page }) => {
     await page.goto('/');
-    const box = page.locator('header').getByRole('searchbox');
+    const box = page.locator('header').getByRole('combobox', { name: 'Search products' }); // SearchBox của UI-2: mẫu ARIA combobox
     await box.fill('corgi');
     await box.press('Enter');
     await expect(page).toHaveURL(/\/search\?q=corgi/);

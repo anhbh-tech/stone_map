@@ -10,7 +10,7 @@ export function SignOutButton() {
   return (
     <button type="button" disabled={busy}
       onClick={async () => { setBusy(true); await postJson('/api/account/logout', {}); router.push('/'); router.refresh(); }}
-      className="inline-flex min-h-11 items-center gap-2 rounded-md border border-border px-4 text-sm font-medium hover:bg-muted disabled:opacity-60">
+      className="inline-flex min-h-11 items-center gap-2 rounded-full border border-input bg-background px-5 text-sm font-medium hover:bg-muted disabled:opacity-60">
       <UiIcon name="logOut" size={18} />Sign out
     </button>
   );

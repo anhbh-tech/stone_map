@@ -39,7 +39,7 @@ export default async function AccountOrderPage({ params }: Props) {
         <p className="text-muted-foreground">Placed {placed(o.created_at)}</p>
       </div>
 
-      <section aria-label="Order progress" className="mt-8 rounded-[var(--radius)] border border-border bg-card p-5 md:p-6">
+      <section aria-label="Order progress" className="mt-8 rounded-lg border border-border bg-card p-5 md:p-6">
         <OrderProgress status={o.status} />
         {o.delivery && (
           <p className="mt-6 flex flex-wrap items-center gap-2 text-sm">

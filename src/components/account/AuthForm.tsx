@@ -63,14 +63,14 @@ export function AuthForm({ mode, next }: { mode: 'login' | 'register'; next: str
         )}
       </Field>
       <button type="submit" disabled={busy} aria-busy={busy}
-        className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-accent px-6 font-semibold text-on-accent transition-opacity hover:opacity-90 disabled:opacity-60">
+        className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary px-7 font-semibold text-on-primary transition-colors hover:bg-secondary disabled:opacity-60">
         {busy && <UiIcon name="loader" size={18} className="animate-spin motion-reduce:animate-none" />}
         {reg ? 'Create account' : 'Sign in'}
       </button>
       <p className="text-center text-sm text-muted-foreground">
         {reg ? 'Already have an account? ' : 'New here? '}
         <Link href={`/account/${reg ? 'login' : 'register'}${next !== '/account' ? `?next=${encodeURIComponent(next)}` : ''}`}
-          className="font-medium text-foreground underline underline-offset-4 hover:text-accent">
+          className="font-medium text-foreground underline underline-offset-4 hover:decoration-2">
           {reg ? 'Sign in' : 'Create an account'}
         </Link>
       </p>

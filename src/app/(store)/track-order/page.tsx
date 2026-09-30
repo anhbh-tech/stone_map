@@ -21,7 +21,7 @@ export default async function TrackOrderPage() {
       </p>
       {c && (
         <p className="mt-3 text-sm">
-          Signed in? <Link href="/account" className="font-medium underline underline-offset-4 hover:text-accent">All your orders are in your account</Link>.
+          Signed in? <Link href="/account" className="font-medium underline underline-offset-4 hover:decoration-2">All your orders are in your account</Link>.
         </p>
       )}
       <div className="mt-8"><TrackOrderForm /></div>

@@ -11,7 +11,7 @@ export function OrderProgress({ status, compact }: { status: OrderStatus; compac
       <div className="flex items-center gap-2">
         <span className="text-sm font-semibold text-foreground">{ORDER_STEPS[at].label}</span>
         <span className="flex gap-1" aria-hidden="true">
-          {ORDER_STEPS.map((s, i) => <span key={s.id} className={`h-1.5 w-5 rounded-full ${i <= at ? 'bg-accent' : 'bg-border'}`} />)}
+          {ORDER_STEPS.map((s, i) => <span key={s.id} className={`h-1.5 w-5 rounded-full ${i <= at ? 'bg-primary' : 'bg-border'}`} />)}
         </span>
         <span className="sr-only">Step {at + 1} of {ORDER_STEPS.length}</span>
       </div>
@@ -24,10 +24,10 @@ export function OrderProgress({ status, compact }: { status: OrderStatus; compac
         return (
           <li key={s.id} aria-current={now ? 'step' : undefined} className="flex items-center gap-3 sm:flex-col sm:items-start sm:gap-2">
             <span className="flex w-full items-center gap-2 max-sm:w-auto">
-              <span className={`flex size-8 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold ${done ? 'border-accent bg-accent text-on-accent' : now ? 'border-accent bg-card text-accent' : 'border-border bg-card text-muted-foreground'}`}>
+              <span className={`flex size-8 shrink-0 items-center justify-center rounded-full border-2 text-sm font-semibold ${done ? 'border-primary bg-primary text-on-primary' : now ? 'border-primary bg-card text-foreground' : 'border-border bg-card text-muted-foreground'}`}>
                 {done ? <UiIcon name="check" size={16} /> : i + 1}
               </span>
-              {i < ORDER_STEPS.length - 1 && <span aria-hidden="true" className={`hidden h-0.5 flex-1 rounded-full sm:block ${done ? 'bg-accent' : 'bg-border'}`} />}
+              {i < ORDER_STEPS.length - 1 && <span aria-hidden="true" className={`hidden h-0.5 flex-1 rounded-full sm:block ${done ? 'bg-primary' : 'bg-border'}`} />}
             </span>
             <span className={`text-sm ${now ? 'font-semibold text-foreground' : done ? 'text-foreground' : 'text-muted-foreground'}`}>
               {s.label}{done && <span className="sr-only"> (done)</span>}{now && <span className="sr-only"> (current)</span>}

@@ -86,11 +86,12 @@ export function SearchBox({ variant = 'header', defaultQuery = '' }: { variant?:
 
   const big = variant === 'page';
   return (
-    <form role="search" action="/search" method="get" className={`relative w-full ${big ? '' : 'max-w-md'}`}
+    <form role="search" action="/search" method="get" className="relative w-full"
       onSubmit={(e) => { e.preventDefault(); if (term) go(-1); else inputRef.current?.focus(); }}>
-      <label htmlFor={`${uid}-q`} className="sr-only">Search products</label>
-      <div className={`flex items-center rounded-md border border-border bg-card focus-within:border-foreground focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring ${big ? 'h-14' : 'h-11'}`}>
-        <UiIcon name="search" size={big ? 22 : 18} className="ml-3 shrink-0 text-muted-foreground" />
+      <label htmlFor={`${uid}-q`} className="sr-only">{big ? 'Search the shop' : 'Search products'}</label>
+      {/* Ô search dạng pill viền Pebble (DESIGN.md › Inputs): header có nút tròn 44px bên phải, trang /search có nút "Search". */}
+      <div className={`flex items-center rounded-full border border-input bg-background focus-within:border-foreground focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring ${big ? 'h-14 pl-2' : 'h-11 pl-1'}`}>
+        {big && <UiIcon name="search" size={22} className="ml-3 shrink-0 text-muted-foreground" />}
         <input
           ref={inputRef} id={`${uid}-q`} name="q" type="search" value={q} maxLength={100}
           role="combobox" aria-autocomplete="list" aria-expanded={expanded} aria-controls={listId}
@@ -101,18 +102,23 @@ export function SearchBox({ variant = 'header', defaultQuery = '' }: { variant?:
           onFocus={() => setOpen(true)}
           onBlur={() => setOpen(false)}
           onKeyDown={onKeyDown}
-          className={`h-full min-w-0 flex-1 bg-transparent px-3 text-foreground outline-none placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:hidden ${big ? 'text-lg' : 'text-base'}`}
+          className={`h-full min-w-0 flex-1 bg-transparent ${big ? 'px-3' : 'pl-3 pr-1'} text-foreground outline-none placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:hidden ${big ? 'text-lg' : 'text-base'}`}
         />
         {loading && <UiIcon name="loader" size={18} className="mr-1 shrink-0 animate-spin text-muted-foreground motion-reduce:animate-none" />}
         {q && (
           <button type="button" aria-label="Clear search" onMouseDown={(e) => e.preventDefault()}
             onClick={() => { setQ(''); inputRef.current?.focus(); }}
-            className="flex size-11 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground">
+            className={`flex shrink-0 items-center justify-center rounded-full text-muted-foreground hover:text-foreground ${big ? 'size-11' : 'size-9'}`}>
             <UiIcon name="x" size={18} />
           </button>
         )}
+        {!big && (
+          <button type="submit" aria-label="Search" className="-mr-px inline-flex size-11 shrink-0 items-center justify-center rounded-full text-foreground transition-colors hover:bg-muted">
+            <UiIcon name="search" size={20} />
+          </button>
+        )}
         {big && (
-          <button type="submit" className="mr-1.5 inline-flex h-11 shrink-0 items-center rounded-md bg-primary px-5 font-semibold text-on-primary hover:opacity-90">
+          <button type="submit" className="mr-1.5 inline-flex h-11 shrink-0 items-center rounded-full bg-primary px-7 font-semibold text-on-primary transition-colors hover:bg-secondary">
             Search
           </button>
         )}
@@ -120,7 +126,7 @@ export function SearchBox({ variant = 'header', defaultQuery = '' }: { variant?:
 
       <ul id={listId} role="listbox" aria-label="Suggestions" hidden={!expanded}
         onMouseDown={(e) => e.preventDefault() /* giữ focus trong input để click chọn được */}
-        className="absolute inset-x-0 top-full z-40 mt-2 max-h-[min(70vh,28rem)] overflow-y-auto rounded-[var(--radius)] border border-border bg-card p-1.5 shadow-lg shadow-foreground/10">
+        className="absolute inset-x-0 top-full z-40 mt-2 max-h-[min(70vh,28rem)] overflow-y-auto rounded-lg border border-border bg-card p-1.5 shadow-md">
         {shown.map((it, i) => (
           <li key={it.handle} id={optionId(i)} role="option" aria-selected={active === i} onClick={() => go(i)} onMouseMove={() => setActive(i)}
             className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 text-sm text-muted-foreground ${active === i ? 'bg-muted' : ''}`}>

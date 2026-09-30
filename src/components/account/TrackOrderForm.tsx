@@ -45,13 +45,13 @@ export function TrackOrderForm() {
         <Field id="track-email" label="Email used at checkout" error={errors.email}>
           {(a) => <input {...a} name="email" type="email" autoComplete="email" autoCapitalize="none" spellCheck={false} />}
         </Field>
-        <button type="submit" disabled={busy} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-md bg-accent px-6 font-semibold text-on-accent hover:opacity-90 disabled:opacity-60 sm:mt-6">
+        <button type="submit" disabled={busy} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary px-7 font-semibold text-on-primary transition-colors hover:bg-secondary disabled:opacity-60 sm:mt-6">
           {busy && <UiIcon name="loader" size={18} className="animate-spin motion-reduce:animate-none" />}Track order
         </button>
       </form>
 
       {order && (
-        <section aria-labelledby="tracked" className="mt-10 rounded-[var(--radius)] border border-border bg-card p-5 md:p-6" data-testid="tracked-order">
+        <section aria-labelledby="tracked" className="mt-10 rounded-lg border border-border bg-card p-5 md:p-6" data-testid="tracked-order">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 id="tracked" ref={resultRef} tabIndex={-1} className="text-3xl font-semibold outline-none">Order #{order.number}</h2>
             <p className="text-sm text-muted-foreground">Placed {placed(order.created_at)} · {fmt(order.total_cents)}</p>

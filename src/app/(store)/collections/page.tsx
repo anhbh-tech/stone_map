@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { listCollections, listProducts } from '@/lib/listing';
-import { Crumbs } from '@/components/listing/Crumbs';
+import { Breadcrumbs } from '@/components/shell/Breadcrumbs';
 import { UiIcon } from '@/components/nav/icons';
 
 export const metadata: Metadata = {
@@ -15,8 +15,8 @@ export default function CollectionsPage() {
   const cols = listCollections().filter((c) => c.count > 0);
   const all = listProducts({ collectionId: null }, { theme: [], type: [], price: null, sort: 'featured', page: 1 }, 1);
   return (
-    <div className="mx-auto max-w-6xl px-4 pb-16 pt-4">
-      <Crumbs items={[{ name: 'Home', path: '/' }, { name: 'Collections', path: '/collections' }]} />
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-16 pt-4">
+      <Breadcrumbs items={[{ name: 'Collections', path: '/collections' }]} />
       <h1 className="mt-4 text-4xl font-semibold text-balance md:text-5xl">Shop by collection</h1>
       <p className="mt-3 max-w-prose text-muted-foreground">Every piece starts from a photo of your pet. Pick the occasion, then the style.</p>
 
@@ -43,7 +43,7 @@ export default function CollectionsPage() {
 
       <div className="mt-14 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-8">
         <p className="text-muted-foreground">Not sure where to start? See the whole shop in one place.</p>
-        <Link href="/collections/all" className="inline-flex min-h-12 items-center gap-2 rounded-md border border-border px-5 font-medium hover:bg-muted">
+        <Link href="/collections/all" className="inline-flex min-h-12 items-center gap-2 rounded-full border border-input bg-background px-6 font-medium hover:bg-muted">
           All products ({all.total}) <UiIcon name="chevronRight" size={18} />
         </Link>
       </div>

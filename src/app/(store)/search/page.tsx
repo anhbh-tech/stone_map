@@ -26,7 +26,7 @@ function Ideas() {
         <ul className="mt-3 flex flex-wrap gap-2">
           {IDEAS.map((w) => (
             <li key={w}>
-              <Link href={`/search?q=${encodeURIComponent(w)}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-card px-4 text-sm font-medium hover:border-foreground">
+              <Link href={`/search?q=${encodeURIComponent(w)}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-input bg-card px-4 text-sm font-medium hover:border-foreground">
                 <UiIcon name="search" size={14} className="text-muted-foreground" />{w}
               </Link>
             </li>
@@ -38,7 +38,7 @@ function Ideas() {
         <ul className="mt-3 divide-y divide-border border-y border-border">
           {cols.map((c) => (
             <li key={c.id}>
-              <Link href={`/collections/${c.handle}`} className="flex min-h-12 items-center justify-between gap-3 text-foreground hover:text-accent">
+              <Link href={`/collections/${c.handle}`} className="flex min-h-12 items-center justify-between gap-3 text-foreground decoration-2 underline-offset-4 hover:underline">
                 {c.title}<span className="flex items-center gap-2 text-sm text-muted-foreground">{c.count}<UiIcon name="chevronRight" size={16} /></span>
               </Link>
             </li>
@@ -57,7 +57,7 @@ export default async function SearchPage({ searchParams }: Props) {
   const res = fts ? listProducts({ fts }, state) : null;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 pb-16 pt-8">
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-16 pt-8">
       <h1 className="text-4xl font-semibold text-balance md:text-5xl">{q ? <>Results for “{q}”</> : 'Search the shop'}</h1>
       <div className="mt-6 max-w-2xl"><SearchBox variant="page" defaultQuery={q} key={q} /></div>
 

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { ALL_COLLECTION, COLLECTION_SORTS, facets, getCollection, listProducts, parseListQuery } from '@/lib/listing';
-import { Crumbs } from '@/components/listing/Crumbs';
+import { Breadcrumbs } from '@/components/shell/Breadcrumbs';
 import { ActiveFilters, FilterPanel, activeCount } from '@/components/listing/Filters';
 import { Pagination } from '@/components/listing/Pagination';
 import { ProductGrid } from '@/components/listing/ProductCard';
@@ -40,8 +40,8 @@ export default async function CollectionPage({ params, searchParams }: Props) {
   const n = activeCount(state);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 pb-16 pt-4">
-      <Crumbs items={[{ name: 'Home', path: '/' }, { name: 'Collections', path: '/collections' }, { name: c.title, path }]} />
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-16 pt-4">
+      <Breadcrumbs items={[{ name: 'Collections', path: '/collections' }, { name: c.title, path }]} />
       <h1 className="mt-4 text-4xl font-semibold text-balance md:text-5xl">{c.title}</h1>
       {c.description && <p className="mt-3 max-w-prose text-muted-foreground">{c.description}</p>}
 
@@ -59,9 +59,9 @@ export default async function CollectionPage({ params, searchParams }: Props) {
             <SortSelect value={state.sort} options={COLLECTION_SORTS} hidden={hidden} />
           </div>
 
-          <details className="group/f mt-3 rounded-[var(--radius)] border border-border bg-card lg:hidden" open={n > 0 || undefined}>
+          <details className="group/f mt-3 rounded-lg border border-border bg-card lg:hidden" open={n > 0 || undefined}>
             <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 px-4 font-medium [&::-webkit-details-marker]:hidden">
-              <span className="flex items-center gap-2"><UiIcon name="sliders" size={18} />Filter{n > 0 && <span className="rounded-full bg-accent px-2 text-xs font-semibold leading-5 text-on-accent">{n}</span>}</span>
+              <span className="flex items-center gap-2"><UiIcon name="sliders" size={18} />Filter{n > 0 && <span className="rounded-full bg-primary px-2 text-xs font-semibold leading-5 text-on-primary">{n}</span>}</span>
               <UiIcon name="chevronDown" size={18} className="transition-transform group-open/f:rotate-180" />
             </summary>
             <div className="border-t border-border p-4"><FilterPanel path={path} state={state} theme={f.theme} type={f.type} /></div>
@@ -71,10 +71,10 @@ export default async function CollectionPage({ params, searchParams }: Props) {
 
           <div className="mt-6">
             {res.items.length ? <ProductGrid items={res.items} label={`${c.title} products`} /> : (
-              <div className="rounded-[var(--radius)] border border-dashed border-border px-6 py-14 text-center">
+              <div className="rounded-lg border border-dashed border-border px-6 py-14 text-center">
                 <p className="text-xl font-semibold">Nothing matches these filters</p>
                 <p className="mt-2 text-muted-foreground">Try removing a filter, or see everything in {c.title}.</p>
-                <Link href={listHref(path, { ...state, theme: [], type: [], price: null })} className="mt-6 inline-flex min-h-12 items-center rounded-md bg-primary px-5 font-semibold text-on-primary hover:opacity-90">
+                <Link href={listHref(path, { ...state, theme: [], type: [], price: null })} className="mt-6 inline-flex min-h-12 items-center rounded-full bg-primary px-7 font-semibold text-on-primary transition-colors hover:bg-secondary">
                   Clear filters
                 </Link>
               </div>

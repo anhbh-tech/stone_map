@@ -70,6 +70,9 @@ test('account: register, sign out, sign in, and address book', async ({ page }) 
   await expect(page).toHaveURL(/\/account$/);
   await oneH1(page);
   await expect(page.locator('h1')).toHaveText('Hi, Mai');
+  // Header (UI-1) render lại AccountLink sau router.refresh(): không cần tải lại trang.
+  await expect(page.locator('header').getByTestId('account-link')).toHaveAccessibleName('Account, signed in as Mai');
+  await expect(page.locator('header').getByTestId('account-link')).toHaveAttribute('href', '/account');
   await expect(page.getByTestId('orders-empty')).toBeVisible();
   const c = (await cookie(page))!;
   expect(c).toMatchObject({ httpOnly: true, sameSite: 'Lax' });
@@ -115,6 +118,7 @@ test('account: register, sign out, sign in, and address book', async ({ page }) 
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page).toHaveURL(/\/$|\/account\/login/);
   expect(await cookie(page)).toBeUndefined();
+  await expect(page.locator('header').getByTestId('account-link')).toHaveAccessibleName('Sign in');
   await page.goto('/account/login');
   await page.getByRole('textbox', { name: 'Email', exact: true }).fill(EMAIL);
   await page.getByLabel('Password', { exact: true }).fill('wrong-password');
@@ -197,7 +201,7 @@ test('checkout while signed in attaches the order; track order by number + email
 test('search: suggestions while typing, keyboard selection, results, sort and empty state', async ({ page }) => {
   await page.goto('/search');
   await oneH1(page);
-  const box = page.getByRole('combobox', { name: 'Search products' });
+  const box = page.getByRole('combobox', { name: 'Search the shop' });
   await box.pressSequentially('ornam', { delay: 30 });
   const list = page.getByRole('listbox', { name: 'Suggestions' });
   await expect(list.getByRole('option', { name: /Ornament/ })).toHaveCount(2);
@@ -216,7 +220,7 @@ test('search: suggestions while typing, keyboard selection, results, sort and em
   await expect(page.getByTestId('result-count')).toHaveText('4 results');
   await page.getByLabel('Sort by').selectOption('price-asc');
   await expect(page).toHaveURL(/sort=price-asc/);
-  const prices = await page.locator('main [data-testid="product-card"] [data-testid="price"]').allTextContents();
+  const prices = await page.locator('main [data-testid="product-card"] [data-testid="card-price"]').allTextContents();
   const cents = prices.map((s) => Number(s.replace(/[^\d.]/g, '')));
   expect(cents).toEqual([...cents].sort((a, b) => a - b));
 
@@ -304,4 +308,47 @@ test('mobile 375: collection filter drawer and search have no horizontal scroll'
   await drawer.locator('summary').click();
   await drawer.getByRole('link', { name: /^Memorial/ }).click();
   await expect(page.getByTestId('result-count')).toHaveText('1 product');
+});
+
+test('header (UI-1) mounts SearchBox, CategoryMenu and AccountLink and they work end to end', async ({ page }) => {
+  await page.goto('/');
+  const header = page.locator('header').first();
+  await expect(header.getByTestId('account-link')).toHaveAttribute('href', '/account/login');
+
+  // Gợi ý trong ô search của header → chọn sản phẩm bằng chuột.
+  const box = header.getByRole('combobox', { name: 'Search products' });
+  const fetched = page.waitForResponse((r) => r.url().includes('/api/search/suggest?q=scarf'));
+  await box.pressSequentially('scarf', { delay: 30 });
+  await fetched;
+  const option = header.getByRole('option', { name: /Christmas Scarf Pet Portrait/ });
+  await expect(option).toBeVisible();
+  await option.click();
+  await expect(page).toHaveURL(/\/products\/demo-christmas-scarf-portrait$/);
+  await oneH1(page);
+
+  // Enter không chọn gợi ý → trang kết quả, SearchBox trên trang nhận sẵn từ khoá.
+  await page.goto('/');
+  await header.getByRole('combobox', { name: 'Search products' }).fill('memorial');
+  await header.getByRole('combobox', { name: 'Search products' }).press('Enter');
+  await expect(page).toHaveURL(/\/search\?q=memorial$/);
+  await expect(page.getByTestId('result-count')).toHaveText('3 results');
+
+  // Hàng category của header (desktop).
+  const main = page.getByRole('navigation', { name: 'Main' });
+  await expect(main.getByRole('link', { name: 'Pet portraits' })).toHaveAttribute('href', '/collections/pet-portraits');
+  await main.getByRole('link', { name: 'Christmas' }).click();
+  await expect(page).toHaveURL(/\/collections\/christmas$/);
+  await expect(page.locator('h1')).toHaveText('Christmas');
+});
+
+test('mobile 375: header menu lists collections with counts', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/');
+  await expect(page.locator('header').getByRole('combobox', { name: 'Search products' })).toBeVisible();
+  await page.getByRole('button', { name: 'Open menu' }).click();
+  const menu = page.getByRole('dialog', { name: 'Menu' });
+  await menu.getByRole('link', { name: /^Memorial 3 products/ }).click();
+  await expect(page).toHaveURL(/\/collections\/memorial$/);
+  await expect(menu).toBeHidden();
+  await expect(page.getByTestId('result-count')).toHaveText('3 products');
 });

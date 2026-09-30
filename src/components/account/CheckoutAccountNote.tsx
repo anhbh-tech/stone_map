@@ -10,7 +10,7 @@ export async function CheckoutAccountNote() {
       <UiIcon name="user" size={16} />
       {c
         ? <>Signed in as <strong className="font-medium text-foreground">{c.email}</strong>. This order will be saved to your account.</>
-        : <>Have an account? <Link href="/account/login?next=/checkout" className="font-medium text-foreground underline underline-offset-4 hover:text-accent">Sign in</Link> to save this order to it.</>}
+        : <>Have an account? <Link href="/account/login?next=/checkout" className="font-medium text-foreground underline underline-offset-4 hover:decoration-2">Sign in</Link> to save this order to it.</>}
     </p>
   );
 }

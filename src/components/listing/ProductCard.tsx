@@ -18,14 +18,14 @@ export function ProductCard({ p, priority }: { p: Card; priority?: boolean }) {
           {p.demo && <span className="rounded-full border border-border bg-card px-2.5 py-0.5 text-xs font-semibold text-foreground">Demo</span>}
         </div>
       </div>
-      <h3 className="mt-3 font-sans text-[0.95rem] font-medium leading-snug text-foreground text-pretty">
+      <h3 className="mt-3 font-sans text-base font-medium leading-snug text-foreground text-pretty">
         {/* Link phủ cả thẻ (after:inset-0): một điểm tab, vùng bấm là toàn bộ thẻ. */}
         <Link href={`/products/${p.handle}`} className="after:absolute after:inset-0 after:rounded-[var(--radius)] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-ring hover:underline hover:underline-offset-4">
           {p.title}
         </Link>
       </h3>
       <p className="mt-1 flex flex-wrap items-baseline gap-x-2 text-sm tabular-nums">
-        <span className="font-semibold text-accent" data-testid="price">{p.sizes > 1 ? `From ${fmt(p.price_cents)}` : fmt(p.price_cents)}</span>
+        <span className="font-bold text-sale" data-testid="card-price">{p.sizes > 1 ? `From ${fmt(p.price_cents)}` : fmt(p.price_cents)}</span>
         {save > 0 && <s className="text-muted-foreground"><span className="sr-only">Regular price </span>{fmt(p.compare_at_cents!)}</s>}
       </p>
       <p className="mt-0.5 text-xs text-muted-foreground">{p.sizes} {p.sizes === 1 ? 'size' : 'sizes'}</p>

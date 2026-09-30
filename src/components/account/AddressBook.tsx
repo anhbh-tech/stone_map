@@ -61,12 +61,12 @@ function AddressForm({ initial, regions, submitLabel, onSave, onCancel, idPrefix
       </Field>
       {!initial && (
         <label className="flex min-h-11 items-center gap-3 text-sm sm:col-span-2">
-          <input type="checkbox" name="is_default" className="size-5 accent-[var(--accent)]" />Use as my default address
+          <input type="checkbox" name="is_default" className="size-5 accent-[var(--primary)]" />Use as my default address
         </label>
       )}
       <div className="flex flex-wrap gap-3 sm:col-span-2">
-        <button type="submit" disabled={busy} className="inline-flex min-h-12 items-center rounded-md bg-primary px-5 font-semibold text-on-primary hover:opacity-90 disabled:opacity-60">{submitLabel}</button>
-        <button type="button" onClick={onCancel} className="inline-flex min-h-12 items-center rounded-md border border-border px-5 font-medium hover:bg-muted">Cancel</button>
+        <button type="submit" disabled={busy} className="inline-flex min-h-12 items-center rounded-full bg-primary px-7 font-semibold text-on-primary transition-colors hover:bg-secondary disabled:opacity-60">{submitLabel}</button>
+        <button type="button" onClick={onCancel} className="inline-flex min-h-12 items-center rounded-full border border-input bg-background px-6 font-medium hover:bg-muted">Cancel</button>
       </div>
     </form>
   );
@@ -103,7 +103,7 @@ export function AddressBook({ initial, regions }: { initial: SavedAddress[]; reg
       )}
       <ul className="grid gap-3">
         {list.map((s) => (
-          <li key={s.id} className="rounded-[var(--radius)] border border-border bg-card p-4" data-testid="address">
+          <li key={s.id} className="rounded-lg border border-border bg-card p-4" data-testid="address">
             {editing === s.id ? (
               <AddressForm idPrefix={`edit-${s.id}`} initial={s.address} regions={regions} submitLabel="Save address" onCancel={() => setEditing(null)}
                 onSave={async (a) => { const e = await apply(`/api/account/addresses/${s.id}`, { address: a }, 'PATCH', 'Address saved.'); if (!e) setEditing(null); return e; }} />
@@ -143,14 +143,14 @@ export function AddressBook({ initial, regions }: { initial: SavedAddress[]; reg
         ))}
       </ul>
       {adding ? (
-        <div className="mt-4 rounded-[var(--radius)] border border-border bg-card p-4">
+        <div className="mt-4 rounded-lg border border-border bg-card p-4">
           <h3 className="mb-4 font-sans text-base font-semibold">New address</h3>
           <AddressForm idPrefix="new" regions={regions} submitLabel="Save address" onCancel={() => setAdding(false)}
             onSave={async (a, makeDefault) => { const e = await apply('/api/account/addresses', { address: a, is_default: makeDefault }, 'POST', 'Address added.'); if (!e) setAdding(false); return e; }} />
         </div>
       ) : (
         <button type="button" onClick={() => { setAdding(true); setEditing(null); }}
-          className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-md border border-border px-4 text-sm font-medium hover:bg-muted">
+          className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full border border-input bg-background px-5 text-sm font-medium hover:bg-muted">
           <UiIcon name="plus" size={18} />Add address
         </button>
       )}

@@ -4,8 +4,8 @@ import { UiIcon } from '@/components/nav/icons';
 import { listHref, toggle, type UrlState } from './urls';
 
 const chip = 'inline-flex min-h-11 items-center gap-1.5 rounded-full border px-4 text-sm font-medium transition-colors';
-const off = `${chip} border-border bg-card text-foreground hover:border-foreground`;
-const on = `${chip} border-accent bg-accent text-on-accent hover:opacity-90`;
+const off = `${chip} border-input bg-card text-foreground hover:border-foreground`;
+const on = `${chip} border-primary bg-primary text-on-primary hover:bg-secondary`;
 
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -32,7 +32,7 @@ export function FilterPanel({ path, state, theme, type }: { path: string; state:
           aria-label={`${f.label}${f.count ? `, ${f.count} ${f.count === 1 ? 'product' : 'products'}` : ''}${active ? ', selected. Remove filter' : ''}`}>
           {active && <UiIcon name="check" size={16} />}
           {f.label}
-          {f.count > 0 && <span className={active ? 'text-on-accent/80' : 'text-muted-foreground'} aria-hidden="true">{f.count}</span>}
+          {f.count > 0 && <span className={active ? 'text-on-primary-muted' : 'text-muted-foreground'} aria-hidden="true">{f.count}</span>}
         </Link>
       </li>
     );
@@ -80,7 +80,7 @@ export function ActiveFilters({ path, state }: { path: string; state: UrlState }
         </Link>
       ))}
       <Link href={listHref(path, { ...state, theme: [], type: [], price: null })} rel="nofollow" scroll={false}
-        className="inline-flex min-h-11 items-center px-2 text-sm font-medium text-foreground underline underline-offset-4 hover:text-accent">
+        className="inline-flex min-h-11 items-center px-2 text-sm font-medium text-foreground underline underline-offset-4 hover:decoration-2">
         Clear all
       </Link>
     </div>

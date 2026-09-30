@@ -10,7 +10,7 @@ export function Field({ id, label, error, hint, className = '', children }: {
       <label htmlFor={id} className="text-sm font-medium">{label}</label>
       {children({
         id, 'aria-invalid': error ? true : undefined, 'aria-describedby': described,
-        className: `mt-1 block min-h-12 w-full rounded-md border bg-background px-3 text-foreground ${error ? 'border-destructive' : 'border-border'}`,
+        className: `mt-1 block min-h-12 w-full rounded-md border bg-background px-3 text-foreground ${error ? 'border-destructive' : 'border-input'}`,
       })}
       {hint && !error && <p id={`${id}-hint`} className="mt-1 text-sm text-muted-foreground">{hint}</p>}
       {error && <p id={`${id}-error`} className="mt-1 text-sm text-destructive">{error}</p>}

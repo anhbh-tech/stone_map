@@ -214,6 +214,42 @@ test.describe('PDP', () => {
   });
 });
 
+test.describe('PDP against the real personalize API (crew B)', () => {
+  test.beforeEach(({}, info) => test.skip(info.project.name !== 'desktop', 'desktop-only'));
+  test.setTimeout(90_000);
+
+  test('real preflight blocks not-a-pet; real job, rotate, confirm, then cart line (#1 #2)', async ({ page }) => {
+    // Chỉ mock giỏ (crew D); /api/personalize/* và /media/* là thật.
+    const lines: unknown[] = [];
+    await page.route('**/api/cart/**', (route) => {
+      if (route.request().url().endsWith('/api/cart/lines')) lines.push(route.request().postDataJSON());
+      return route.fulfill({ status: 200, contentType: 'application/json', body: '{"lines":[]}' });
+    });
+    await page.route('**/cart', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>Cart</title><h1>Cart</h1>' }));
+    const apiErrors: string[] = [];
+    page.on('response', (r) => { if (r.url().includes('/api/personalize/') && r.status() >= 400) apiErrors.push(`${r.status()} ${r.url()}`); });
+
+    await page.goto(PDP);
+    await uploadPhoto(page, 'not-a-pet.jpg');
+    await expect(page.getByTestId('preflight-error')).toBeVisible({ timeout: 20_000 });
+    await expect(generateBtn(page)).toBeDisabled();
+
+    await page.getByTestId('photo-input').setInputFiles(path.join(FIX, 'pet-ok.jpg'));
+    await expect(page.getByTestId('preflight-error')).toHaveCount(0, { timeout: 20_000 });
+    await generateBtn(page).click();
+    await expect(page.getByTestId('eta')).toHaveText(/About \d+ (seconds|minutes?) left|Almost done/);
+    await expect(page.getByTestId('preview-editor')).toBeVisible({ timeout: 60_000 });
+    for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Rotate right' }).click(); // 270° → -90° theo TransformSchema
+    await page.getByRole('slider').fill('1.5');
+    await page.getByTestId('pet-confirm').check();
+    await addToCart(page).click();
+    await page.waitForURL('**/cart', { timeout: 20_000 });
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatchObject({ qty: 1, design_id: expect.stringMatching(/^DSN-/) });
+    expect(apiErrors).toEqual([]);
+  });
+});
+
 test.describe('PDP mobile 375px', () => {
   test.beforeEach(({}, info) => test.skip(info.project.name !== 'mobile-375', 'mobile-only'));
 

@@ -4,7 +4,7 @@ import Image from 'next/image';
 import { useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import type { DesignView } from '@/lib/types';
 import type { Transform } from './api';
-import { clamp } from '../pdp/logic';
+import { clamp, normRotate } from '../pdp/logic';
 import { ArrowIcon, RotateCcwIcon, RotateCwIcon } from '../pdp/icons';
 
 export const IDENTITY: Transform = { rotate: 0, zoom: 1, x: 0, y: 0 };
@@ -32,7 +32,7 @@ export function PreviewEditor({ design, transform: t, onChange, sizeLabel, scale
   const drag = useRef<{ x: number; y: number; t: Transform; w: number } | null>(null);
   const set = (p: Partial<Transform>) => {
     const n = { ...t, ...p };
-    onChange({ rotate: ((n.rotate % 360) + 360) % 360, zoom: clamp(n.zoom, 1, 3), x: clamp(n.x, -0.5, 0.5), y: clamp(n.y, -0.5, 0.5) });
+    onChange({ rotate: normRotate(n.rotate), zoom: clamp(n.zoom, 1, 3), x: clamp(n.x, -0.5, 0.5), y: clamp(n.y, -0.5, 0.5) });
   };
 
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {

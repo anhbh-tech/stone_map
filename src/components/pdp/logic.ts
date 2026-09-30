@@ -43,4 +43,7 @@ export function sizeScale(size: string, all: string[]): number {
   return Math.max(0.2, n(size) / max);
 }
 
+/** Góc về khoảng -180..180 như TransformSchema của API (270° → -90°). */
+export const normRotate = (deg: number) => { const r = ((deg % 360) + 360) % 360; return r > 180 ? r - 360 : r; };
+
 export const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));

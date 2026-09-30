@@ -115,7 +115,8 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
   async function ensureDesign(m: Mode) {
     if (!uploaded) throw new Error('no upload');
     if (design && design.upload_id === uploaded.upload_id && design.mode === m) {
-      const d = await api.patchDesign(design.id, { style, pet_name: petName || undefined, notes: m === 'designer' ? notes || undefined : undefined, variant_id: variantId });
+      const locked = design.status === 'confirmed' || design.status === 'in_review'; // API khoá style/transform ở các trạng thái này
+      const d = await api.patchDesign(design.id, { ...(locked ? {} : { style }), pet_name: petName || undefined, notes: m === 'designer' ? notes || undefined : undefined, variant_id: variantId });
       const next = { ...d, upload_id: uploaded.upload_id };
       setDesign(next);
       return next;
@@ -145,7 +146,7 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
     if (s.timer) clearTimeout(s.timer);
     s.timer = setTimeout(() => {
       s.timer = null;
-      if (design) s.pending = api.patchDesign(design.id, { transform: t }).catch(() => {});
+      if (design && design.status !== 'confirmed') s.pending = api.patchDesign(design.id, { transform: t }).catch(() => {});
     }, 600);
   }
 
@@ -156,12 +157,12 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
       if (mode === 'ai') {
         if (!d) throw new Error('no design');
         const s = transformSave.current;
-        if (s.timer) { clearTimeout(s.timer); s.timer = null; await api.patchDesign(d.id, { transform }); }
+        if (s.timer) { clearTimeout(s.timer); s.timer = null; if (d.status !== 'confirmed') await api.patchDesign(d.id, { transform }); }
         await s.pending;
-        if (d.status !== 'confirmed') await api.confirm(d.id);
+        if (d.status !== 'confirmed') { d = { ...(await api.confirm(d.id)), upload_id: d.upload_id }; setDesign(d); }
       } else {
         d = await ensureDesign('designer');
-        if (d.status !== 'in_review') await api.submit(d.id);
+        if (d.status !== 'in_review') { d = { ...(await api.submit(d.id)), upload_id: d.upload_id }; setDesign(d); }
       }
       await api.addLine({ variant_id: variantId, qty, design_id: d.id });
       router.push('/cart');
@@ -254,7 +255,7 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
         <div ref={previewOnStage ? setStage : undefined} className="scroll-mt-24 space-y-3">
           {mode === 'ai' && (
             <>
-              {!running && (
+              {!running && design?.status !== 'confirmed' && (
                 <div>
                   <button
                     type="button" onClick={generate} disabled={!!generateReason}

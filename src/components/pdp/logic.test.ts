@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Variant } from '../../lib/catalog';
 import { totals } from '../../lib/pricing';
 import { DEFAULTS } from '../../lib/settings';
-import { bundleRows, etaText, pickVariant, sizeScale } from './logic';
+import { bundleRows, etaText, normRotate, pickVariant, sizeScale } from './logic';
 
 const v = (id: number, price: number): Variant => ({ id, product_id: 1, sku: `S${id}`, size: `${id}×${id}`, price_cents: price, compare_at_cents: null, print_px: 2000, position: id });
 const variants = [v(12, 5998), v(8, 3998), v(16, 8998)];
@@ -38,6 +38,12 @@ describe('etaText', () => {
     expect(etaText(41000)).toBe('About 45 seconds left');
     expect(etaText(61000)).toBe('About 2 minutes left');
     expect(etaText(59000)).toBe('About 60 seconds left');
+  });
+});
+
+describe('normRotate', () => {
+  it('stays inside the API range -180..180', () => {
+    expect([0, 90, 180, 270, 360, -90, -270, 450].map(normRotate)).toEqual([0, 90, 180, -90, 0, -90, 90, 90]);
   });
 });
 

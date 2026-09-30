@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { listCollections, listProducts } from '@/lib/listing';
 import { Breadcrumbs } from '@/components/shell/Breadcrumbs';
 import { UiIcon } from '@/components/nav/icons';
+import { ProductGrid } from '@/components/listing/ProductCard';
 
 export const metadata: Metadata = {
   title: 'Shop by collection',
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
 
 export default function CollectionsPage() {
   const cols = listCollections().filter((c) => c.count > 0);
-  const all = listProducts({ collectionId: null }, { theme: [], type: [], price: null, sort: 'featured', page: 1 }, 1);
+  const all = listProducts({ collectionId: null }, { theme: [], type: [], price: null, sort: 'featured', page: 1 }, 12);
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-16 pt-4">
       <Breadcrumbs items={[{ name: 'Collections', path: '/collections' }]} />
@@ -41,8 +42,13 @@ export default function CollectionsPage() {
         ))}
       </ul>
 
-      <div className="mt-14 flex flex-wrap items-center justify-between gap-4 border-t border-border pt-8">
-        <p className="text-muted-foreground">Not sure where to start? See the whole shop in one place.</p>
+      <section className="mt-14 border-t border-border pt-8" aria-labelledby="all-products">
+        <h2 id="all-products" className="mb-6 text-2xl font-semibold">All products</h2>
+        <ProductGrid items={all.items} label="All products" />
+      </section>
+
+      <div className="mt-10 flex flex-wrap items-center justify-between gap-4">
+        <p className="text-muted-foreground">Filter by style, size and price on the full list.</p>
         <Link href="/collections/all" className="inline-flex min-h-12 items-center gap-2 rounded-full border border-input bg-background px-6 font-medium hover:bg-muted">
           All products ({all.total}) <UiIcon name="chevronRight" size={18} />
         </Link>

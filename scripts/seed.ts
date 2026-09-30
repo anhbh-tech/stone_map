@@ -9,8 +9,11 @@ const d = db();
 tx(() => {
   for (const k of Object.keys(DEFAULTS) as (keyof Settings)[]) setSetting(k, DEFAULTS[k]);
 
+  // Xoá bảng tham chiếu variants/addons TRƯỚC (khoá ngoại). Giỏ hàng luôn xoá: dòng giỏ trỏ vào variant sắp tạo lại.
+  d.exec('DELETE FROM cart_addons; DELETE FROM cart_lines;');
+  if (!process.argv.includes('--keep-orders')) d.exec('DELETE FROM order_addons; DELETE FROM order_lines; DELETE FROM orders; DELETE FROM jobs; DELETE FROM designs;');
   d.exec('DELETE FROM bundle_tiers; DELETE FROM addons; DELETE FROM product_images; DELETE FROM variants;');
-  if (!process.argv.includes('--keep-orders')) d.exec('DELETE FROM cart_lines; DELETE FROM cart_addons; DELETE FROM order_lines; DELETE FROM order_addons; DELETE FROM orders; DELETE FROM jobs; DELETE FROM designs; DELETE FROM products;');
+  if (!process.argv.includes('--keep-orders')) d.exec('DELETE FROM products;');
 
   const p = d.prepare(`INSERT INTO products (handle, title, subtitle, description_html, meta_title, meta_description, frame_included)
     VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(handle) DO UPDATE SET title=excluded.title RETURNING id`).get(

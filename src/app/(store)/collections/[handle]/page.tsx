@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { notFound } from 'next/navigation';
+import { redirect } from 'next/navigation';
 import { ALL_COLLECTION, COLLECTION_SORTS, facets, getCollection, listProducts, parseListQuery } from '@/lib/listing';
 import { Breadcrumbs } from '@/components/shell/Breadcrumbs';
 import { ActiveFilters, FilterPanel, activeCount } from '@/components/listing/Filters';
@@ -30,7 +30,8 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 
 export default async function CollectionPage({ params, searchParams }: Props) {
   const c = find((await params).handle);
-  if (!c) notFound();
+  // Handle không tồn tại (link cũ, collection bị xoá/chưa seed) → về toàn bộ sản phẩm thay vì 404.
+  if (!c) redirect('/collections/all');
   const state = parseListQuery(await searchParams, COLLECTION_SORTS);
   const scope = { collectionId: c.handle === 'all' ? null : c.id };
   const res = listProducts(scope, state);

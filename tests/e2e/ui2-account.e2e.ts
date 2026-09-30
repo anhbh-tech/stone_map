@@ -274,9 +274,10 @@ test('collections: index, filters, sort and pagination', async ({ page }) => {
   await page.getByRole('link', { name: 'Clear filters' }).click();
   await expect(page).toHaveURL(/\/collections\/pet-portraits$/);
 
+  // Handle không tồn tại → redirect về toàn bộ sản phẩm, không 404.
   await page.goto('/collections/nope');
+  await expect(page).toHaveURL(/\/collections\/all$/);
   await expect(page.locator('h1')).toHaveCount(1);
-  expect((await page.request.get('/collections/nope')).status()).toBe(404);
 
   // Thêm tạm 1 sản phẩm → /collections/all có 13 sản phẩm, 2 trang.
   exec("INSERT INTO products (handle, title) VALUES (?, 'UI2 E2E temporary product')", TEMP_HANDLE);

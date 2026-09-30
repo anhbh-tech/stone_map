@@ -1,26 +1,52 @@
 @import "tailwindcss";
 
+/* Design system "Pearl Atelier" — sinh bằng skill ui-ux-pro-max:
+   python3 .claude/skills/ui-ux-pro-max/scripts/search.py "luxury pet portrait ecommerce personalized gift" --design-system -p "Pearl Atelier"
+   Giữ palette + typography của skill; KHÔNG dùng style "Liquid Glass" nó gợi ý (blur/animation nặng, trái mục tiêu hiệu năng #8)
+   → dùng "minimal luxury editorial": nền phẳng, viền mảnh, bóng nhẹ.
+   Component chỉ dùng token (bg-card, text-muted-foreground…), không hex thô. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --primary: #1c1917; --on-primary: #ffffff;
+  --secondary: #44403c; --on-secondary: #ffffff;
+  --accent: #a16207; --on-accent: #ffffff;           /* CTA vàng đồng, 4.5:1 với trắng */
+  --background: #fafaf9; --foreground: #0c0a09;
+  --card: #ffffff; --card-foreground: #0c0a09;
+  --muted: #f0eeec; --muted-foreground: #57534e;
+  --border: #d6d3d1; --ring: #1c1917;
+  --destructive: #dc2626; --on-destructive: #ffffff;
+  --success: #15803d;
+  --radius: 10px;
 }
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  :root:not([data-theme="light"]) {
+    --primary: #fafaf9; --on-primary: #1c1917;
+    --secondary: #d6d3d1; --on-secondary: #1c1917;
+    --accent: #eab308; --on-accent: #1c1917;
+    --background: #0c0a09; --foreground: #fafaf9;
+    --card: #1c1917; --card-foreground: #fafaf9;
+    --muted: #292524; --muted-foreground: #a8a29e;
+    --border: #44403c; --ring: #fafaf9;
+    --success: #4ade80;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@theme inline {
+  --color-primary: var(--primary); --color-on-primary: var(--on-primary);
+  --color-secondary: var(--secondary); --color-on-secondary: var(--on-secondary);
+  --color-accent: var(--accent); --color-on-accent: var(--on-accent);
+  --color-background: var(--background); --color-foreground: var(--foreground);
+  --color-card: var(--card); --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted); --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border); --color-ring: var(--ring);
+  --color-destructive: var(--destructive); --color-on-destructive: var(--on-destructive);
+  --color-success: var(--success);
+  --radius-DEFAULT: var(--radius);
+  --font-serif: var(--font-cormorant);
+  --font-sans: var(--font-montserrat);
 }
+
+body { background: var(--background); color: var(--foreground); font-family: var(--font-montserrat), system-ui, sans-serif; font-size: 16px; line-height: 1.5; }
+h1, h2, h3 { font-family: var(--font-cormorant), Georgia, serif; line-height: 1.15; }
+:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+button, a, [role="button"] { cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }

@@ -113,8 +113,7 @@ test.describe('product page', () => {
   test('desktop gallery: square main image ≤ 70vh in a ~55% column, 64px thumbnail strip', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(PDP);
-    const track = page.getByRole('list', { name: /Product photos/ });
-    const box = (await track.boundingBox())!;
+    const box = (await page.getByTestId('gallery-viewport').boundingBox())!;
     expect(Math.abs(box.width - box.height)).toBeLessThan(2);
     expect(box.height).toBeLessThanOrEqual(900 * 0.7 + 1);
     expect(box.width).toBeLessThan(1440 * 0.55);
@@ -130,15 +129,14 @@ test.describe('product page', () => {
     await thumbs.nth(2).click();
     await expect(thumbs.nth(2)).toHaveAttribute('aria-current', 'true');
     await expect(thumbs.nth(2)).toHaveCSS('border-top-color', RED);
-    await page.getByRole('button', { name: 'Next photo' }).click();
-    await expect(thumbs.first()).toHaveAttribute('aria-current', 'true'); // vòng lại
+    await expect(page.getByRole('button', { name: 'Next photo' })).toBeDisabled(); // ảnh cuối: không vòng lại
   });
 });
 
 test.describe('mobile 375px', () => {
   test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
 
-  test('title and price in the first screen; swipe gallery with dots; menu drawer', async ({ page }) => {
+  test('title and price in the first screen; gallery dots; menu drawer', async ({ page }) => {
     await page.goto(PDP);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
     const p = (await page.getByTestId('price').boundingBox())!;
@@ -146,8 +144,7 @@ test.describe('mobile 375px', () => {
     await expect(page.getByTestId('gallery-dots')).toBeVisible();
     await expect(page.getByRole('list', { name: 'Choose a photo' })).toBeHidden();
 
-    const track = page.getByRole('list', { name: /Product photos/ });
-    await track.evaluate((el) => el.scrollTo({ left: el.clientWidth, behavior: 'instant' }));
+    await page.getByRole('button', { name: 'Next photo' }).click(); // vuốt: xem ui1-gallery.e2e.ts
     await expect(page.getByTestId('gallery-dots').locator('span').nth(1)).toHaveClass(/w-5/);
 
     await page.getByRole('button', { name: 'Open menu' }).click();

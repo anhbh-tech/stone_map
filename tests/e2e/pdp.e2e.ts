@@ -268,7 +268,7 @@ test.describe('PDP mobile 375px', () => {
     const bar = page.getByTestId('sticky-preview');
     await expect(bar).toHaveAttribute('data-visible', 'false');
     await page.locator('#step-extras').scrollIntoViewIfNeeded();
-    await page.getByRole('button', { name: 'Add to cart' }).scrollIntoViewIfNeeded();
+    await page.getByRole('region', { name: 'Add to cart' }).getByRole('button', { name: 'Add to cart' }).scrollIntoViewIfNeeded();
     await expect(bar).toHaveAttribute('data-visible', 'true');
     const box = await bar.boundingBox();
     expect(box!.height).toBeLessThanOrEqual(80);

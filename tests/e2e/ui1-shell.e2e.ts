@@ -173,7 +173,7 @@ test.describe('mobile 375px', () => {
     await expect(page.getByTestId('req-error')).toHaveText('Generate with AI is required');
 
     // Khối Add to cart trên trang đang hiện → thanh ẩn, không có hai nút mua cùng lúc.
-    await page.getByRole('button', { name: 'Add to cart' }).scrollIntoViewIfNeeded();
+    await page.getByRole('region', { name: 'Add to cart' }).getByRole('button', { name: 'Add to cart' }).scrollIntoViewIfNeeded();
     await expect(bar).toHaveAttribute('data-visible', 'false');
     await expect(page.getByRole('button', { name: 'Add to cart' })).toHaveCount(1);
   });

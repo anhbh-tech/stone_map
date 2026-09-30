@@ -109,7 +109,7 @@ test('Buy More, Save More! table on the PDP lists flagged codes, copies them, an
   await expect(box.getByRole('heading', { name: 'Buy More, Save More!' })).toBeVisible();
   await expect(box.getByRole('columnheader')).toHaveText(['Spend', 'Get', 'Code']);
   const rows = box.locator('tbody tr');
-  await expect(rows).toHaveText([/^Buy 2 items\s*10% off\s*PEARL2/, /^Buy 3 items\s*15% off\s*PEARL3/, /^Buy 5 items\s*20% off\s*PEARL5/]);
+  await expect(rows).toHaveText([/^Buy 2 items\s*15% off\s*PEARL2/, /^Buy 3 items\s*20% off\s*PEARL3/, /^Buy 5 items\s*25% off\s*PEARL5/]);
   await expect(box).not.toContainText('E2ESAVE10'); // không đánh dấu show_on_pdp
   await box.getByRole('button', { name: 'Copy code PEARL3' }).click();
   await expect(rows.nth(1).getByRole('status')).toHaveText('Copied');

@@ -3,9 +3,9 @@
 import type { DatabaseSync } from 'node:sqlite';
 
 export const TIER_CODES = [
-  { code: 'PEARL2', min_qty: 2, percent: 10 },
-  { code: 'PEARL3', min_qty: 3, percent: 15 },
-  { code: 'PEARL5', min_qty: 5, percent: 20 },
+  { code: 'PEARL2', min_qty: 2, percent: 15 },
+  { code: 'PEARL3', min_qty: 3, percent: 20 },
+  { code: 'PEARL5', min_qty: 5, percent: 25 },
 ];
 
 export function seedDiscounts(d: DatabaseSync) {

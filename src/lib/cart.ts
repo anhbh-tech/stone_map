@@ -13,7 +13,7 @@ import { discountSummary, discountUses, evaluateDiscount, findDiscount, rejectio
 
 export const CART_COOKIE = 'cart_id';
 export const ORDERS_COOKIE = 'pa_orders';
-export const MAX_QTY = 20;
+export const MAX_QTY = 99;
 /** Design vào được giỏ: AI đã được khách xác nhận, hoặc đã gửi designer (và sau đó được duyệt). */
 export const ADDABLE: readonly DesignStatus[] = ['confirmed', 'in_review', 'approved'];
 

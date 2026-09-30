@@ -142,15 +142,15 @@ describe('discount codes at checkout', () => {
       ('SPEND80', 'fixed', 800, 8000, NULL, 1, 1), ('GONE', 'percent', 30, NULL, '2020-01-01 00:00:00', 1, 1), ('PAUSED', 'percent', 30, NULL, NULL, 0, 1)`);
     expect(pdpCodes()).toEqual([
       { code: 'SPEND80', spend: 'Spend $80.00', get: '$8.00 off' },
-      { code: 'PEARL2', spend: 'Buy 2 items', get: '10% off' },
-      { code: 'PEARL3', spend: 'Buy 3 items', get: '15% off' },
-      { code: 'PEARL5', spend: 'Buy 5 items', get: '20% off' },
+      { code: 'PEARL2', spend: 'Buy 2 items', get: '15% off' },
+      { code: 'PEARL3', spend: 'Buy 3 items', get: '20% off' },
+      { code: 'PEARL5', spend: 'Buy 5 items', get: '25% off' },
     ]); // SAVE10 (not flagged), GONE (expired), PAUSED (disabled) stay off the PDP
 
     const id = cartWith(10, 2);
     expect(err(() => applyDiscountCode(id, 'pearl3'))).toBe('422 discount_min_qty: The code PEARL3 needs 3 or more portraits in your cart. Add 1 more to use it.');
     updateLine(id, getCart(id).lines[0].id, 3);
     applyDiscountCode(id, 'pearl3');
-    expect(getCart(id).totals).toMatchObject({ discount_cents: 0, code_discount_cents: 1799 }); // 15% > bậc 10%, không cộng dồn
+    expect(getCart(id).totals).toMatchObject({ discount_cents: 0, code_discount_cents: 2399 }); // 20% > bậc tự động, không cộng dồn
   });
 });

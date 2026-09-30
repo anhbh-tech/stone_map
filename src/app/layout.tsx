@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 // Layout gốc chỉ có html/body. Header/footer của storefront nằm ở app/(store)/layout.tsx, admin ở app/admin/layout.tsx.
-export default function RootLayout({ children }: LayoutProps<'/'>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${cormorant.variable} ${montserrat.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">{children}</body>

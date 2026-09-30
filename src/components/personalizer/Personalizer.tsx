@@ -7,9 +7,10 @@ import type { DesignView, JobView, Settings } from '@/lib/types';
 import { fmt } from '@/lib/money';
 import { livePrice, sizeScale } from '../pdp/logic';
 import { AlertIcon, BrushIcon, LoaderIcon, SparklesIcon } from '../pdp/icons';
-import { api, ApiError, type Transform } from './api';
-import { Addons, BundlePicker, SizePicker, type AddonState } from './options';
-import { UploadBox, type UploadState } from './UploadBox';
+import { api, ApiError, type Transform, type UploadResult } from './api';
+import { Addons, BundlePicker, QuantitySelect, SizePicker, type AddonState } from './options';
+import { CONSENT_ID, PHOTO_CHANGE_ID, PHOTO_INPUT_ID, UploadBox, type UploadState } from './UploadBox';
+import { useDesignEditor } from './editor';
 import { JobProgress } from './JobProgress';
 import { IDENTITY, PreviewEditor } from './PreviewEditor';
 import { StickyPreview } from './StickyPreview';
@@ -26,7 +27,13 @@ export type PersonalizerProps = {
   delivery: ReactNode;
   /** Tiêu đề (h1), phụ đề, rating — render ở server, đặt ngay trên giá. */
   header?: ReactNode;
+  /** Trần số lượng của cart API (MAX_QTY ở src/lib/cart.ts) — ô "10+" không cho vượt. */
+  maxQty?: number;
 };
+
+/** Điều kiện bắt buộc trước khi thêm giỏ; nút Add to cart không bao giờ disabled, bấm thiếu → báo lỗi ngay dưới nhóm đó. */
+type Req = 'photo' | 'generate' | 'confirm';
+const REQ_ERR: Record<Req, string> = { photo: 'req-photo-error', generate: 'req-generate-error', confirm: 'req-confirm-error' };
 
 type Mode = 'ai' | 'designer';
 const POLL_MS = 1500;
@@ -37,8 +44,18 @@ const h2 = 'font-sans text-lg font-semibold';
 const input = 'min-h-11 w-full rounded-md border border-input bg-background px-3 text-base';
 // Lựa chọn đang chọn = viền + nền đỏ nhạt (PRODUCT.md: đỏ cho lựa chọn đang chọn).
 export const selectedCls = 'has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:ring-1 has-[:checked]:ring-accent';
+// Focus bàn phím của lựa chọn = viền đỏ, cùng họ với trạng thái đang chọn.
+export const focusCls = 'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent';
 
-export function Personalizer({ product, variants, initialVariantId, tiers, addons, settings, delivery, header }: PersonalizerProps) {
+function ReqError({ req, text }: { req: Req; text: string }) {
+  return (
+    <p id={REQ_ERR[req]} role="alert" className="flex gap-2 text-sm font-semibold text-destructive" data-testid="req-error">
+      <AlertIcon className="mt-0.5 shrink-0" /> {text}
+    </p>
+  );
+}
+
+export function Personalizer({ product, variants, initialVariantId, tiers, addons, settings, delivery, header, maxQty = 10 }: PersonalizerProps) {
   const router = useRouter();
   const [variantId, setVariantId] = useState(initialVariantId);
   const [qty, setQty] = useState(1);
@@ -57,6 +74,10 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
   const [petConfirmed, setPetConfirmed] = useState(false);
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+  const [reqErr, setReqErr] = useState<Req | null>(null);
+  const editor = useDesignEditor();
+  const resultRef = useRef<HTMLDivElement>(null);
+  const wasRunning = useRef(false);
   const stageRef = useRef<HTMLElement>(null);
   const priceRef = useRef<HTMLDivElement>(null);
   const photoRef = useRef<HTMLElement>(null);
@@ -96,6 +117,12 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
     return () => { alive = false; clearTimeout(t); };
   }, [job?.id, running]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Modal AI Filter đóng (job xong/lỗi) → đưa focus tới kết quả, không để rơi về <body>.
+  useEffect(() => {
+    if (wasRunning.current && !running) requestAnimationFrame(() => resultRef.current?.focus({ preventScroll: false }));
+    wasRunning.current = running;
+  }, [running]);
+
   function chooseSize(id: number) {
     setVariantId(id);
     const u = new URL(window.location.href);
@@ -111,17 +138,22 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
   }
 
   async function onFile(f: File) {
+    // "Change" sau khi đã gen: ảnh mới qua preflight thì gen lại luôn với cùng style.
+    const rerun = mode === 'ai' && !!design && design.mode === 'ai' && (!!design.preview_url || !!job);
     setUpload({ status: 'uploading', name: f.name });
     setDesign(null); setJob(null); setGenError(null); setPetConfirmed(false); setTransform(IDENTITY);
     try {
-      setUpload({ status: 'done', name: f.name, result: await api.upload(f) });
+      const result = await api.upload(f);
+      setUpload({ status: 'done', name: f.name, result });
+      if (rerun && result.preflight.ok) await generate(result, null);
     } catch (e) {
       setUpload({ status: 'error', name: f.name, message: msg(e) });
     }
   }
 
-  /** Design gắn với ảnh hiện tại và đúng mode; đổi ảnh/mode → tạo design mới. */
-  async function ensureDesign(m: Mode) {
+  /** Design gắn với ảnh hiện tại và đúng mode; đổi ảnh/mode → tạo design mới. `current` = design đang giữ (null = bắt buộc tạo mới). */
+  async function ensureDesign(m: Mode, up: UploadResult | null = uploaded, current = design) {
+    const uploaded = up, design = current;
     if (!uploaded) throw new Error('no upload');
     if (design && design.upload_id === uploaded.upload_id && design.mode === m) {
       const locked = design.status === 'confirmed' || design.status === 'in_review'; // API khoá style/transform ở các trạng thái này
@@ -139,10 +171,10 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
     return next;
   }
 
-  async function generate() {
+  async function generate(up: UploadResult | null = uploaded, current = design) {
     setGenError(null); setPetConfirmed(false); setTransform(IDENTITY);
     try {
-      const d = await ensureDesign('ai');
+      const d = await ensureDesign('ai', up, current);
       setJob(await api.generate(d.id, style));
     } catch (e) {
       setGenError(msg(e));
@@ -159,7 +191,28 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
     }, 600);
   }
 
+  /** Bấm Add to cart/Generate khi còn thiếu: hiện lỗi dưới nhóm đó, cuộn tới và focus vào ô cần làm. */
+  function demand(r: Req) {
+    setReqErr(r);
+    const id = r === 'photo' ? (!consent ? CONSENT_ID : uploaded ? PHOTO_CHANGE_ID : PHOTO_INPUT_ID) : r === 'generate' ? 'generate-btn' : 'pet-confirm';
+    const el = document.getElementById(id);
+    const box = r === 'photo' ? photoRef.current : el;
+    const behavior = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+    box?.scrollIntoView({ behavior, block: r === 'photo' ? 'start' : 'center' });
+    el?.focus({ preventScroll: true });
+  }
+
+  function tryGenerate() {
+    if (missing.photo) return demand('photo');
+    setReqErr(null);
+    generate();
+  }
+
   async function addToCart() {
+    if (adding) return;
+    const first = (['photo', 'generate', 'confirm'] as const).find((r) => missing[r]);
+    if (first) return demand(first);
+    setReqErr(null);
     setAdding(true); setAddError(null);
     try {
       let d = design;
@@ -182,12 +235,11 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
   }
 
   const aiBlocked = mode === 'ai' && !!uploaded && !uploaded.preflight.ok;
-  const generateReason = !uploaded ? 'Upload a photo of your pet first.' : aiBlocked ? 'This photo didn’t pass our check — see the note under the upload box.' : null;
-  const atcReason =
-    !uploaded ? 'Upload a photo of your pet to continue.'
-      : mode === 'ai' && !ready ? 'Generate your preview to continue.'
-      : !petConfirmed ? 'Tick “This is my pet” to continue.'
-      : null;
+  const missing: Record<Req, boolean> = { photo: !uploaded || aiBlocked, generate: mode === 'ai' && !ready, confirm: !petConfirmed };
+  // Lỗi chỉ hiện sau khi bấm, và tự tắt khi điều kiện đó đã đủ.
+  const shownErr = reqErr && missing[reqErr] && !(reqErr !== 'photo' && missing.photo) ? reqErr : null;
+  const photoErrText = mode === 'ai' ? 'Generate with AI is required' : 'A photo of your pet is required';
+  const atcLabel = mode === 'designer' ? 'Send to designer & add to cart' : 'Add to cart';
 
   // Thanh dính trên mobile bám theo khung đang hiện ảnh: preview/tiến trình AI, hoặc ô upload.
   const previewOnStage = mode === 'ai' && (running || ready);
@@ -195,11 +247,7 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
   const stickySrc = ready ? design!.preview_url : uploaded?.url || null;
   const stickyDetail = running && job ? `${Math.round(job.progress * 100)}% · ${variant.size} in` : `${variant.size} in · ${fmt(price.price_cents, settings.currency)}`;
   const priceNote = [qty > 1 ? `for ${qty} portraits` : null, addonsCents ? 'add-ons included' : null].filter(Boolean).join(', ');
-  // Thanh mua dính (mobile): chưa đủ bước thì đưa khách tới bước còn thiếu, đủ rồi mới là nút thêm giỏ.
-  const nextStep = () => {
-    const el = !uploaded ? photoRef.current : atcReason && mode === 'ai' && !ready ? stageRef.current : buyRef.current;
-    el?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
-  };
+  const scale = sizeScale(variant.size, variants.map((v) => v.size));
 
   return (
     <div className="space-y-8">
@@ -213,26 +261,32 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
       </section>
 
       <section ref={(el) => { photoRef.current = el; if (!previewOnStage) setStage(el); }} className={step} aria-labelledby="step-photo">
-        <h2 id="step-photo" className={h2}>Add your pet&apos;s photo</h2>
-        <fieldset className="min-w-0">
-          <legend className="sr-only">How should we make your portrait?</legend>
+        <h2 id="step-photo" className={h2}>
+          Choose Creation Method{' '}
+          <span className="block text-sm font-normal text-muted-foreground sm:inline">(If AI fails, upload original photo for designers)</span>
+        </h2>
+        <fieldset className="min-w-0" aria-labelledby="step-photo" aria-describedby={shownErr === 'photo' ? REQ_ERR.photo : undefined}>
           <div className="grid gap-2 sm:grid-cols-2">
             {([
               { m: 'ai' as const, title: 'Generate with AI', text: 'See a preview on this page and approve it before we print.', Icon: SparklesIcon },
               { m: 'designer' as const, title: 'Designer finish', text: 'A designer makes it by hand from your photo and notes, at no extra cost.', Icon: BrushIcon },
             ]).map(({ m, title, text, Icon }) => (
-              <label key={m} className={`flex min-h-11 cursor-pointer gap-3 rounded-lg border border-input bg-card p-4 text-card-foreground transition-colors duration-150 hover:border-foreground ${selectedCls} has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring`}>
+              <label key={m} className={`flex min-h-11 cursor-pointer gap-3 rounded-lg border border-input bg-card p-4 text-card-foreground transition-colors duration-150 hover:border-foreground ${selectedCls} ${focusCls}`} data-testid="mode-option">
                 <input type="radio" name="mode" value={m} checked={mode === m} onChange={() => chooseMode(m)} className="sr-only" />
                 <Icon className="mt-0.5 shrink-0 text-foreground" />
                 <span><span className="block font-semibold">{title}</span><span className="text-sm text-muted-foreground">{text}</span></span>
               </label>
             ))}
           </div>
+          {shownErr === 'photo' && <div className="mt-2"><ReqError req="photo" text={photoErrText} /></div>}
         </fieldset>
         <UploadBox
           shopName={settings.shopName} privacy={settings.privacy} minSidePx={settings.preflight.min_side_px}
           mode={mode} consent={consent} onConsent={setConsent} state={upload} onFile={onFile}
           onUseDesigner={() => chooseMode('designer')}
+          thumb={ready ? { src: design!.preview_url!, alt: `Your ${stylesName || 'AI'} portrait preview`, label: 'AI portrait', detail: `${stylesName || 'AI'} style · ${upload.status === 'done' ? upload.name : 'your photo'}` } : null}
+          onEdit={ready && design!.status !== 'confirmed' ? editor.openEditor : undefined}
+          describedBy={shownErr === 'photo' ? REQ_ERR.photo : undefined} invalid={shownErr === 'photo'}
         />
       </section>
 
@@ -243,7 +297,7 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
             <legend className="text-sm font-semibold">Style</legend>
             <div className="mt-2 flex flex-wrap gap-2">
               {settings.styles.map((s) => (
-                <label key={s.id} className={`inline-flex min-h-11 cursor-pointer items-center rounded-full border border-input bg-card px-4 text-sm font-medium text-card-foreground transition-colors duration-150 hover:border-foreground ${selectedCls} has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring`}>
+                <label key={s.id} className={`inline-flex min-h-11 cursor-pointer items-center rounded-full border border-input bg-card px-4 text-sm font-medium text-card-foreground transition-colors duration-150 hover:border-foreground ${selectedCls} ${focusCls}`}>
                   <input type="radio" name="style" value={s.id} checked={style === s.id} onChange={() => setStyle(s.id)} className="sr-only" />
                   {s.name}
                 </label>
@@ -269,13 +323,14 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
               {!running && design?.status !== 'confirmed' && (
                 <div>
                   <button
-                    type="button" onClick={generate} disabled={!!generateReason}
-                    aria-describedby={generateReason ? 'generate-reason' : undefined}
-                    className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-primary px-5 font-semibold text-on-primary transition-opacity duration-150 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                    type="button" id="generate-btn" onClick={tryGenerate}
+                    aria-describedby={shownErr === 'generate' ? REQ_ERR.generate : aiBlocked ? 'upload-error' : undefined}
+                    aria-invalid={shownErr === 'generate' || undefined}
+                    className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-primary px-5 font-semibold text-on-primary transition-opacity duration-150 hover:opacity-90 focus-visible:outline-accent"
                   >
                     <SparklesIcon /> {ready ? `Try again in ${stylesName || 'this style'}` : 'Generate with AI'}
                   </button>
-                  {generateReason && <p id="generate-reason" className="mt-1 text-sm text-muted-foreground">{generateReason}</p>}
+                  {shownErr === 'generate' && <div className="mt-2"><ReqError req="generate" text="Generate with AI is required" /></div>}
                 </div>
               )}
               {genError && (
@@ -289,10 +344,15 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
               {running && job && (
                 <JobProgress job={job} savedEmail={email} onEmail={async (e) => { if (design) await api.patchDesign(design.id, { email: e }); setEmail(e); }} />
               )}
-              {ready && !running && (
-                <PreviewEditor
-                  design={design!} transform={transform} onChange={changeTransform}
-                  sizeLabel={variant.size} scale={sizeScale(variant.size, variants.map((v) => v.size))}
+              <div ref={resultRef} tabIndex={-1} className="outline-none" aria-label={ready ? 'Your portrait preview' : undefined}>
+                {ready && !running && (
+                  <PreviewEditor design={design!} transform={transform} onChange={changeTransform} sizeLabel={variant.size} scale={scale} />
+                )}
+              </div>
+              {ready && (
+                <editor.Editor
+                  open={editor.open} onClose={editor.closeEditor}
+                  design={design!} transform={transform} onChange={changeTransform} sizeLabel={variant.size} scale={scale}
                 />
               )}
             </>
@@ -311,7 +371,10 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
       <section ref={buyRef} className="scroll-mt-24 space-y-3 lg:scroll-mt-40" aria-label="Add to cart">
         {uploaded && (mode === 'designer' || ready) && (
           <label className="flex cursor-pointer items-start gap-3">
-            <input type="checkbox" className="mt-0.5 size-5 shrink-0 accent-accent" checked={petConfirmed} onChange={(e) => setPetConfirmed(e.target.checked)} data-testid="pet-confirm" />
+            <input
+              type="checkbox" id="pet-confirm" className="mt-0.5 size-5 shrink-0 accent-accent" checked={petConfirmed} onChange={(e) => setPetConfirmed(e.target.checked)} data-testid="pet-confirm"
+              aria-invalid={shownErr === 'confirm' || undefined} aria-describedby={shownErr === 'confirm' ? REQ_ERR.confirm : undefined}
+            />
             <span>
               <span className="font-semibold">This is my pet</span>
               <span className="block text-sm text-muted-foreground">
@@ -322,23 +385,25 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
             </span>
           </label>
         )}
-        <button
-          type="button" onClick={addToCart} disabled={!!atcReason || adding}
-          aria-describedby={atcReason ? 'atc-reason' : undefined}
-          className="inline-flex min-h-13 w-full items-center justify-center gap-2 rounded-full bg-accent px-6 text-lg font-semibold text-on-accent transition-colors duration-150 hover:bg-accent-hover disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
-        >
-          {adding && <LoaderIcon />} {mode === 'designer' ? 'Send to designer & add to cart' : 'Add to cart'}
-        </button>
-        {atcReason && <p id="atc-reason" className="text-sm text-muted-foreground">{atcReason}</p>}
+        {shownErr === 'confirm' && <ReqError req="confirm" text="Please confirm this is your pet" />}
+        <div className="flex gap-2">
+          <QuantitySelect qty={qty} max={maxQty} onChange={setQty} />
+          <button
+            type="button" onClick={addToCart} aria-busy={adding || undefined}
+            className="inline-flex min-h-13 min-w-0 flex-1 items-center justify-center gap-2 rounded-full bg-accent px-5 text-lg font-semibold text-on-accent transition-colors duration-150 hover:bg-accent-hover focus-visible:outline-accent"
+          >
+            {adding && <LoaderIcon />} <span className="truncate">{atcLabel}</span>
+          </button>
+        </div>
         {addError && <p role="alert" className="flex gap-2 text-sm text-destructive"><AlertIcon className="mt-0.5 shrink-0" /> {addError}</p>}
       </section>
 
       <StickyBuy
         watch={[priceRef, buyRef]}
         price={price} currency={settings.currency}
-        label={atcReason ? (uploaded ? 'Continue' : 'Personalize it') : mode === 'designer' ? 'Send to designer & add to cart' : 'Add to cart'}
+        label={atcLabel}
         busy={adding}
-        onClick={atcReason ? nextStep : addToCart}
+        onClick={addToCart}
       />
       <StickyPreview target={stageRef} observeKey={`${previewOnStage}`} src={stickySrc} title={ready ? `Your ${product.title}` : running ? 'Making your portrait' : 'Your photo'} detail={stickyDetail} />
     </div>

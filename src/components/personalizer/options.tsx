@@ -7,9 +7,9 @@ import { fmt } from '@/lib/money';
 import { bundleRows } from '../pdp/logic';
 import { api } from './api';
 
-// Đang chọn = viền + nền đỏ nhạt, giống selectedCls ở Personalizer.
+// Đang chọn = viền + nền đỏ nhạt, focus bàn phím = viền đỏ — giống selectedCls/focusCls ở Personalizer.
 const optionCard =
-  'flex min-h-12 cursor-pointer items-center justify-center gap-1 rounded-lg border border-input bg-card px-3 py-2 text-center text-card-foreground transition-colors duration-150 hover:border-foreground has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:ring-1 has-[:checked]:ring-accent has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60';
+  'flex min-h-12 cursor-pointer items-center justify-center gap-1 rounded-lg border border-input bg-card px-3 py-2 text-center text-card-foreground transition-colors duration-150 hover:border-foreground has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:ring-1 has-[:checked]:ring-accent has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60';
 
 export function SizePicker({ variants, value, onChange }: { variants: Variant[]; value: number; onChange: (id: number) => void; currency?: string }) {
   const current = variants.find((v) => v.id === value);
@@ -77,7 +77,7 @@ export function Addons({ addons, currency, value, onChange }: { addons: Addon[];
           const st = status[a.id];
           const msgId = `addon-${a.id}-msg`;
           return (
-            <div key={a.id} className="rounded-lg border border-input bg-card text-card-foreground transition-colors duration-150 has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:ring-1 has-[:checked]:ring-accent">
+            <div key={a.id} className="rounded-lg border border-input bg-card text-card-foreground transition-colors duration-150 has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:ring-1 has-[:checked]:ring-accent has-[input[type=checkbox]:focus-visible]:outline-2 has-[input[type=checkbox]:focus-visible]:outline-offset-2 has-[input[type=checkbox]:focus-visible]:outline-accent">
               <label className="flex min-h-11 cursor-pointer flex-wrap items-start gap-x-3 gap-y-1 px-4 py-3">
                 <input
                   type="checkbox"
@@ -126,3 +126,47 @@ export function Addons({ addons, currency, value, onChange }: { addons: Addon[];
   );
 }
 export type { AddonState };
+
+const QTY_STEPS = Array.from({ length: 10 }, (_, i) => i + 1);
+const field = 'min-h-13 rounded-full border border-input bg-background px-4 text-base font-semibold text-foreground transition-colors duration-150 hover:border-foreground focus-visible:border-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent';
+
+/** Số lượng cạnh nút Add to cart: 1..10, "10+" mở ô nhập số (11..max, max = MAX_QTY của cart API). Đồng bộ với BundlePicker qua cùng qty. */
+export function QuantitySelect({ qty, max, onChange }: { qty: number; max: number; onChange: (q: number) => void }) {
+  const [draft, setDraft] = useState<string | null>(null); // đang gõ dở ở ô "10+"
+  const custom = qty > 10;
+  const commit = () => {
+    const n = Math.round(Number(draft));
+    if (draft !== null) onChange(Number.isFinite(n) ? Math.min(max, Math.max(11, n)) : 11);
+    setDraft(null);
+  };
+  return (
+    <div className="flex shrink-0 gap-2">
+      <label className="sr-only" htmlFor="qty-select">Quantity</label>
+      <select
+        id="qty-select" data-testid="qty-select" value={custom ? '10+' : String(qty)}
+        onChange={(e) => onChange(e.target.value === '10+' ? 11 : Number(e.target.value))}
+        className={`${field} w-[4.75rem] cursor-pointer pr-2`}
+      >
+        {QTY_STEPS.map((n) => <option key={n} value={n}>{n}</option>)}
+        {max > 10 && <option value="10+">10+</option>}
+      </select>
+      {custom && (
+        <>
+          <label className="sr-only" htmlFor="qty-custom">Quantity, {11} to {max}</label>
+          <input
+            id="qty-custom" data-testid="qty-custom" type="number" inputMode="numeric" min={11} max={max} step={1}
+            value={draft ?? String(qty)}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              const n = Number(e.target.value);
+              if (Number.isInteger(n) && n >= 11 && n <= max) onChange(n);
+            }}
+            onBlur={commit}
+            onKeyDown={(e) => { if (e.key === 'Enter') commit(); }}
+            className={`${field} w-[5.5rem] text-center tabular-nums`}
+          />
+        </>
+      )}
+    </div>
+  );
+}

@@ -103,10 +103,10 @@ test.describe('product page', () => {
     await expect(sel.locator('input')).toBeChecked();
     await expect(sel).toHaveCSS('border-top-color', RED);
     await expect(page.getByTestId('size-option').nth(1)).not.toHaveCSS('border-top-color', RED);
-    // Nút mua đỏ chỉ khi bấm được; lúc chưa có ảnh (disabled) là màu trung tính, không phải đỏ nhạt.
+    // Nút mua luôn đỏ và bấm được; thiếu bước thì báo lỗi tại chỗ (ui1-buybox.e2e.ts).
     const atc = page.getByRole('button', { name: 'Add to cart' });
-    await expect(atc).toBeDisabled();
-    await expect(atc).not.toHaveCSS('background-color', RED);
+    await expect(atc).toBeEnabled();
+    await expect(atc).toHaveCSS('background-color', RED);
     await expect(page.getByTestId('sale-badge')).toHaveCSS('background-color', RED);
   });
 
@@ -166,10 +166,11 @@ test.describe('mobile 375px', () => {
     await expect.poll(async () => { const b = (await bar.boundingBox())!; return b.y + b.height; }).toBeLessThanOrEqual(812 + 1); // hết trượt lên
     expect((await bar.boundingBox())!.height).toBeLessThanOrEqual(80);
 
-    // Chưa có ảnh → nút (đỏ, bấm được) đưa về bước upload, không phải thêm giỏ.
-    await expect(bar.getByRole('button', { name: 'Personalize it' })).toHaveCSS('background-color', RED);
-    await bar.getByRole('button', { name: 'Personalize it' }).click();
+    // Chưa có ảnh → nút mua (đỏ, bấm được) đưa về bước chọn cách làm + báo lỗi, không thêm giỏ.
+    await expect(bar.getByRole('button', { name: 'Add to cart' })).toHaveCSS('background-color', RED);
+    await bar.getByRole('button', { name: 'Add to cart' }).click();
     await expect(page.locator('#step-photo')).toBeInViewport();
+    await expect(page.getByTestId('req-error')).toHaveText('Generate with AI is required');
 
     // Khối Add to cart trên trang đang hiện → thanh ẩn, không có hai nút mua cùng lúc.
     await page.getByRole('button', { name: 'Add to cart' }).scrollIntoViewIfNeeded();

@@ -116,36 +116,37 @@ test.describe('PDP', () => {
     await expect(page.getByTestId('bundle-option').nth(1)).toContainText('Save 10%');
   });
 
-  test('not-a-pet photo is blocked: red error under the upload box, Generate locked (#1)', async ({ page }) => {
-    await mockApi(page);
+  test('not-a-pet photo is blocked: red error under the upload box, Generate refuses to run (#1)', async ({ page }) => {
+    const calls = await mockApi(page);
     await page.goto(PDP);
     await uploadPhoto(page, 'not-a-pet.jpg');
     const err = page.getByTestId('preflight-error');
     await expect(err).toBeVisible();
     await expect(err).toContainText('couldn’t find a pet');
     await expect(page.getByTestId('photo-input')).toHaveAttribute('aria-describedby', /upload-error/);
-    await expect(generateBtn(page)).toBeDisabled();
+    await generateBtn(page).click(); // không bao giờ disabled: bấm → báo lỗi, không gọi generate
+    await expect(page.getByTestId('req-error')).toHaveText('Generate with AI is required');
+    expect(calls.some((c) => c.path.endsWith('/generate'))).toBe(false);
     // Gợi ý designer finish
     await err.getByRole('button', { name: /designer/ }).click();
     await expect(page.getByLabel('Notes for the designer (optional)')).toBeVisible();
   });
 
-  test('AI flow: real ETA, options usable while waiting, cannot add to cart before “This is my pet” (#1 #2)', async ({ page }) => {
+  test('AI flow: real ETA in the AI Filter modal, cannot add to cart before “This is my pet” (#1 #2)', async ({ page }) => {
     const calls = await mockApi(page);
     await page.goto(PDP);
+    await page.getByTestId('size-option').nth(1).click();
+    const sizeId = Number(await page.getByTestId('size-option').nth(1).locator('input').getAttribute('value'));
+    await expect(page.getByTestId('price')).toContainText('$59.98');
     await uploadPhoto(page, 'pet-ok.jpg');
     await expect(generateBtn(page)).toBeEnabled();
-    await expect(addToCart(page)).toBeDisabled();
+    await expect(addToCart(page)).toBeEnabled(); // không bao giờ disabled (xem ui1-buybox.e2e.ts)
     await generateBtn(page).click();
 
     const progress = page.getByTestId('job-progress');
     await expect(progress).toBeVisible();
     await expect(page.getByTestId('eta')).toHaveText(/About \d+ seconds left/);
-    await expect(progress).not.toContainText(/few seconds/i);
-    // Trong lúc chờ vẫn đổi size + add-on được
-    await page.getByTestId('size-option').nth(1).click();
-    const sizeId = Number(await page.getByTestId('size-option').nth(1).locator('input').getAttribute('value'));
-    await expect(page.getByTestId('price')).toContainText('$59.98');
+    await expect(progress).toContainText('Please wait, this may take a few seconds');
     await progress.getByLabel(/Email me the link/).fill('me@example.com');
     await progress.getByRole('button', { name: 'Send link' }).click();
     await expect(progress).toContainText("We'll email me@example.com");
@@ -156,9 +157,10 @@ test.describe('PDP', () => {
     await page.getByRole('button', { name: 'On the wall' }).click();
     await expect(page.getByRole('img', { name: /on a wall/ })).toBeVisible();
 
-    // Chưa tick xác nhận → không thêm giỏ được
-    await expect(addToCart(page)).toBeDisabled();
-    await expect(page.locator('#atc-reason')).toContainText('This is my pet');
+    // Chưa tick xác nhận → bấm thêm giỏ chỉ báo lỗi, focus vào ô xác nhận
+    await addToCart(page).click();
+    await expect(page.getByTestId('req-error')).toHaveText('Please confirm this is your pet');
+    await expect(page.getByTestId('pet-confirm')).toBeFocused();
     expect(calls.some((c) => c.path === '/api/cart/lines')).toBe(false);
 
     await page.getByTestId('pet-confirm').check();
@@ -181,7 +183,9 @@ test.describe('PDP', () => {
     await page.getByLabel(/Pet.s name/).fill('Mochi');
     await page.getByLabel('Notes for the designer (optional)').fill('Remove the leash');
     const btn = page.getByRole('button', { name: /Send to designer/ });
-    await expect(btn).toBeDisabled();
+    await btn.click();
+    await expect(page.getByTestId('req-error')).toHaveText('Please confirm this is your pet');
+    expect(calls.some((c) => c.path.endsWith('/submit'))).toBe(false);
     await page.getByTestId('pet-confirm').check();
     await btn.click();
     await page.waitForURL('**/cart');
@@ -231,7 +235,9 @@ test.describe('PDP against the real personalize API (crew B)', () => {
     await page.goto(PDP);
     await uploadPhoto(page, 'not-a-pet.jpg');
     await expect(page.getByTestId('preflight-error')).toBeVisible({ timeout: 20_000 });
-    await expect(generateBtn(page)).toBeDisabled();
+    await generateBtn(page).click();
+    await expect(page.getByTestId('req-error')).toHaveText('Generate with AI is required');
+    await expect(page.getByTestId('job-progress')).toHaveCount(0);
 
     await page.getByTestId('photo-input').setInputFiles(path.join(FIX, 'pet-ok.jpg'));
     await expect(page.getByTestId('preflight-error')).toHaveCount(0, { timeout: 20_000 });

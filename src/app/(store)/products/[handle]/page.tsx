@@ -11,6 +11,7 @@ import { InfoTabs } from '@/components/pdp/InfoTabs';
 import { RatingLink, Reviews } from '@/components/pdp/Reviews';
 import { pickVariant } from '@/components/pdp/logic';
 import { Personalizer } from '@/components/personalizer/Personalizer';
+import { MAX_QTY } from '@/lib/cart';
 import { Breadcrumbs } from '@/components/shell/Breadcrumbs';
 
 type Props = {
@@ -78,6 +79,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
             initialVariantId={variant.id}
             tiers={bundleTiers().map(plain)}
             addons={addonsFor(product).map(plain)}
+            maxQty={MAX_QTY}
             settings={{
               shopName: settings.shop.name,
               currency: settings.shop.currency,

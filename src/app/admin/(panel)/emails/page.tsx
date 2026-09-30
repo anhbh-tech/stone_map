@@ -16,7 +16,7 @@ export default async function EmailsPage({ searchParams }: { searchParams: Promi
     <>
       <PageHeader title="Email outbox" description="Every email the store would send. Nothing leaves the server in this environment." />
       {emails.length === 0 ? <Empty>No emails yet.</Empty> : (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
           <Card>
             <ul className="-my-2 divide-y divide-border">
               {emails.map((e) => (

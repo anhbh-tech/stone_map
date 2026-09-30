@@ -1,24 +1,31 @@
 import type { Metadata } from 'next';
 import { getSettings, shippingHeadline } from '@/lib/settings';
 import { requireAdminPage } from '../../_lib/session';
-import { Card, PageHeader } from '../../_components/ui';
-import { ApiForm, Field, MoneyField, Select, TextArea } from '../../_components/form';
+import { listStaff, staffName } from '../../_lib/staff';
+import { Card, PageHeader, StatusBadge } from '../../_components/ui';
+import { ActionButton, ApiForm, Field, MoneyField, Select, TextArea } from '../../_components/form';
+
+const SECTIONS = [['shop', 'Shop'], ['shipping', 'Shipping'], ['claims', 'Marketing claims'], ['privacy', 'Privacy'], ['ai', 'AI generation'], ['preflight', 'Photo preflight'], ['staff', 'Staff']] as const;
 
 export const metadata: Metadata = { title: 'Settings' };
 
 // Mỗi key của Settings (src/lib/types.ts) một form, PUT /api/admin/settings/:key với cả giá trị của key đó.
 // Đây là nguồn sự thật duy nhất cho câu chữ ship / khung / số liệu trên storefront (#3).
 export default async function SettingsPage() {
-  await requireAdminPage();
+  const me = await requireAdminPage();
   const s = getSettings();
+  const staff = listStaff();
   const grid = 'sm:grid-cols-2 xl:grid-cols-3';
   return (
     <>
       <PageHeader title="Settings" description="The single source of truth for shipping, privacy, claims and AI copy shown in the store. Nothing about shipping or numbers is hard-coded in pages." />
-      <nav aria-label="Settings sections" className="mb-6 flex flex-wrap gap-2 text-sm">
-        {['shop', 'shipping', 'claims', 'privacy', 'ai', 'preflight'].map((k) => (
-          <a key={k} href={`#settings-${k}`} className="inline-flex min-h-11 items-center rounded-full border border-border bg-card px-4 font-medium hover:border-foreground">{k}</a>
-        ))}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[11rem_minmax(0,1fr)]">
+      <nav aria-label="Settings sections" className="lg:sticky lg:top-20 lg:self-start">
+        <ul className="flex gap-1 overflow-x-auto pb-1 text-sm lg:flex-col lg:overflow-visible">
+          {SECTIONS.map(([k, label]) => (
+            <li key={k} className="shrink-0"><a href={`#settings-${k}`} className="flex min-h-11 items-center rounded-[var(--radius)] px-3 font-medium text-muted-foreground hover:bg-muted hover:text-foreground">{label}</a></li>
+          ))}
+        </ul>
       </nav>
       <div className="grid gap-6">
         <Card title="Shop" id="settings-shop">
@@ -80,6 +87,26 @@ export default async function SettingsPage() {
             <Field name="min_pet_confidence" label="Min pet confidence" type="number" min={0} max={1} step={0.05} required defaultValue={s.preflight.min_pet_confidence} hint="0 – 1" />
           </ApiForm>
         </Card>
+        <Card title="Staff" id="settings-staff" description="People who can sign in to this admin. Designers can be assigned designs in the queue.">
+          <ul className="mb-5 divide-y divide-border rounded-[var(--radius)] border border-border">
+            {staff.map((m) => (
+              <li key={m.id} className="flex flex-wrap items-center gap-3 px-3 py-2">
+                <span className="flex size-8 items-center justify-center rounded-full bg-muted text-xs font-semibold uppercase" aria-hidden="true">{staffName(m).slice(0, 2)}</span>
+                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium">{staffName(m)}{m.id === me.id && <span className="font-normal text-muted-foreground"> (you)</span>}</span><span className="block truncate text-xs text-muted-foreground">{m.username}</span></span>
+                <StatusBadge status={m.role} tone={m.role === 'owner' ? 'info' : 'neutral'} label={m.role === 'owner' ? 'Owner' : 'Designer'} />
+                {m.id !== me.id && <ActionButton action={`/api/admin/staff/${m.id}`} method="DELETE" label="Remove" icon="trash" tone="danger" ariaLabel={`Remove ${staffName(m)}`} confirm={`Remove ${staffName(m)}? Their designs become unassigned.`} />}
+              </li>
+            ))}
+          </ul>
+          <h3 className="mb-3 text-sm font-semibold">Add staff member</h3>
+          <ApiForm action="/api/admin/staff" types={{ username: 'text', display_name: 'nulltext', password: 'text', role: 'text' }} reset submitLabel="Add staff member" successMessage="Staff member added" className={grid} ariaLabel="Add staff member">
+            <Field name="username" label="Username" required autoComplete="off" pattern="[a-z0-9._-]+" hint="Lowercase, used to sign in" />
+            <Field name="display_name" label="Display name" maxLength={60} hint="Shown in the design queue" />
+            <Field name="password" label="Password" type="password" required minLength={8} autoComplete="new-password" hint="At least 8 characters" />
+            <Select name="role" label="Role" defaultValue="designer" options={[{ value: 'designer', label: 'Designer' }, { value: 'owner', label: 'Owner' }]} />
+          </ApiForm>
+        </Card>
+      </div>
       </div>
     </>
   );

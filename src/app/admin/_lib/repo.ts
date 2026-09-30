@@ -3,6 +3,7 @@ import { db, json } from '../../../lib/db';
 import type { Addon, BundleTier, ProductImage, Variant } from '../../../lib/catalog';
 import type { DesignStatus } from '../../../lib/types';
 import { mediaUrl } from './storage';
+import { like, offset, type ListState } from './list';
 
 export type AdminProduct = {
   id: number; handle: string; title: string; subtitle: string | null; description_html: string;
@@ -144,4 +145,47 @@ export function dashboardCounts() {
     designer_queue: one("SELECT count(*) AS n FROM designs WHERE mode = 'designer' AND status = 'in_review'"),
     reviews_pending: one("SELECT count(*) AS n FROM reviews WHERE status = 'pending'"),
   };
+}
+
+// ── Danh sách có tìm/lọc/sắp xếp/phân trang (URL state, xem ./list.ts)
+export const PRODUCT_SORTS = ['title', 'created', 'price', 'status'] as const;
+export function searchProducts(s: ListState<(typeof PRODUCT_SORTS)[number]>, status?: string) {
+  const d = db();
+  const w: string[] = [];
+  const args: (string | number)[] = [];
+  if (status) { w.push('p.status = ?'); args.push(status); }
+  if (s.q) { w.push("(p.title LIKE ? ESCAPE '\\' OR p.handle LIKE ? ESCAPE '\\' OR EXISTS (SELECT 1 FROM variants v WHERE v.product_id = p.id AND v.sku LIKE ? ESCAPE '\\'))"); args.push(like(s.q), like(s.q), like(s.q)); }
+  const sql = w.length ? `WHERE ${w.join(' AND ')}` : '';
+  const order = { title: 'lower(p.title)', created: 'p.created_at', price: 'from_cents', status: 'p.status' }[s.sort];
+  const dir = s.dir === 'asc' ? 'ASC' : 'DESC';
+  const rows = d.prepare(`SELECT p.id, p.handle, p.title, p.status, p.frame_included, p.meta_description, p.created_at,
+      (SELECT count(*) FROM variants v WHERE v.product_id = p.id) AS variants,
+      (SELECT count(*) FROM product_images i WHERE i.product_id = p.id) AS images,
+      (SELECT url FROM product_images i WHERE i.product_id = p.id ORDER BY position, id LIMIT 1) AS image_url,
+      (SELECT alt FROM product_images i WHERE i.product_id = p.id ORDER BY position, id LIMIT 1) AS image_alt,
+      (SELECT min(price_cents) FROM variants v WHERE v.product_id = p.id) AS from_cents
+    FROM products p ${sql} ORDER BY ${order} ${dir} NULLS LAST, p.id ${dir} LIMIT ? OFFSET ?`).all(...args, s.per, offset(s)) as {
+    id: number; handle: string; title: string; status: string; frame_included: 0 | 1; meta_description: string | null; created_at: string;
+    variants: number; images: number; image_url: string | null; image_alt: string | null; from_cents: number | null;
+  }[];
+  const total = (d.prepare(`SELECT count(*) AS n FROM products p ${sql}`).get(...args) as { n: number }).n;
+  return { rows, total };
+}
+
+export const REVIEW_SORTS = ['date', 'rating'] as const;
+export function searchReviews(s: ListState<(typeof REVIEW_SORTS)[number]>, f: { status?: string; rating?: number }) {
+  const d = db();
+  const w: string[] = [];
+  const args: (string | number)[] = [];
+  if (f.status) { w.push('r.status = ?'); args.push(f.status); }
+  if (f.rating) { w.push('r.rating = ?'); args.push(f.rating); }
+  if (s.q) { w.push("(r.author LIKE ? ESCAPE '\\' OR r.title LIKE ? ESCAPE '\\' OR r.body LIKE ? ESCAPE '\\')"); args.push(like(s.q), like(s.q), like(s.q)); }
+  const sql = w.length ? `WHERE ${w.join(' AND ')}` : '';
+  const order = s.sort === 'rating' ? 'r.rating' : 'r.created_at';
+  const dir = s.dir === 'asc' ? 'ASC' : 'DESC';
+  const rows = d.prepare(`SELECT r.*, p.title AS product_title, o.number AS order_number
+    FROM reviews r LEFT JOIN products p ON p.id = r.product_id LEFT JOIN orders o ON o.id = r.order_id
+    ${sql} ORDER BY CASE r.status WHEN 'pending' THEN 0 ELSE 1 END, ${order} ${dir}, r.id ${dir} LIMIT ? OFFSET ?`).all(...args, s.per, offset(s)) as AdminReview[];
+  const total = (d.prepare(`SELECT count(*) AS n FROM reviews r ${sql}`).get(...args) as { n: number }).n;
+  return { rows, total };
 }

@@ -117,7 +117,63 @@ export const isSettingsKey = (k: string): k is keyof Settings => Object.hasOwn(s
 // ── Vận hành
 export const ORDER_STATUSES = ['paid', 'in_production', 'shipped', 'delivered', 'refunded', 'canceled'] as const;
 export const orderPatch = z.object({ status: z.enum(ORDER_STATUSES) });
-export const designPatch = z.object({ status: z.enum(['approved', 'rejected']) });
+// in_review = giao lại cho designer (AI không đạt); assignee_id null = bỏ giao.
+export const designPatch = z.object({
+  status: z.enum(['approved', 'rejected', 'in_review']).optional(),
+  assignee_id: z.number().int().positive().nullable().optional(),
+}).refine((v) => v.status !== undefined || v.assignee_id !== undefined, { message: 'Nothing to update' });
+
+export const orderFulfill = z.object({
+  carrier: optText(60),
+  tracking_number: optText(80),
+  tracking_url: optText(500).refine((u) => !u || /^https:\/\//.test(u), 'Use an https:// link'),
+  notify: flag.default(0),
+});
+export const orderComment = z.object({ message: text(2000) });
+
+// ── Discounts. Ngày nhập dạng YYYY-MM-DD (UTC): bắt đầu 00:00, kết thúc hết ngày đó.
+const day = z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD').nullish().transform((v) => v || null);
+const discountBase = z.object({
+  kind: z.enum(['percent', 'fixed', 'free_shipping']),
+  value: z.number().int('Whole numbers only').min(0),
+  min_subtotal_cents: cents.nullish().transform((v) => v ?? null),
+  min_qty: z.number().int().min(1).max(100).nullish().transform((v) => v ?? null),
+  starts_at: day,
+  ends_at: day,
+  usage_limit: z.number().int().min(1).nullish().transform((v) => v ?? null),
+  active: flag,
+});
+const discountRules = <T extends { kind?: string; value?: number; starts_at?: string | null; ends_at?: string | null }>(v: T, ctx: z.RefinementCtx) => {
+  if (v.kind === 'percent' && v.value !== undefined && (v.value < 1 || v.value > 100)) ctx.addIssue({ code: 'custom', path: ['value'], message: 'Percent must be 1–100' });
+  if (v.kind === 'fixed' && v.value !== undefined && v.value < 1) ctx.addIssue({ code: 'custom', path: ['value'], message: 'Must be more than $0' });
+  if (v.starts_at && v.ends_at && v.ends_at < v.starts_at) ctx.addIssue({ code: 'custom', path: ['ends_at'], message: 'End date must be on or after the start date' });
+};
+export const discountCreate = discountBase.extend({
+  code: z.string().trim().toUpperCase().regex(/^[A-Z0-9][A-Z0-9_-]{2,31}$/, '3–32 letters, digits, dashes'),
+  active: flag.default(1),
+}).superRefine(discountRules);
+export const discountPatch = discountBase.partial().superRefine(discountRules);
+
+// ── Collections (bảng của UI-2; chỉ ghi các cột trong hợp đồng)
+export const collectionCreate = z.object({
+  handle: z.string().trim().regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'Lowercase letters, digits and dashes').max(80),
+  title: text(80),
+});
+export const collectionPatch = z.object({
+  title: text(80),
+  description: optText(1000),
+  image: optText(500).refine((u) => !u || u.startsWith('/') || /^https:\/\//.test(u), 'Use a site path (/…) or an https:// URL'),
+  sort: z.number().int().min(0).max(10000),
+}).partial();
+export const collectionProducts = z.object({ product_ids: z.array(z.number().int().positive()).max(500) });
+
+// ── Nhân viên
+export const staffCreate = z.object({
+  username: z.string().trim().toLowerCase().regex(/^[a-z0-9._-]{3,32}$/, '3–32 lowercase letters, digits, . _ -'),
+  display_name: optText(80),
+  password: z.string().min(8, 'At least 8 characters').max(200),
+  role: z.enum(['owner', 'designer']).default('designer'),
+});
 
 export const REVIEW_STATUSES = ['pending', 'published', 'hidden'] as const;
 // is_sample không có trong schema sửa: không bao giờ đổi được sau khi tạo (review thật không thể thành mẫu và ngược lại).

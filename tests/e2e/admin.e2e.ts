@@ -54,7 +54,7 @@ test('wrong password is rejected and does not open the admin', async ({ page }) 
 test('correct login opens the dashboard, sets an httpOnly cookie, and sign out ends the session', async ({ page, context }) => {
   await login(page);
   await expect(page).toHaveURL(/\/admin$/);
-  await expect(page.getByRole('heading', { level: 1, name: 'Dashboard' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Home' })).toBeVisible();
   await expect(page.getByTestId('job-metrics')).toContainText('p75 duration');
   const cookie = (await context.cookies()).find((c) => c.name === 'pa_admin');
   expect(cookie?.httpOnly).toBe(true);
@@ -121,7 +121,7 @@ test('designer queue: upload hand-made artwork, approve, download print file, em
   await card.getByRole('button', { name: 'Approve' }).click();
   await expect(card).toHaveCount(0);
   await page.goto('/admin/designs?status=approved');
-  await expect(page.locator('li#DSN-E2EAAA')).toContainText('approved');
+  await expect(page.locator('li#DSN-E2EAAA')).toContainText('Approved');
 
   await page.goto('/admin/emails');
   await expect(page.getByRole('link', { name: /Mochi's portrait is approved/ })).toBeVisible();

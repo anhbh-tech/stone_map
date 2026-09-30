@@ -3,8 +3,11 @@ import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { fmt } from '@/lib/money';
 import { requireAdminPage } from '../../../_lib/session';
+import Link from 'next/link';
 import { getProduct } from '../../../_lib/repo';
-import { Card, Empty, PageHeader, StatusBadge } from '../../../_components/ui';
+import { collectionsForProduct } from '../../../_lib/collections';
+import { collectionsReady } from '../../../_lib/schema-info';
+import { Card, Empty, PageHeader, StatusBadge, linkCls } from '../../../_components/ui';
 import { ActionButton, ApiForm, Checkbox, CountedField, Field, MoneyField, Select, TextArea } from '../../../_components/form';
 
 export const metadata: Metadata = { title: 'Edit product' };
@@ -15,15 +18,16 @@ export default async function ProductEdit({ params }: { params: Promise<{ id: st
   await requireAdminPage();
   const p = getProduct(Number((await params).id));
   if (!p) notFound();
+  const cols = collectionsReady() ? collectionsForProduct(p.id) : null;
   const base = p.variants.length ? Math.min(...p.variants.map((v) => v.price_cents)) : 0;
 
   return (
     <>
-      <PageHeader title={p.title} back={{ href: '/admin/products', label: 'All products' }}
+      <PageHeader title={p.title} back={{ href: '/admin/products', label: 'Products' }}
         description={<>/{p.handle} · <StatusBadge status={p.status} /></>}
         actions={<a href={`/products/${p.handle}`} className="inline-flex min-h-11 items-center text-sm underline underline-offset-4">View in store</a>} />
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <Card title="Details & SEO" id="details">
           <ApiForm action={`/api/admin/products/${p.id}`} method="PATCH" ariaLabel="Product details"
             types={{ title: 'text', subtitle: 'nulltext', meta_title: 'nulltext', meta_description: 'nulltext', description_html: 'nulltext', frame_included: 'bool', status: 'text' }}>
@@ -39,6 +43,15 @@ export default async function ProductEdit({ params }: { params: Promise<{ id: st
         </Card>
 
         <div className="grid content-start gap-6">
+          {cols && (
+            <Card title="Collections" id="collections" description="Change membership from the collection page.">
+              {cols.length === 0 ? <p className="text-sm text-muted-foreground">Not in any collection. <Link href="/admin/collections" className={linkCls}>Manage collections</Link></p> : (
+                <ul className="flex flex-wrap gap-2">
+                  {cols.map((c) => <li key={c.id}><Link href={`/admin/collections/${c.id}`} className="inline-flex min-h-9 items-center rounded-full border border-border px-3 text-sm hover:border-foreground">{c.title}</Link></li>)}
+                </ul>
+              )}
+            </Card>
+          )}
           <Card title="Images" id="images" description="Alt text is required: describe the pet and style, not the file name.">
             {p.images.length === 0 ? <Empty>No images yet.</Empty> : (
               <ul className="grid gap-4">

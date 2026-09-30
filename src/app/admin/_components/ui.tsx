@@ -47,8 +47,8 @@ export function Card({ title, description, children, className = '', id, actions
 }
 
 type Tone = 'neutral' | 'success' | 'warning' | 'danger' | 'info';
-const DOT: Record<Tone, string> = { neutral: 'bg-muted-foreground', success: 'bg-success', warning: 'bg-accent', danger: 'bg-destructive', info: 'bg-primary' };
-const RING: Record<Tone, string> = { neutral: 'border-border bg-background', success: 'border-border bg-background', warning: 'border-accent bg-background', danger: 'border-destructive bg-background', info: 'border-border bg-background' };
+const DOT: Record<Tone, string> = { neutral: 'bg-muted-foreground', success: 'bg-success', warning: 'bg-(--admin-attention)', danger: 'bg-destructive', info: 'bg-primary' };
+const RING: Record<Tone, string> = { neutral: 'border-border bg-background', success: 'border-border bg-background', warning: 'border-(--admin-attention) bg-background', danger: 'border-destructive bg-background', info: 'border-border bg-background' };
 
 const TONES: Record<string, Tone> = {
   active: 'success', draft: 'neutral', archived: 'neutral',
@@ -176,7 +176,7 @@ export function Tabs({ items, label }: { items: { href: string; label: string; c
   );
 }
 
-const control = 'min-h-11 rounded-[var(--radius)] border border-border bg-background px-3 text-sm text-foreground focus-visible:border-foreground';
+const control = 'min-h-11 rounded-[var(--radius)] border border-input bg-background px-3 text-sm text-foreground focus-visible:border-foreground';
 
 /** Thanh tìm + lọc: form GET, giữ các tham số ẩn (tab…). Không cần JS; Enter hoặc nút Apply để lọc. */
 export function FilterBar({ base, q, placeholder, hidden = {}, selects = [], sp }: {
@@ -209,12 +209,11 @@ export function FilterBar({ base, q, placeholder, hidden = {}, selects = [], sp 
   );
 }
 
-export const linkCls = 'font-medium text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground';
+export const linkCls = 'font-medium text-foreground underline decoration-input underline-offset-4 hover:decoration-foreground';
 export const btn = {
   base: 'inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius)] px-4 text-sm font-semibold transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60',
   primary: 'bg-primary text-on-primary hover:bg-secondary',
-  accent: 'bg-accent text-on-accent hover:opacity-90',
-  outline: 'border border-border bg-card text-foreground hover:border-foreground',
+  outline: 'border border-input bg-card text-foreground hover:border-foreground',
   danger: 'border border-destructive bg-card text-destructive hover:bg-destructive hover:text-on-destructive',
 };
 

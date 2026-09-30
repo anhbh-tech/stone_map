@@ -67,7 +67,7 @@ export function ApiForm({
   action: string; method?: 'POST' | 'PATCH' | 'PUT'; types: Record<string, FieldType>; extra?: Record<string, unknown>;
   children: ReactNode; submitLabel?: string; pendingLabel?: string; successMessage?: string; reset?: boolean;
   /** Sau khi tạo xong: đường dẫn, `{id}` thay bằng id trả về. */
-  redirect?: string; tone?: 'primary' | 'accent' | 'outline'; className?: string; inline?: boolean; ariaLabel?: string;
+  redirect?: string; tone?: 'primary' | 'outline'; className?: string; inline?: boolean; ariaLabel?: string;
 }) {
   const router = useRouter();
   const uid = useId();
@@ -129,7 +129,7 @@ function useField(name: string, hint?: ReactNode) {
   return { id, error, describedBy };
 }
 
-const inputCls = 'min-h-11 w-full rounded-[var(--radius)] border border-border bg-background px-3 py-2 text-base text-foreground placeholder:text-muted-foreground focus-visible:border-foreground aria-[invalid=true]:border-destructive';
+const inputCls = 'min-h-11 w-full rounded-[var(--radius)] border border-input bg-background px-3 py-2 text-base text-foreground placeholder:text-muted-foreground focus-visible:border-foreground aria-[invalid=true]:border-destructive';
 
 function Wrap({ id, label, hint, error, children, required, className = '' }: { id: string; label: ReactNode; hint?: ReactNode; error?: string; children: ReactNode; required?: boolean; className?: string }) {
   return (
@@ -217,7 +217,7 @@ export function Checkbox({ name, label, hint, defaultChecked, className = '' }: 
     <div className={`grid gap-1 ${className}`}>
       <label htmlFor={f.id} className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-medium text-foreground">
         <input id={f.id} type="checkbox" name={name} defaultChecked={defaultChecked} aria-describedby={f.describedBy}
-          className="size-5 shrink-0 cursor-pointer accent-[var(--accent)]" />
+          className="size-5 shrink-0 cursor-pointer accent-[var(--primary)]" />
         {label}
       </label>
       {hint && <p id={`${f.id}-hint`} className="pl-8 text-xs text-muted-foreground">{hint}</p>}
@@ -277,7 +277,7 @@ export function UploadForm({ action, label, accept, hint }: { action: string; la
     <form onSubmit={onSubmit} className="grid gap-2">
       <label htmlFor={`${uid}-file`} className="text-sm font-medium text-foreground">{label}</label>
       <input id={`${uid}-file`} type="file" name="file" accept={accept} required aria-describedby={hint ? `${uid}-hint` : undefined}
-        className="min-h-11 w-full min-w-0 rounded-[var(--radius)] border border-border bg-background px-2 py-2 text-sm file:mr-3 file:min-h-9 file:cursor-pointer file:rounded-[var(--radius)] file:border-0 file:bg-muted file:px-3 file:text-sm file:font-medium file:text-foreground" />
+        className="min-h-11 w-full min-w-0 rounded-[var(--radius)] border border-input bg-background px-2 py-2 text-sm file:mr-3 file:min-h-9 file:cursor-pointer file:rounded-[var(--radius)] file:border-0 file:bg-muted file:px-3 file:text-sm file:font-medium file:text-foreground" />
       {hint && <p id={`${uid}-hint`} className="text-xs text-muted-foreground">{hint}</p>}
       <div className="flex flex-wrap items-center gap-3">
         <button type="submit" disabled={pending} aria-busy={pending} className={`${btn.base} ${btn.outline}`}>

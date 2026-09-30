@@ -2,8 +2,6 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { requireAdminPage } from '../../../_lib/session';
 import { collectionProducts, getCollection } from '../../../_lib/collections';
-import { collectionsReady } from '../../../_lib/schema-info';
-import { TablesNotReady } from '../../../_components/not-ready';
 import { MembershipForm } from '../../../_components/membership';
 import { Card, PageHeader } from '../../../_components/ui';
 import { ActionButton, ApiForm, Field, TextArea } from '../../../_components/form';
@@ -11,13 +9,12 @@ import { ActionButton, ApiForm, Field, TextArea } from '../../../_components/for
 type P = { params: Promise<{ id: string }> };
 
 export async function generateMetadata({ params }: P): Promise<Metadata> {
-  const c = collectionsReady() ? getCollection(Number((await params).id)) : null;
+  const c = getCollection(Number((await params).id));
   return { title: c?.title ?? 'Collection' };
 }
 
 export default async function CollectionPage({ params }: P) {
   await requireAdminPage();
-  if (!collectionsReady()) return (<><PageHeader title="Collection" back={{ href: '/admin/collections', label: 'Collections' }} /><TablesNotReady what="collections" /></>);
   const c = getCollection(Number((await params).id));
   if (!c) notFound();
   const products = collectionProducts(c.id);

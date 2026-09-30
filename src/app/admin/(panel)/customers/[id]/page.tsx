@@ -5,21 +5,18 @@ import { fmt } from '@/lib/money';
 import { requireAdminPage } from '../../../_lib/session';
 import { getCustomer } from '../../../_lib/customers';
 import { ORDER_SORTS, searchOrders } from '../../../_lib/orders';
-import { customersReady } from '../../../_lib/schema-info';
 import { listState, type SearchParams } from '../../../_lib/list';
-import { TablesNotReady } from '../../../_components/not-ready';
 import { Card, FulfillmentBadge, PageHeader, Pagination, PaymentBadge, SortHeader, Stat, Table, fmtDate, fmtDay, linkCls, td, tr } from '../../../_components/ui';
 
 type P = { params: Promise<{ id: string }>; searchParams: Promise<SearchParams> };
 
 export async function generateMetadata({ params }: P): Promise<Metadata> {
-  const c = customersReady() ? getCustomer(Number((await params).id)) : null;
+  const c = getCustomer(Number((await params).id));
   return { title: c ? c.name || c.email : 'Customer' };
 }
 
 export default async function CustomerPage({ params, searchParams }: P) {
   await requireAdminPage();
-  if (!customersReady()) return (<><PageHeader title="Customer" back={{ href: '/admin/customers', label: 'Customers' }} /><TablesNotReady what="customers" /></>);
   const c = getCustomer(Number((await params).id));
   if (!c) notFound();
   const sp = await searchParams;

@@ -1,7 +1,7 @@
 // Crew UI-3 e2e: back office kiểu Shopify. Home (KPI + biểu đồ), Orders (lọc/tìm/sắp xếp, fulfill, timeline),
 // Designs (giao designer, chuyển AI sang designer), Customers, Collections, Discounts, ngăn kéo điều hướng 375px.
-// Dữ liệu phụ ghi thẳng vào DB tmp của config gốc và xoá hết ở afterAll (spec khác dùng chung DB).
-// Bảng customers/collections là của UI-2: nếu DB chưa có thì tạo đúng hình hợp đồng rồi gỡ lại sau khi chạy.
+// Dữ liệu phụ ghi thẳng vào DB tmp của config gốc (bảng customers/collections của UI-2 đã có qua ui2_001_customers.sql)
+// và xoá hết ở afterAll (spec khác dùng chung DB).
 import { DatabaseSync } from 'node:sqlite';
 import { expect, test, type Page } from '@playwright/test';
 import { E2E_DB_PATH } from './ui3.config';
@@ -12,23 +12,9 @@ const run = (fn: (d: DatabaseSync) => void) => { const d = db(); try { fn(d); } 
 const ORDERS = ['8801', '8802', '8803'];
 const DESIGNS = ['DSN-UI3PRT', 'DSN-UI3REV', 'DSN-UI3AIP'];
 const EMAIL = 'ui3.buyer@example.test';
-const created: string[] = [];
-let addedCustomerId = false;
 
 test.beforeAll(() => run((d) => {
-  const has = (t: string) => !!d.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(t);
-  // Hình bảng theo hợp đồng ui2_001_customers.sql; chỉ tạo khi thiếu.
-  const contract: [string, string][] = [
-    ['customers', "CREATE TABLE customers (id INTEGER PRIMARY KEY, email TEXT NOT NULL UNIQUE COLLATE NOCASE, name TEXT, password_hash TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')))"],
-    ['customer_sessions', 'CREATE TABLE customer_sessions (id TEXT PRIMARY KEY, customer_id INTEGER NOT NULL, expires_at TEXT NOT NULL)'],
-    ['customer_addresses', 'CREATE TABLE customer_addresses (id INTEGER PRIMARY KEY, customer_id INTEGER NOT NULL, address TEXT NOT NULL, is_default INTEGER NOT NULL DEFAULT 0)'],
-    ['collections', 'CREATE TABLE collections (id INTEGER PRIMARY KEY, handle TEXT NOT NULL UNIQUE, title TEXT NOT NULL, description TEXT, image TEXT, sort INTEGER NOT NULL DEFAULT 0)'],
-    ['product_collections', 'CREATE TABLE product_collections (product_id INTEGER NOT NULL, collection_id INTEGER NOT NULL, position INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (product_id, collection_id))'],
-  ];
-  for (const [t, sql] of contract) if (!has(t)) { d.exec(sql); created.push(t); }
-  if (!(d.prepare("SELECT 1 FROM pragma_table_info('orders') WHERE name = 'customer_id'").get())) { d.exec('ALTER TABLE orders ADD customer_id INTEGER'); addedCustomerId = true; }
-
-  d.exec(`INSERT INTO customers (email, name) VALUES ('${EMAIL}', 'Robin Vale')`);
+  d.exec(`INSERT INTO customers (email, name, password_hash) VALUES ('${EMAIL}', 'Robin Vale', 'not-a-real-hash')`);
   const pv = "(SELECT id FROM products ORDER BY id LIMIT 1), (SELECT id FROM variants ORDER BY position LIMIT 1)";
   d.exec(`INSERT INTO designs (id, product_id, variant_id, mode, pet_name, status, email, print_path) VALUES
     ('DSN-UI3PRT', ${pv}, 'designer', 'Pepper', 'approved', '${EMAIL}', 'storage/prints/DSN-UI3PRT.png'),
@@ -56,8 +42,6 @@ test.afterAll(() => run((d) => {
   d.prepare("DELETE FROM product_collections WHERE collection_id IN (SELECT id FROM collections WHERE handle = 'ui3-test')").run();
   d.prepare("DELETE FROM collections WHERE handle = 'ui3-test'").run();
   d.prepare('DELETE FROM customers WHERE email = ?').run(EMAIL);
-  if (addedCustomerId) d.exec('ALTER TABLE orders DROP COLUMN customer_id');
-  for (const t of [...created].reverse()) d.exec(`DROP TABLE ${t}`);
 }));
 
 async function login(page: Page) {

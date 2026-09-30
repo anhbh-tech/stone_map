@@ -6,7 +6,6 @@ import { searchOrders } from '../../_lib/orders';
 import { searchCustomers } from '../../_lib/customers';
 import { searchProducts } from '../../_lib/repo';
 import { DESIGN_TABS, searchDesigns } from '../../_lib/designs';
-import { customersReady } from '../../_lib/schema-info';
 import { hrefWith, one, type SearchParams } from '../../_lib/list';
 import { EmptyState, FulfillmentBadge, PageHeader, StatusBadge, linkCls } from '../../_components/ui';
 
@@ -36,7 +35,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   }
   const s = { q, sort: 'date' as const, dir: 'desc' as const, page: 1, per: N };
   const orders = searchOrders(s);
-  const customers = customersReady() ? searchCustomers({ ...s, sort: 'created' }) : { rows: [], total: 0 };
+  const customers = searchCustomers({ ...s, sort: 'created' });
   const products = searchProducts({ ...s, sort: 'title', dir: 'asc' });
   const designs = DESIGN_TABS.map((t) => ({ tab: t, ...searchDesigns(t.key, { ...s, dir: 'asc' }) })).filter((g) => g.total > 0);
   const designRows = designs.flatMap((g) => g.rows).slice(0, N);

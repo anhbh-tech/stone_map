@@ -2,8 +2,6 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { requireAdminPage } from '../../_lib/session';
 import { listCollections } from '../../_lib/collections';
-import { collectionsReady } from '../../_lib/schema-info';
-import { TablesNotReady } from '../../_components/not-ready';
 import { Card, EmptyState, PageHeader, Table, linkCls, td, th, tr } from '../../_components/ui';
 import { ApiForm, Field } from '../../_components/form';
 
@@ -11,7 +9,6 @@ export const metadata: Metadata = { title: 'Collections' };
 
 export default async function CollectionsPage() {
   await requireAdminPage();
-  if (!collectionsReady()) return (<><PageHeader title="Collections" /><TablesNotReady what="collections" /></>);
   const rows = listCollections();
   return (
     <>

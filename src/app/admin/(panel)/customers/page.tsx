@@ -3,9 +3,7 @@ import Link from 'next/link';
 import { fmt } from '@/lib/money';
 import { requireAdminPage } from '../../_lib/session';
 import { CUSTOMER_SORTS, searchCustomers } from '../../_lib/customers';
-import { customersReady } from '../../_lib/schema-info';
 import { listState, type SearchParams } from '../../_lib/list';
-import { TablesNotReady } from '../../_components/not-ready';
 import { EmptyState, FilterBar, PageHeader, Pagination, SortHeader, Table, btn, fmtDay, linkCls, td, tr } from '../../_components/ui';
 
 export const metadata: Metadata = { title: 'Customers' };
@@ -14,7 +12,6 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
   await requireAdminPage();
   const sp = await searchParams;
   const base = '/admin/customers';
-  if (!customersReady()) return (<><PageHeader title="Customers" /><TablesNotReady what="customers" /></>);
   const s = listState(sp, CUSTOMER_SORTS, 'created');
   const { rows, total } = searchCustomers(s);
   const sortProps = { sort: s.sort, dir: s.dir, base, sp };

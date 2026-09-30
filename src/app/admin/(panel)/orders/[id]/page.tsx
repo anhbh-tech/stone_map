@@ -9,7 +9,6 @@ import { ORDER_STATUSES } from '../../../_lib/schemas';
 import { orderFulfillments, orderTimeline } from '../../../_lib/orders';
 import { canFulfill, fulfillmentStatus, paymentStatus } from '../../../_lib/order-status';
 import { customerForOrder } from '../../../_lib/customers';
-import { customersReady } from '../../../_lib/schema-info';
 import { Icon } from '../../../_components/icons';
 import { Timeline } from '../../../_components/timeline';
 import { Card, FulfillmentBadge, PageHeader, PaymentBadge, StatusBadge, btn, fmtDate, linkCls, statusLabel } from '../../../_components/ui';
@@ -34,7 +33,7 @@ export default async function OrderPage({ params }: P) {
   const blocked = o.lines.filter((l) => !l.design || l.design.status === 'in_review' || !l.design.has_print);
   const shipments = orderFulfillments(o.id);
   const timeline = orderTimeline(o.id);
-  const customer = customersReady() ? customerForOrder({ email: o.email, customer_id: raw.customer_id ?? null }) : null;
+  const customer = customerForOrder({ email: o.email, customer_id: raw.customer_id ?? null });
   const items = o.lines.reduce((a, l) => a + l.qty, 0);
 
   return (
@@ -102,8 +101,8 @@ export default async function OrderPage({ params }: P) {
           {fulfillable && (
             <Card title="Mark as fulfilled" id="fulfill" description="Record the shipment. The order moves to shipped and the event is added to the timeline.">
               {blocked.length > 0 ? (
-                <p role="note" className="flex gap-2 rounded-[var(--radius)] border border-accent bg-background px-3 py-2 text-sm">
-                  <Icon name="alert" className="mt-0.5 shrink-0 text-accent" />
+                <p role="note" className="flex gap-2 rounded-[var(--radius)] border border-(--admin-attention) bg-background px-3 py-2 text-sm">
+                  <Icon name="alert" className="mt-0.5 shrink-0 text-(--admin-attention)" />
                   <span>{blocked.length} {blocked.length === 1 ? 'line still needs' : 'lines still need'} an approved print file ({blocked.map((l) => l.design?.id ?? l.sku).join(', ')}). Approve the design first, then fulfill.</span>
                 </p>
               ) : (
@@ -154,7 +153,7 @@ export default async function OrderPage({ params }: P) {
               </>
             ) : <p className="font-medium">{o.name}</p>}
             <p className="mt-2 text-sm"><a href={`mailto:${o.email}`} className={`${linkCls} break-all`}>{o.email}</a></p>
-            {!customer && <p className="mt-1 text-xs text-muted-foreground">{customersReady() ? 'Guest checkout, no customer account.' : 'Customer accounts are not set up in this database yet.'}</p>}
+            {!customer && <p className="mt-1 text-xs text-muted-foreground">Guest checkout, no customer account.</p>}
             <h3 className="mt-4 text-sm font-semibold">Shipping address</h3>
             <address className="mt-1 text-sm not-italic text-muted-foreground">{addr.length ? addr.map(([k, v]) => <div key={k}>{v}</div>) : 'No address'}</address>
             <p className="mt-2 text-sm">Method: {o.shipping_method}</p>

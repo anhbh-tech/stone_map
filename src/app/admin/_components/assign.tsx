@@ -23,7 +23,7 @@ export function AssignSelect({ designId, value, staff }: { designId: string; val
       <label htmlFor={id} className="text-sm font-medium">Designer</label>
       <div className="flex items-center gap-2">
         <select id={id} defaultValue={value ?? ''} disabled={pending} aria-busy={pending} onChange={(e) => change(e.target.value)}
-          className="min-h-11 min-w-0 flex-1 rounded-[var(--radius)] border border-border bg-background px-3 text-sm text-foreground focus-visible:border-foreground disabled:opacity-60">
+          className="min-h-11 min-w-0 flex-1 rounded-[var(--radius)] border border-input bg-background px-3 text-sm text-foreground focus-visible:border-foreground disabled:opacity-60">
           <option value="">Unassigned</option>
           {staff.map((s) => <option key={s.id} value={s.id}>{s.name}{s.role === 'owner' ? ' (owner)' : ''}</option>)}
         </select>

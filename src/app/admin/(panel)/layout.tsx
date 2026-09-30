@@ -25,7 +25,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         </form>
         <div className="flex shrink-0 items-center gap-1 text-sm">
           <span className="hidden items-center gap-2 px-2 md:flex" title={`Signed in as ${user.username}`}>
-            <span className="flex size-8 items-center justify-center rounded-full bg-accent text-xs font-semibold uppercase text-on-accent" aria-hidden="true">{user.username.slice(0, 2)}</span>
+            <span className="flex size-8 items-center justify-center rounded-full bg-secondary text-xs font-semibold uppercase text-on-secondary" aria-hidden="true">{user.username.slice(0, 2)}</span>
             <span className="max-w-32 truncate"><span className="sr-only">Signed in as </span>{user.username}</span>
           </span>
           <LogoutButton className="admin-tb-hover" />

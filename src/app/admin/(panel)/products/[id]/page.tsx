@@ -6,7 +6,6 @@ import { requireAdminPage } from '../../../_lib/session';
 import Link from 'next/link';
 import { getProduct } from '../../../_lib/repo';
 import { collectionsForProduct } from '../../../_lib/collections';
-import { collectionsReady } from '../../../_lib/schema-info';
 import { Card, Empty, PageHeader, StatusBadge, linkCls } from '../../../_components/ui';
 import { ActionButton, ApiForm, Checkbox, CountedField, Field, MoneyField, Select, TextArea } from '../../../_components/form';
 
@@ -18,7 +17,7 @@ export default async function ProductEdit({ params }: { params: Promise<{ id: st
   await requireAdminPage();
   const p = getProduct(Number((await params).id));
   if (!p) notFound();
-  const cols = collectionsReady() ? collectionsForProduct(p.id) : null;
+  const cols = collectionsForProduct(p.id);
   const base = p.variants.length ? Math.min(...p.variants.map((v) => v.price_cents)) : 0;
 
   return (

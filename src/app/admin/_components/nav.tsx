@@ -39,7 +39,7 @@ function Row({ it, path, badges, onNavigate }: { it: Item; path: string; badges:
         className={`flex min-h-11 items-center gap-3 rounded-[var(--radius)] px-3 text-sm font-medium transition-colors duration-150 ${self ? 'bg-card text-foreground shadow-[0_0_0_1px_var(--border)]' : inGroup ? 'text-foreground' : 'text-secondary hover:bg-card/70 hover:text-foreground'}`}>
         <Icon name={it.icon} className={self || inGroup ? 'text-foreground' : 'text-muted-foreground'} />
         <span className="flex-1">{it.label}</span>
-        {n ? <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-on-accent tnum">{n}<span className="sr-only"> waiting</span></span> : null}
+        {n ? <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-on-primary tnum">{n}<span className="sr-only"> waiting</span></span> : null}
       </Link>
       {it.children && inGroup && (
         <ul className="mb-1 ml-[1.375rem] mt-0.5 grid gap-0.5 border-l border-border pl-2">

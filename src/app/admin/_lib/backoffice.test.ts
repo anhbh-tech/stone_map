@@ -14,7 +14,6 @@ const { rangeBounds, metricValue, change, overview, attention, sqlTime } = await
 const { discountState, evaluateDiscount, discountSummary } = await import('./discounts');
 const { formatMetric, formatChange, niceMax } = await import('./metric-format');
 const { searchOrders, orderTabCounts, orderTimeline, logOrderEvent } = await import('./orders');
-const { customersReady, collectionsReady } = await import('./schema-info');
 const { discountCreate, orderFulfill, designPatch } = await import('./schemas');
 afterAll(() => fs.rmSync(dir, { recursive: true, force: true }));
 
@@ -124,10 +123,6 @@ describe('overview and attention from the database', () => {
     const t = orderTimeline(id);
     expect(t.map((e) => e.kind)).toEqual(['comment', 'email', 'placed']);
     expect(t[0].author).toBe('admin');
-  });
-  it('UI-2 tables are detected, not assumed', () => {
-    expect(typeof customersReady()).toBe('boolean');
-    expect(typeof collectionsReady()).toBe('boolean');
   });
 });
 

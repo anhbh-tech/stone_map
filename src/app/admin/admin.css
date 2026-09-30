@@ -1,10 +1,16 @@
-/* Chỉ cho /admin (globals.css thuộc UI-1, không sửa). Operate surface: một họ chữ sans cho mọi thứ,
+/* Chỉ cho /admin (globals.css thuộc UI-1, không sửa). Admin là Operate surface nên tiêu đề dùng Figtree, không Caprasimo.
+   Đỏ theo DESIGN.md chỉ cho giá/sale/lựa chọn/nút mua ở storefront: admin không dùng --accent; lỗi/xoá dùng --destructive,
+   “cần xử lý” dùng --admin-attention (hổ phách, riêng admin) để không lẫn với đỏ. Operate surface: một họ chữ sans cho mọi thứ,
    số dạng bảng trong bảng/trục, trình duyệt (selection, scrollbar, caret) cũng mặc token của cửa hàng. */
 .admin-root h1, .admin-root h2, .admin-root h3 {
-  font-family: var(--font-montserrat), system-ui, sans-serif;
+  font-family: var(--font-figtree), system-ui, sans-serif;
   letter-spacing: -0.01em;
   text-wrap: balance;
 }
+/* Hổ phách “cần xử lý” (Unfulfilled, In review, Pending, đơn bị chặn): 5.0:1 trên trắng, 9.9:1 trên nền tối. */
+:root { --admin-attention: #b45309; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --admin-attention: #fbbf24; } }
+:root[data-theme="dark"] { --admin-attention: #fbbf24; }
 .admin-root { accent-color: var(--primary); caret-color: var(--foreground); scrollbar-color: var(--border) transparent; }
 .admin-root ::selection { background: var(--foreground); color: var(--background); }
 .admin-root table, .admin-root .tnum { font-variant-numeric: tabular-nums; }

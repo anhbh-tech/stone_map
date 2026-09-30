@@ -1,14 +1,12 @@
-import { admin, body, HttpError, intId, notFound } from '@/app/admin/_lib/http';
+import { admin, body, intId, notFound } from '@/app/admin/_lib/http';
 import { collectionProducts, getCollection } from '@/app/admin/_lib/collections';
 import { collectionProducts as schema } from '@/app/admin/_lib/schemas';
-import { collectionsReady } from '@/app/admin/_lib/schema-info';
 import { db, tx } from '@/lib/db';
 
 type P = { id: string };
 
 // PUT { product_ids: [...] } → thay toàn bộ danh sách sản phẩm; thứ tự trong mảng = position.
 export const PUT = admin<P>(async (req, { id }) => {
-  if (!collectionsReady()) throw new HttpError(503, 'collections_unavailable', 'Collections are not set up in this database yet');
   const cid = intId(id);
   if (!getCollection(cid)) notFound('Collection');
   const { product_ids } = await body(req, schema);

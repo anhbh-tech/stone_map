@@ -52,7 +52,7 @@ export default async function ReviewsPage({ searchParams }: { searchParams: Prom
                 <li key={r.id}>
                   <article aria-labelledby={`review-${r.id}`} data-testid={`review-${r.id}`} className="px-4 py-4 sm:px-5">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="flex text-accent" aria-hidden="true">{[1, 2, 3, 4, 5].map((i) => <Icon key={i} name="star" size={16} fill={i <= r.rating ? 'currentColor' : 'none'} />)}</span>
+                      <span className="flex text-foreground" aria-hidden="true">{[1, 2, 3, 4, 5].map((i) => <Icon key={i} name="star" size={16} fill={i <= r.rating ? 'currentColor' : 'none'} />)}</span>
                       <span className="sr-only">{r.rating} out of 5 stars</span>
                       <h2 id={`review-${r.id}`} className="text-base font-semibold">{r.title || 'Untitled review'}</h2>
                       <StatusBadge status={r.status} />

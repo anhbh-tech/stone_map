@@ -2,7 +2,6 @@
 import { db } from '../../../lib/db';
 import { like, offset, type ListState } from './list';
 import { STATUSES_FOR, fulfillmentStatus, paymentStatus, type FulfillmentStatus, type PaymentStatus } from './order-status';
-import { customersReady } from './schema-info';
 
 export const ORDER_SORTS = ['date', 'number', 'total', 'customer'] as const;
 export type OrderSort = (typeof ORDER_SORTS)[number];
@@ -25,7 +24,7 @@ function where(f: OrderFilter, q: string) {
   if (f.customer_id != null || f.email) {
     // Đơn của khách: gắn customer_id (UI-2) hoặc đơn khách vãng lai cùng email.
     const parts: string[] = [];
-    if (f.customer_id != null && customersReady()) { parts.push('o.customer_id = ?'); args.push(f.customer_id); }
+    if (f.customer_id != null) { parts.push('o.customer_id = ?'); args.push(f.customer_id); }
     if (f.email) { parts.push('lower(o.email) = lower(?)'); args.push(f.email); }
     if (parts.length) w.push(`(${parts.join(' OR ')})`);
   }
@@ -43,8 +42,7 @@ export function searchOrders(s: ListState<OrderSort>, f: OrderFilter = {}): { ro
   const { sql, args } = where(f, s.q);
   const order = { date: 'o.created_at', number: 'CAST(o.number AS INTEGER)', total: 'o.total_cents', customer: 'lower(o.name)' }[s.sort];
   const dir = s.dir === 'asc' ? 'ASC' : 'DESC';
-  const cust = customersReady() ? 'o.customer_id' : 'NULL';
-  const rows = d.prepare(`SELECT o.id, o.number, o.email, o.name, o.shipping_method, o.total_cents, o.status, o.created_at, ${cust} AS customer_id,
+  const rows = d.prepare(`SELECT o.id, o.number, o.email, o.name, o.shipping_method, o.total_cents, o.status, o.created_at, o.customer_id,
       (SELECT coalesce(sum(qty), 0) FROM order_lines l WHERE l.order_id = o.id) AS items,
       (SELECT count(*) FROM order_lines l JOIN designs g ON g.id = l.design_id WHERE l.order_id = o.id AND g.status = 'in_review') AS designs_pending
     FROM orders o ${sql} ORDER BY ${order} ${dir}, o.id ${dir} LIMIT ? OFFSET ?`).all(...args, s.per, offset(s)) as Omit<OrderListRow, 'payment' | 'fulfillment'>[];

@@ -45,7 +45,7 @@ export default async function OrderPage({ params }: Props) {
       <section aria-labelledby="items" className="mt-8 rounded-[var(--radius)] border border-border bg-card p-5">
         <h2 id="items" className="text-2xl font-semibold">Your order</h2>
         <LineList showDesign items={order.lines.map((l, i) => ({ key: i, title: l.product_title, size: l.variant_size, qty: l.qty, cents: l.unit_cents * l.qty, thumbnail_url: l.thumbnail_url, properties: l.properties, design_id: l.design_id }))} />
-        <Summary totals={order.totals} addons={order.addons} shippingNote={order.shipping_method === 'express' ? 'Express' : 'Standard'} />
+        <Summary totals={order.totals} code={order.discount_code ? { code: order.discount_code, free_shipping: false } : null} addons={order.addons} shippingNote={order.shipping_method === 'express' ? 'Express' : 'Standard'} />
       </section>
       <section aria-labelledby="ship-to" className="mt-6 text-sm">
         <h2 id="ship-to" className="text-xl font-semibold">Shipping to</h2>

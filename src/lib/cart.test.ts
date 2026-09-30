@@ -100,7 +100,7 @@ describe('bundle + totals', () => {
     setAddon(id, { addon_id: 2, on: true, text: 'Happy birthday!' });
     const v = getCart(id);
     // 2 × 59.98 = 119.96, −10% = 107.96 → free standard shipping; card 4.99.
-    expect(v.totals).toEqual({ subtotal_cents: 11996, discount_cents: 1200, addons_cents: 499, shipping_cents: 0, total_cents: 11295 });
+    expect(v.totals).toEqual({ subtotal_cents: 11996, discount_cents: 1200, code_discount_cents: 0, addons_cents: 499, shipping_cents: 0, total_cents: 11295 });
     expect(v.addons.find((a) => a.id === 2)).toMatchObject({ on: true, text: 'Happy birthday!', text_free: true });
     expect(getCart(id, 'express').totals.shipping_cents).toBe(1999);
     setAddon(id, { addon_id: 2, on: false });
@@ -126,7 +126,7 @@ describe('checkout', () => {
     expect(order_number).toBe('1001');
     const o = getOrder(order_number)!;
     expect(o.lines[0]).toMatchObject({ design_id: 'DSN-OK0001', properties: { 'Pet name': 'Mochi', Style: 'Starry King' } });
-    expect(o.totals).toEqual({ subtotal_cents: 3998, discount_cents: 0, addons_cents: 1398, shipping_cents: 1999, total_cents: 7395 });
+    expect(o.totals).toEqual({ subtotal_cents: 3998, discount_cents: 0, code_discount_cents: 0, addons_cents: 1398, shipping_cents: 1999, total_cents: 7395 });
     expect(o.addons).toEqual([{ title: 'Gold frame', price_cents: 1398, text: null }]);
     const line = db().prepare('SELECT sku, properties FROM order_lines').get() as { sku: string; properties: string };
     expect(line.sku).toBe('S');

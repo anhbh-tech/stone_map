@@ -5,7 +5,6 @@ import { fmt } from '@/lib/money';
 import { requireAdminPage } from '../../../_lib/session';
 import { STATE_LABEL, discountSummary, getDiscount, ordersWithDiscount } from '../../../_lib/discounts';
 import { DiscountForm } from '../../../_components/discount-form';
-import { CheckoutNote } from '../../../_components/checkout-note';
 import { Card, PageHeader, StatusBadge, fmtDay, linkCls } from '../../../_components/ui';
 import { ActionButton } from '../../../_components/form';
 
@@ -24,7 +23,6 @@ export default async function DiscountPage({ params }: P) {
   return (
     <>
       <PageHeader title={d.code} back={{ href: '/admin/discounts', label: 'Discounts' }} meta={<StatusBadge status={d.state} label={STATE_LABEL[d.state]} />} description={discountSummary(d, fmt)} />
-      <CheckoutNote />
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <Card title="Settings" id="discount-settings"><DiscountForm initial={d} /></Card>
         <div className="grid content-start gap-5">

@@ -6,6 +6,7 @@ import type { CartAddonView, CartLineView, CartView } from '@/lib/cart';
 import { fmt } from '@/lib/money';
 import { Icon } from '@/components/shell/Icon';
 import { Summary } from './Summary';
+import { DiscountCode } from './DiscountCode';
 import { announceCartCount } from '@/components/shell/CartBadge';
 
 type ApiError = { error: { code: string; message: string } };
@@ -85,7 +86,8 @@ export function CartClient({ initial, shopHref }: { initial: CartView; shopHref:
       </div>
       <aside aria-label="Order summary" className="h-fit rounded-[var(--radius)] border border-border bg-card p-5 lg:sticky lg:top-6">
         <h2 className="text-2xl font-semibold">Summary</h2>
-        <Summary totals={view.totals} addons={view.addons.filter((a) => a.on)} shippingNote="Standard. Express is available at checkout." />
+        <DiscountCode applied={view.discount} error={view.discount_error} onView={(v) => { setView(v); announceCartCount(v.count); }} />
+        <Summary totals={view.totals} addons={view.addons.filter((a) => a.on)} shippingNote="Standard. Express is available at checkout." code={view.discount} />
         <Link href="/checkout" aria-disabled={busy}
           className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-accent px-6 font-semibold text-on-accent transition-colors hover:bg-accent-hover">
           <Icon name="lock" size={18} /> Checkout

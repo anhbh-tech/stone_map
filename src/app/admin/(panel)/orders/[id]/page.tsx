@@ -25,7 +25,7 @@ export default async function OrderPage({ params }: P) {
   await requireAdminPage();
   const o = getOrder(Number((await params).id));
   if (!o) notFound();
-  const raw = o as typeof o & { discount_code?: string | null; customer_id?: number | null };
+  const raw = o as typeof o & { discount_code?: string | null; code_discount_cents?: number; customer_id?: number | null };
   const addr = Object.entries(o.address).filter(([, v]) => v);
   const payment = paymentStatus(o.status);
   const fulfillment = fulfillmentStatus(o.status);
@@ -161,7 +161,8 @@ export default async function OrderPage({ params }: P) {
           <Card title="Payment" id="totals" actions={<PaymentBadge status={payment} />}>
             <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 text-sm tnum">
               <dt>Subtotal</dt><dd className="text-right">{fmt(o.subtotal_cents)}</dd>
-              {o.discount_cents > 0 && <><dt>{raw.discount_code ? <>Discount <span className="font-medium">{raw.discount_code}</span></> : 'Bundle discount'}</dt><dd className="text-right">−{fmt(o.discount_cents)}</dd></>}
+              {o.discount_cents > 0 && <><dt>Multi-portrait discount</dt><dd className="text-right">−{fmt(o.discount_cents)}</dd></>}
+              {raw.discount_code && <><dt>Discount code <Link href={`/admin/discounts?q=${encodeURIComponent(raw.discount_code)}`} className={`${linkCls} font-mono`}>{raw.discount_code}</Link></dt><dd className="text-right">{raw.code_discount_cents ? `−${fmt(raw.code_discount_cents)}` : 'Free shipping'}</dd></>}
               {o.addons.map((a, i) => <div key={i} className="contents"><dt className="min-w-0 break-words">{a.title}{a.text ? ` — “${a.text}”` : ''}</dt><dd className="text-right">{fmt(a.price_cents)}</dd></div>)}
               <dt>Shipping</dt><dd className="text-right">{fmt(o.shipping_cents)}</dd>
               <dt className="border-t border-border pt-1 font-semibold">Total</dt><dd className="border-t border-border pt-1 text-right font-semibold">{fmt(o.total_cents)}</dd>

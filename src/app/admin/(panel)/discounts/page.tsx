@@ -5,7 +5,6 @@ import { requireAdminPage } from '../../_lib/session';
 import { DISCOUNT_SORTS, DISCOUNT_STATES, STATE_LABEL, discountSummary, searchDiscounts } from '../../_lib/discounts';
 import { hrefWith, listState, pick, type SearchParams } from '../../_lib/list';
 import { Icon } from '../../_components/icons';
-import { CheckoutNote } from '../../_components/checkout-note';
 import { EmptyState, FilterBar, PageHeader, Pagination, SortHeader, StatusBadge, Table, Tabs, btn, fmtDay, linkCls, td, th, tr } from '../../_components/ui';
 
 export const metadata: Metadata = { title: 'Discounts' };
@@ -26,7 +25,6 @@ export default async function DiscountsPage({ searchParams }: { searchParams: Pr
   return (
     <>
       <PageHeader title="Discounts" description="Codes customers enter at checkout, including buy-more tiers by number of portraits." actions={add} />
-      <CheckoutNote />
       <section aria-label="Discount list" className="rounded-[var(--radius)] border border-border bg-card">
         <Tabs label="Discount status" items={tabs} />
         <FilterBar base={base} q={s.q} sp={sp} placeholder="Search by code" hidden={{ state }} />

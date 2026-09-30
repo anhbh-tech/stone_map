@@ -1,14 +1,15 @@
 'use client';
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Totals } from '@/lib/pricing';
+import type { AppliedCode, CartTotals } from '@/lib/cart';
 import { fmt } from '@/lib/money';
 import { Icon } from '@/components/shell/Icon';
 import { Summary } from './Summary';
+import { DiscountCode } from './DiscountCode';
 import { announceCartCount } from '@/components/shell/CartBadge';
 
 type Method = 'standard' | 'express';
-export type MethodOption = { id: Method; label: string; window: string; totals: Totals };
+export type MethodOption = { id: Method; label: string; window: string; totals: CartTotals };
 type Field = 'email' | 'name' | 'line1' | 'city' | 'region' | 'postal_code' | 'country';
 type Errors = Partial<Record<Field, string>>;
 
@@ -28,7 +29,10 @@ function validate(f: FormData): Errors {
 }
 
 /** Checkout giả lập: không thu thông tin thẻ. Lỗi hiện ngay dưới ô + bảng lỗi đầu form nhận focus (ui-ux-pro-max: error summary). */
-export function CheckoutForm({ methods, regions, addons, children }: { methods: MethodOption[]; regions: string[]; addons: { title: string; price_cents: number }[]; children?: React.ReactNode }) {
+export function CheckoutForm({ methods, regions, addons, discount, discountError, children }: {
+  methods: MethodOption[]; regions: string[]; addons: { title: string; price_cents: number }[];
+  discount: AppliedCode | null; discountError: { code: string; message: string } | null; children?: React.ReactNode;
+}) {
   const [method, setMethod] = useState<Method>('standard');
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -139,7 +143,8 @@ export function CheckoutForm({ methods, regions, addons, children }: { methods: 
       <aside aria-label="Order summary" className="h-fit rounded-[var(--radius)] border border-border bg-card p-5 lg:sticky lg:top-6">
         <h2 className="text-2xl font-semibold">Order summary</h2>
         {children}
-        <Summary totals={current.totals} addons={addons} shippingNote={current.label} />
+        <DiscountCode applied={discount} error={discountError} />
+        <Summary totals={current.totals} addons={addons} shippingNote={current.label} code={discount} />
         <button type="submit" disabled={busy} aria-busy={busy}
           className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-accent px-6 font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:cursor-wait disabled:opacity-60">
           <Icon name="lock" size={18} /> {busy ? 'Placing order…' : `Place order · ${fmt(current.totals.total_cents)}`}

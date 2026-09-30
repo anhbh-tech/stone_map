@@ -28,7 +28,7 @@ export default async function OrderPage({ params }: Props) {
         <h1 className="text-4xl font-semibold">Order #{number}</h1>
         <p className="mt-4 text-muted-foreground">
           For your privacy, order details are only shown on the device that placed the order. Check your confirmation email, or write to{' '}
-          <a href={`mailto:${s.shop.support_email}`} className="text-accent underline">{s.shop.support_email}</a>.
+          <a href={`mailto:${s.shop.support_email}`} className="font-medium text-foreground underline">{s.shop.support_email}</a>.
         </p>
       </div>
     );

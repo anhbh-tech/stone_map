@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Addon, BundleTier, Variant } from '@/lib/catalog';
 import type { DesignView, JobView, Settings } from '@/lib/types';
 import { fmt } from '@/lib/money';
-import { bundleRows, sizeScale } from '../pdp/logic';
+import { livePrice, sizeScale } from '../pdp/logic';
 import { AlertIcon, BrushIcon, LoaderIcon, SparklesIcon } from '../pdp/icons';
 import { api, ApiError, type Transform } from './api';
 import { Addons, BundlePicker, SizePicker, type AddonState } from './options';
@@ -13,6 +13,8 @@ import { UploadBox, type UploadState } from './UploadBox';
 import { JobProgress } from './JobProgress';
 import { IDENTITY, PreviewEditor } from './PreviewEditor';
 import { StickyPreview } from './StickyPreview';
+import { StickyBuy } from './StickyBuy';
+import { Price } from './Price';
 
 export type PersonalizerProps = {
   product: { id: number; title: string };
@@ -22,17 +24,21 @@ export type PersonalizerProps = {
   addons: Addon[];
   settings: Pick<Settings, 'privacy' | 'preflight'> & { shopName: string; currency: string; styles: Settings['ai']['styles'] };
   delivery: ReactNode;
+  /** Tiêu đề (h1), phụ đề, rating — render ở server, đặt ngay trên giá. */
+  header?: ReactNode;
 };
 
 type Mode = 'ai' | 'designer';
 const POLL_MS = 1500;
 const msg = (e: unknown) => (e instanceof ApiError ? e.message : 'Network problem. Check your connection and try again.');
 
-const step = 'space-y-3 scroll-mt-24';
-const h2 = 'text-2xl font-semibold';
-const input = 'min-h-11 w-full rounded-md border border-border bg-background px-3 text-base';
+const step = 'space-y-3 scroll-mt-24 lg:scroll-mt-40';
+const h2 = 'font-sans text-lg font-semibold';
+const input = 'min-h-11 w-full rounded-md border border-input bg-background px-3 text-base';
+// Lựa chọn đang chọn = viền + nền đỏ nhạt (PRODUCT.md: đỏ cho lựa chọn đang chọn).
+export const selectedCls = 'has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:ring-1 has-[:checked]:ring-accent';
 
-export function Personalizer({ product, variants, initialVariantId, tiers, addons, settings, delivery }: PersonalizerProps) {
+export function Personalizer({ product, variants, initialVariantId, tiers, addons, settings, delivery, header }: PersonalizerProps) {
   const router = useRouter();
   const [variantId, setVariantId] = useState(initialVariantId);
   const [qty, setQty] = useState(1);
@@ -52,12 +58,15 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
   const stageRef = useRef<HTMLElement>(null);
+  const priceRef = useRef<HTMLDivElement>(null);
+  const photoRef = useRef<HTMLElement>(null);
+  const buyRef = useRef<HTMLElement>(null);
   const setStage = (el: HTMLElement | null) => { stageRef.current = el; };
   const transformSave = useRef<{ timer: ReturnType<typeof setTimeout> | null; pending: Promise<unknown> | null }>({ timer: null, pending: null });
 
   const variant = variants.find((v) => v.id === variantId) || variants[0];
-  const row = bundleRows(variant.price_cents, tiers).find((r) => r.qty === qty) || bundleRows(variant.price_cents, [])[0];
   const addonsCents = addons.filter((a) => addonState[a.id]?.on).reduce((n, a) => n + a.price_cents, 0);
+  const price = livePrice(variant, qty, tiers, addonsCents);
   const uploaded = upload.status === 'done' ? upload.result : null;
   const running = !!job && (job.status === 'queued' || job.status === 'running');
   const ready = mode === 'ai' && !!design && design.mode === 'ai' && !!design.preview_url && (design.status === 'ready' || design.status === 'confirmed');
@@ -184,35 +193,37 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
   const previewOnStage = mode === 'ai' && (running || ready);
   const stylesName = settings.styles.find((s) => s.id === style)?.name;
   const stickySrc = ready ? design!.preview_url : uploaded?.url || null;
-  const stickyDetail = running && job ? `${Math.round(job.progress * 100)}% · ${variant.size} in` : `${variant.size} in · ${fmt(row.total_cents, settings.currency)}`;
+  const stickyDetail = running && job ? `${Math.round(job.progress * 100)}% · ${variant.size} in` : `${variant.size} in · ${fmt(price.price_cents, settings.currency)}`;
+  const priceNote = [qty > 1 ? `for ${qty} portraits` : null, addonsCents ? 'add-ons included' : null].filter(Boolean).join(', ');
+  // Thanh mua dính (mobile): chưa đủ bước thì đưa khách tới bước còn thiếu, đủ rồi mới là nút thêm giỏ.
+  const nextStep = () => {
+    const el = !uploaded ? photoRef.current : atcReason && mode === 'ai' && !ready ? stageRef.current : buyRef.current;
+    el?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  };
 
   return (
     <div className="space-y-8">
-      <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1" data-testid="price">
-        <span className="text-2xl font-semibold">{fmt(variant.price_cents, settings.currency)}</span>
-        {variant.compare_at_cents && variant.compare_at_cents > variant.price_cents && (
-          <span className="text-muted-foreground"><span className="sr-only">Regular price </span><s>{fmt(variant.compare_at_cents, settings.currency)}</s></span>
-        )}
-        <span className="text-sm text-muted-foreground">{variant.size} in</span>
-      </p>
+      <div ref={priceRef} className="space-y-3">
+        {header}
+        <Price price={price} currency={settings.currency} note={priceNote} />
+      </div>
 
-      <section className={step} aria-labelledby="step-size">
-        <h2 id="step-size" className={h2}>1. Choose a size</h2>
+      <section className={step} aria-label="Size">
         <SizePicker variants={variants} value={variantId} onChange={chooseSize} currency={settings.currency} />
       </section>
 
-      <section ref={previewOnStage ? undefined : setStage} className={step} aria-labelledby="step-photo">
-        <h2 id="step-photo" className={h2}>2. Add your pet&apos;s photo</h2>
-        <fieldset>
+      <section ref={(el) => { photoRef.current = el; if (!previewOnStage) setStage(el); }} className={step} aria-labelledby="step-photo">
+        <h2 id="step-photo" className={h2}>Add your pet&apos;s photo</h2>
+        <fieldset className="min-w-0">
           <legend className="sr-only">How should we make your portrait?</legend>
           <div className="grid gap-2 sm:grid-cols-2">
             {([
               { m: 'ai' as const, title: 'Generate with AI', text: 'See a preview on this page and approve it before we print.', Icon: SparklesIcon },
               { m: 'designer' as const, title: 'Designer finish', text: 'A designer makes it by hand from your photo and notes, at no extra cost.', Icon: BrushIcon },
             ]).map(({ m, title, text, Icon }) => (
-              <label key={m} className="flex min-h-11 cursor-pointer gap-3 rounded-lg border border-border bg-card p-4 text-card-foreground hover:border-foreground has-[:checked]:border-primary has-[:checked]:ring-1 has-[:checked]:ring-primary has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring">
+              <label key={m} className={`flex min-h-11 cursor-pointer gap-3 rounded-lg border border-input bg-card p-4 text-card-foreground transition-colors duration-150 hover:border-foreground ${selectedCls} has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring`}>
                 <input type="radio" name="mode" value={m} checked={mode === m} onChange={() => chooseMode(m)} className="sr-only" />
-                <Icon className="mt-0.5 shrink-0 text-accent" />
+                <Icon className="mt-0.5 shrink-0 text-foreground" />
                 <span><span className="block font-semibold">{title}</span><span className="text-sm text-muted-foreground">{text}</span></span>
               </label>
             ))}
@@ -226,13 +237,13 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
       </section>
 
       <section className={step} aria-labelledby="step-style">
-        <h2 id="step-style" className={h2}>3. {mode === 'ai' ? 'Pick a style' : 'Tell our designer about your pet'}</h2>
+        <h2 id="step-style" className={h2}>{mode === 'ai' ? 'Pick a style' : 'Tell our designer about your pet'}</h2>
         {settings.styles.length > 0 && (
-          <fieldset>
+          <fieldset className="min-w-0">
             <legend className="text-sm font-semibold">Style</legend>
             <div className="mt-2 flex flex-wrap gap-2">
               {settings.styles.map((s) => (
-                <label key={s.id} className="inline-flex min-h-11 cursor-pointer items-center rounded-full border border-border bg-card px-4 text-sm text-card-foreground hover:border-foreground has-[:checked]:border-primary has-[:checked]:bg-primary has-[:checked]:text-on-primary has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring">
+                <label key={s.id} className={`inline-flex min-h-11 cursor-pointer items-center rounded-full border border-input bg-card px-4 text-sm font-medium text-card-foreground transition-colors duration-150 hover:border-foreground ${selectedCls} has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring`}>
                   <input type="radio" name="style" value={s.id} checked={style === s.id} onChange={() => setStyle(s.id)} className="sr-only" />
                   {s.name}
                 </label>
@@ -247,7 +258,7 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
         {mode === 'designer' && (
           <div>
             <label htmlFor="designer-notes" className="text-sm font-semibold">Notes for the designer <span className="font-normal text-muted-foreground">(optional)</span></label>
-            <textarea id="designer-notes" rows={3} maxLength={500} className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-base" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. remove the leash, keep her pink collar" />
+            <textarea id="designer-notes" rows={3} maxLength={500} className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-base" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. remove the leash, keep her pink collar" />
             <p className="text-xs text-muted-foreground">We&apos;ll email a proof for your approval before printing.</p>
           </div>
         )}
@@ -260,7 +271,7 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
                   <button
                     type="button" onClick={generate} disabled={!!generateReason}
                     aria-describedby={generateReason ? 'generate-reason' : undefined}
-                    className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-primary px-5 font-semibold text-on-primary hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-primary px-5 font-semibold text-on-primary transition-opacity duration-150 hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <SparklesIcon /> {ready ? `Try again in ${stylesName || 'this style'}` : 'Generate with AI'}
                   </button>
@@ -290,14 +301,14 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
       </section>
 
       <section className={step} aria-labelledby="step-extras">
-        <h2 id="step-extras" className={h2}>4. Quantity &amp; extras</h2>
+        <h2 id="step-extras" className={h2}>Quantity &amp; extras</h2>
         <BundlePicker unitCents={variant.price_cents} tiers={tiers} qty={qty} onChange={setQty} currency={settings.currency} />
         <Addons addons={addons} currency={settings.currency} value={addonState} onChange={setAddonState} />
       </section>
 
       {delivery}
 
-      <section className="space-y-3 rounded-lg border border-border bg-card p-4 text-card-foreground" aria-label="Add to cart">
+      <section ref={buyRef} className="scroll-mt-24 space-y-3 lg:scroll-mt-40" aria-label="Add to cart">
         {uploaded && (mode === 'designer' || ready) && (
           <label className="flex cursor-pointer items-start gap-3">
             <input type="checkbox" className="mt-0.5 size-5 shrink-0 accent-accent" checked={petConfirmed} onChange={(e) => setPetConfirmed(e.target.checked)} data-testid="pet-confirm" />
@@ -311,14 +322,10 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
             </span>
           </label>
         )}
-        <dl className="flex justify-between text-sm">
-          <dt className="text-muted-foreground">{qty} × {variant.size} in{addonsCents ? ' + add-ons' : ''}</dt>
-          <dd className="font-semibold" data-testid="line-total">{fmt(row.total_cents + addonsCents, settings.currency)}</dd>
-        </dl>
         <button
           type="button" onClick={addToCart} disabled={!!atcReason || adding}
           aria-describedby={atcReason ? 'atc-reason' : undefined}
-          className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-accent px-5 font-semibold text-on-accent hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex min-h-13 w-full items-center justify-center gap-2 rounded-full bg-accent px-6 text-lg font-semibold text-on-accent transition-colors duration-150 hover:bg-accent-hover disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
         >
           {adding && <LoaderIcon />} {mode === 'designer' ? 'Send to designer & add to cart' : 'Add to cart'}
         </button>
@@ -326,6 +333,13 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
         {addError && <p role="alert" className="flex gap-2 text-sm text-destructive"><AlertIcon className="mt-0.5 shrink-0" /> {addError}</p>}
       </section>
 
+      <StickyBuy
+        watch={[priceRef, buyRef]}
+        price={price} currency={settings.currency}
+        label={atcReason ? (uploaded ? 'Continue' : 'Personalize it') : mode === 'designer' ? 'Send to designer & add to cart' : 'Add to cart'}
+        busy={adding}
+        onClick={atcReason ? nextStep : addToCart}
+      />
       <StickyPreview target={stageRef} observeKey={`${previewOnStage}`} src={stickySrc} title={ready ? `Your ${product.title}` : running ? 'Making your portrait' : 'Your photo'} detail={stickyDetail} />
     </div>
   );

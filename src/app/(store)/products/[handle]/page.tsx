@@ -10,6 +10,7 @@ import { Delivery } from '@/components/pdp/Delivery';
 import { RatingLink, Reviews } from '@/components/pdp/Reviews';
 import { pickVariant } from '@/components/pdp/logic';
 import { Personalizer } from '@/components/personalizer/Personalizer';
+import { Breadcrumbs } from '@/components/shell/Breadcrumbs';
 
 type Props = {
   params: Promise<{ handle: string }>;
@@ -53,19 +54,24 @@ export default async function ProductPage({ params, searchParams }: Props) {
   const jsonLd = productJsonLd(product, settings, url, summary);
 
   return (
-    <div className="mx-auto w-full max-w-7xl flex-1 px-4 pb-16 pt-6 sm:px-6 lg:px-8">
+    <div className="mx-auto w-full max-w-7xl flex-1 px-4 pb-16 sm:px-6 lg:px-8">
+      {/* JSON-LD Product đứng trước BreadcrumbList. */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }} />
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,28rem)] lg:gap-12 xl:grid-cols-[minmax(0,1fr)_32rem]">
-        <div className="min-w-0 lg:sticky lg:top-6 lg:self-start">
-          <Gallery images={product.images} title={product.title} />
+      <Breadcrumbs items={[{ name: product.title, path: `/products/${product.handle}` }]} className="py-2 lg:py-3" />
+      {/* Desktop: cột ảnh ~55%, ảnh chính vuông tối đa 70vh, dính dưới header (cao ~121px). */}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,11fr)_minmax(0,9fr)] lg:gap-12 xl:gap-16">
+        <div className="min-w-0 lg:sticky lg:top-[8.5rem] lg:self-start">
+          <Gallery images={product.images.map(plain)} title={product.title} />
         </div>
-        <div className="min-w-0 space-y-6">
-          <header className="space-y-2">
-            <h1 className="text-4xl font-semibold sm:text-5xl">{product.title}</h1>
-            {product.subtitle && <p className="text-lg text-muted-foreground">{product.subtitle}</p>}
-            <RatingLink summary={summary} />
-          </header>
+        <div className="min-w-0">
           <Personalizer
+            header={
+              <header className="space-y-1.5">
+                <h1 className="text-[2rem] leading-tight sm:text-[2.5rem]">{product.title}</h1>
+                {product.subtitle && <p className="text-base text-muted-foreground sm:text-lg">{product.subtitle}</p>}
+                <RatingLink summary={summary} />
+              </header>
+            }
             product={{ id: product.id, title: product.title }}
             variants={product.variants.map(plain)}
             initialVariantId={variant.id}
@@ -83,7 +89,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
         </div>
       </div>
 
-      <section aria-labelledby="details-title" className="mt-16 max-w-prose">
+      <section aria-labelledby="details-title" className="mt-16 max-w-prose border-t border-border pt-10">
         <h2 id="details-title" className="text-3xl font-semibold">Details</h2>
         {/* description_html do admin nhập (crew A), không phải nội dung người dùng */}
         <div className="mt-4 space-y-3 [&_li]:ml-5 [&_ul]:list-disc" dangerouslySetInnerHTML={{ __html: product.description_html }} />

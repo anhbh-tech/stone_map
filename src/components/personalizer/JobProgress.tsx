@@ -22,7 +22,7 @@ export function JobProgress({ job, onEmail, savedEmail }: { job: JobView; onEmai
   return (
     <div className="space-y-4 rounded-lg border border-border bg-card p-4 text-card-foreground" data-testid="job-progress">
       <div className="flex items-start gap-3">
-        <SparklesIcon className="mt-0.5 shrink-0 text-accent" />
+        <SparklesIcon className="mt-0.5 shrink-0 text-foreground" />
         <div className="flex-1">
           {/* Chỉ báo đọc khi đổi giai đoạn, không đọc lại ETA mỗi 1.5 s */}
           <p className="font-semibold" role="status">{stage}</p>
@@ -34,7 +34,7 @@ export function JobProgress({ job, onEmail, savedEmail }: { job: JobView; onEmai
         <span className="text-sm font-semibold tabular-nums">{pct}%</span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="Portrait progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
-        <div className="h-full rounded-full bg-accent transition-[width] duration-[1500ms] ease-linear" style={{ width: `${Math.max(pct, 3)}%` }} />
+        <div className="h-full rounded-full bg-foreground transition-[width] duration-[1500ms] ease-linear" style={{ width: `${Math.max(pct, 3)}%` }} />
       </div>
       <p className="text-sm text-muted-foreground">You can keep choosing your size and add-ons while you wait.</p>
 

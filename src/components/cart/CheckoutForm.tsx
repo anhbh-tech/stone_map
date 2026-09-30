@@ -141,7 +141,7 @@ export function CheckoutForm({ methods, regions, addons, children }: { methods: 
         {children}
         <Summary totals={current.totals} addons={addons} shippingNote={current.label} />
         <button type="submit" disabled={busy} aria-busy={busy}
-          className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-accent px-6 font-semibold text-on-accent hover:opacity-90 disabled:cursor-wait disabled:opacity-60">
+          className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-accent px-6 font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:cursor-wait disabled:opacity-60">
           <Icon name="lock" size={18} /> {busy ? 'Placing order…' : `Place order · ${fmt(current.totals.total_cents)}`}
         </button>
       </aside>

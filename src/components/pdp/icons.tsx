@@ -4,7 +4,7 @@ import type { SVGProps } from 'react';
 type P = SVGProps<SVGSVGElement> & { size?: number };
 const base = ({ size = 20, ...p }: P) => ({
   width: size, height: size, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor',
-  strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true, focusable: false, ...p,
+  strokeWidth: 1.75, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true, focusable: false, ...p,
 });
 
 export const StarIcon = ({ filled = true, ...p }: P & { filled?: boolean }) => (

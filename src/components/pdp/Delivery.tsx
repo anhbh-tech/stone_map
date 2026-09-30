@@ -12,7 +12,7 @@ export function Delivery({ settings: s, now = new Date() }: { settings: Settings
   ];
   return (
     <section aria-labelledby="delivery-title" className="rounded-lg border border-border bg-card p-4 text-card-foreground">
-      <h2 id="delivery-title" className="text-xl font-semibold">Estimated delivery</h2>
+      <h2 id="delivery-title" className="font-sans text-lg font-semibold">Estimated delivery</h2>
       <ul className="mt-3 space-y-2">
         {rows.map(({ method, label, Icon }) => {
           const w = deliveryWindow(s, method, now);

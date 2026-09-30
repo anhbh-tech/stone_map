@@ -22,7 +22,7 @@ export function StickyPreview({ target, observeKey, src, title, detail }: Props)
       inert={!show}
       data-testid="sticky-preview"
       data-visible={show}
-      className={`fixed inset-x-0 top-0 z-30 border-b border-border bg-card/95 pt-[env(safe-area-inset-top)] text-card-foreground shadow-sm backdrop-blur-sm transition-transform duration-200 ease-out md:hidden ${show ? 'translate-y-0' : '-translate-y-full'}`}
+      className={`fixed inset-x-0 top-0 z-30 border-b border-border bg-card pt-[env(safe-area-inset-top)] text-card-foreground shadow-sm transition-transform duration-200 ease-out md:hidden ${show ? 'translate-y-0' : '-translate-y-full'}`}
     >
       <div className="flex h-16 items-center gap-3 px-4">
         <Image src={src} alt="" width={48} height={48} unoptimized className="size-12 rounded-md border border-border object-cover" />

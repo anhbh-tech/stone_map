@@ -1,52 +1,76 @@
 @import "tailwindcss";
 
-/* Design system "Pearl Atelier" — sinh bằng skill ui-ux-pro-max:
-   python3 .claude/skills/ui-ux-pro-max/scripts/search.py "luxury pet portrait ecommerce personalized gift" --design-system -p "Pearl Atelier"
-   Giữ palette + typography của skill; KHÔNG dùng style "Liquid Glass" nó gợi ý (blur/animation nặng, trái mục tiêu hiệu năng #8)
-   → dùng "minimal luxury editorial": nền phẳng, viền mảnh, bóng nhẹ.
-   Component chỉ dùng token (bg-card, text-muted-foreground…), không hex thô. */
+/* Design system "Pearl Atelier" v2 — cửa hàng quà tặng thủ công ấm áp, bố cục Shopify quen thuộc (PRODUCT.md).
+   Hướng đi: .impeccable/surfaces/src-app-store-products-handle-page-tsx.md. Tra cứu ui-ux-pro-max:
+   search.py "handmade gift shop personalized pet ecommerce warm" --design-system (lấy pattern e-commerce, KHÔNG lấy palette xanh lá: brief chốt đỏ).
+   - Nền trắng cho ảnh sản phẩm, mực nâu đen ấm, viền xám ấm.
+   - Đỏ (--accent / --sale) CHỈ mang một nghĩa: giá, badge sale, lựa chọn đang chọn, nút mua. Không dùng đỏ để trang trí.
+   Component chỉ dùng token (bg-card, text-muted-foreground, bg-accent text-on-accent, text-sale…), không hex thô. */
 :root {
-  --primary: #1c1917; --on-primary: #ffffff;
-  --secondary: #44403c; --on-secondary: #ffffff;
-  --accent: #a16207; --on-accent: #ffffff;           /* CTA vàng đồng, 4.5:1 với trắng */
-  --background: #fafaf9; --foreground: #0c0a09;
-  --card: #ffffff; --card-foreground: #0c0a09;
-  --muted: #f0eeec; --muted-foreground: #57534e;
-  --border: #d6d3d1; --ring: #1c1917;
-  --destructive: #dc2626; --on-destructive: #ffffff;
+  --primary: #2b1d18; --on-primary: #ffffff; --on-primary-muted: #d9cdc7; /* mực: chữ, announcement bar, footer */
+  --secondary: #5c4a42; --on-secondary: #ffffff;
+  --accent: #c62a2f; --on-accent: #ffffff;           /* đỏ ruy băng: nút mua, badge sale — 5.6:1 với trắng */
+  --accent-hover: #a82126;
+  --accent-soft: #fdeceb;                            /* nền lựa chọn đang chọn; chữ đỏ trên nền này 4.9:1 */
+  --sale: #c62a2f;                                   /* chữ giá */
+  --background: #ffffff; --foreground: #2b1d18;
+  --card: #ffffff; --card-foreground: #2b1d18;
+  --muted: #f6f2ef; --muted-foreground: #6e5f58;     /* 6.1:1 trên trắng, 5.5:1 trên muted */
+  --border: #e7dfda;                                 /* đường kẻ trang trí */
+  --input: #9c8c84;                                  /* viền control ở trạng thái nghỉ, 3.2:1 (WCAG 1.4.11) */
+  --ring: #2b1d18;
+  --destructive: #b91c1c; --on-destructive: #ffffff;
   --success: #15803d;
   --radius: 10px;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --primary: #fafaf9; --on-primary: #1c1917;
-    --secondary: #d6d3d1; --on-secondary: #1c1917;
-    --accent: #eab308; --on-accent: #1c1917;
-    --background: #0c0a09; --foreground: #fafaf9;
-    --card: #1c1917; --card-foreground: #fafaf9;
-    --muted: #292524; --muted-foreground: #a8a29e;
-    --border: #44403c; --ring: #fafaf9;
+    --primary: #f5ede9; --on-primary: #1a1311; --on-primary-muted: #5c4a42;
+    --secondary: #d9cdc7; --on-secondary: #1a1311;
+    --accent: #d33a3f; --on-accent: #ffffff;
+    --accent-hover: #bf3237;                         /* hover tối hơn nền đỏ: chữ trắng 5.6:1 (bản sáng hơn chỉ 3.9:1) */
+    --accent-soft: #3a1c1b;
+    --sale: #ff7b72;
+    --background: #1a1311; --foreground: #f5ede9;
+    --card: #231a17; --card-foreground: #f5ede9;
+    --muted: #2e2420; --muted-foreground: #bfb0a8;
+    --border: #3d312c; --input: #7a6a62; --ring: #f5ede9;
+    --destructive: #f87171; --on-destructive: #1a1311;   /* chữ lỗi 6.6:1 trên nền tối (#b91c1c chỉ 2.8:1) */
     --success: #4ade80;
   }
 }
 
 @theme inline {
-  --color-primary: var(--primary); --color-on-primary: var(--on-primary);
+  --color-primary: var(--primary); --color-on-primary: var(--on-primary); --color-on-primary-muted: var(--on-primary-muted);
   --color-secondary: var(--secondary); --color-on-secondary: var(--on-secondary);
   --color-accent: var(--accent); --color-on-accent: var(--on-accent);
+  --color-accent-hover: var(--accent-hover); --color-accent-soft: var(--accent-soft);
+  --color-sale: var(--sale);
   --color-background: var(--background); --color-foreground: var(--foreground);
   --color-card: var(--card); --color-card-foreground: var(--card-foreground);
   --color-muted: var(--muted); --color-muted-foreground: var(--muted-foreground);
-  --color-border: var(--border); --color-ring: var(--ring);
+  --color-border: var(--border); --color-input: var(--input); --color-ring: var(--ring);
   --color-destructive: var(--destructive); --color-on-destructive: var(--on-destructive);
   --color-success: var(--success);
   --radius-DEFAULT: var(--radius);
-  --font-serif: var(--font-cormorant);
-  --font-sans: var(--font-montserrat);
+  /* Caprasimo: serif kiểu Cooper, nét tròn như hạt ngọc — giọng tiệm quà thủ công. Chỉ có 1 weight (400). */
+  --font-display: var(--font-caprasimo);
+  --font-serif: var(--font-caprasimo);
+  --font-sans: var(--font-figtree);
 }
 
-body { background: var(--background); color: var(--foreground); font-family: var(--font-montserrat), system-ui, sans-serif; font-size: 16px; line-height: 1.5; }
-h1, h2, h3 { font-family: var(--font-cormorant), Georgia, serif; line-height: 1.15; }
-:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
-button, a, [role="button"] { cursor: pointer; }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+/* Trong @layer base để utility (font-sans, font-semibold…) ghi đè được khi cần. */
+@layer base {
+  body { background: var(--background); color: var(--foreground); font-family: var(--font-figtree), system-ui, sans-serif; font-size: 16px; line-height: 1.5; }
+  /* Display face chỉ có weight 400: chặn trình duyệt tự làm đậm giả (font-semibold trên h1/h2). */
+  h1, h2, .font-display, .font-serif { font-family: var(--font-caprasimo), Georgia, serif; font-weight: 400; font-synthesis: none; line-height: 1.15; letter-spacing: -0.005em; text-wrap: balance; }
+  h3 { line-height: 1.25; }
+  :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+  button, a, [role="button"], label:has(> input[type="radio"]), label:has(> input[type="checkbox"]) { cursor: pointer; }
+  ::selection { background: var(--muted); color: var(--foreground); }
+  input, textarea { caret-color: var(--foreground); }
+  html { scrollbar-color: var(--input) transparent; }
+  a { text-underline-offset: 3px; }
+  .tabular-nums, [data-price] { font-variant-numeric: tabular-nums; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }

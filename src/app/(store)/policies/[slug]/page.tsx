@@ -105,7 +105,7 @@ export default async function PolicyPage({ params }: Props) {
         <ol className="flex gap-2"><li><Link href="/" className="hover:text-foreground">Home</Link></li><li aria-hidden="true">/</li><li aria-current="page">{title}</li></ol>
       </nav>
       <h1 className="mt-4 text-4xl font-semibold md:text-5xl">{title}</h1>
-      <div className="policy mt-6 space-y-4 text-foreground [&_a]:text-accent [&_a]:underline [&_h2]:mt-8 [&_h2]:text-2xl [&_h2]:font-semibold [&_li]:ml-5 [&_li]:list-disc [&_.lead]:text-lg [&_table]:w-full [&_table]:text-left [&_td]:border-t [&_td]:border-border [&_td]:py-2 [&_td]:pr-3 [&_th]:py-2 [&_th]:pr-3">
+      <div className="policy mt-6 space-y-4 text-foreground [&_a]:font-medium [&_a]:underline [&_h2]:mt-8 [&_h2]:text-2xl [&_h2]:font-semibold [&_li]:ml-5 [&_li]:list-disc [&_.lead]:text-lg [&_table]:w-full [&_table]:text-left [&_td]:border-t [&_td]:border-border [&_td]:py-2 [&_td]:pr-3 [&_th]:py-2 [&_th]:pr-3">
         <Body s={s} />
       </div>
     </article>

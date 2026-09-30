@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
-import { Cormorant, Montserrat } from 'next/font/google';
+import { Caprasimo, Figtree } from 'next/font/google';
 import './globals.css';
 
 // Font tự host qua next/font (không gọi Google Fonts lúc chạy, #8).
-const cormorant = Cormorant({ variable: '--font-cormorant', subsets: ['latin'], weight: ['500', '600', '700'], display: 'swap' });
-const montserrat = Montserrat({ variable: '--font-montserrat', subsets: ['latin'], weight: ['400', '500', '600'], display: 'swap' });
+// Caprasimo (display, 1 weight) cho tên shop + tiêu đề: tròn, ấm, "tiệm quà thủ công". Figtree (variable) cho mọi control và chữ thường.
+const caprasimo = Caprasimo({ variable: '--font-caprasimo', subsets: ['latin'], weight: '400', display: 'swap' });
+const figtree = Figtree({ variable: '--font-figtree', subsets: ['latin'], display: 'swap' });
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.SITE_URL || 'http://localhost:3000'),
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
 // Layout gốc chỉ có html/body. Header/footer của storefront nằm ở app/(store)/layout.tsx, admin ở app/admin/layout.tsx.
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${cormorant.variable} ${montserrat.variable} h-full antialiased`}>
+    <html lang="en" className={`${caprasimo.variable} ${figtree.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

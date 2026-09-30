@@ -20,10 +20,10 @@ export function CartBadge({ initial }: { initial: number }) {
     return () => removeEventListener(CART_COUNT_EVENT, on);
   }, []);
   return (
-    <Link href="/cart" aria-label={`Cart, ${count} ${count === 1 ? 'item' : 'items'}`} className="relative inline-flex size-11 items-center justify-center rounded-md text-foreground hover:text-accent">
+    <Link href="/cart" aria-label={`Cart, ${count} ${count === 1 ? 'item' : 'items'}`} className="relative inline-flex size-11 items-center justify-center rounded-md text-foreground transition-colors hover:bg-muted">
       <Icon name="bag" size={22} />
       {count > 0 && (
-        <span aria-hidden="true" className="absolute right-0.5 top-0.5 flex min-w-5 items-center justify-center rounded-full bg-accent px-1 text-xs font-semibold leading-5 text-on-accent">
+        <span aria-hidden="true" className="absolute right-0.5 top-0.5 flex min-w-5 items-center justify-center rounded-full bg-primary px-1 text-xs font-semibold leading-5 text-on-primary">
           {count}
         </span>
       )}

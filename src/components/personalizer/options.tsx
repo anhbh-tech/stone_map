@@ -1,56 +1,48 @@
 'use client';
-// Chọn size (#6: mỗi nút ghi giá + mức chênh), số lượng theo bậc giảm giá, và add-on (#7: lời chúc thiệp miễn phí).
+// Chọn size, số lượng theo bậc giảm giá, và add-on (#7: lời chúc thiệp miễn phí).
+// Nút lựa chọn KHÔNG ghi giá (PRODUCT.md: giá chỉ hiện 1 chỗ cạnh tiêu đề và đổi theo lựa chọn); add-on chỉ ghi phần cộng thêm "+$x".
 import { useState } from 'react';
 import type { Addon, BundleTier, Variant } from '@/lib/catalog';
-import { delta, fmt } from '@/lib/money';
+import { fmt } from '@/lib/money';
 import { bundleRows } from '../pdp/logic';
 import { api } from './api';
 
+// Đang chọn = viền + nền đỏ nhạt, giống selectedCls ở Personalizer.
 const optionCard =
-  'flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-card-foreground transition-colors duration-150 hover:border-foreground has-[:checked]:border-primary has-[:checked]:ring-1 has-[:checked]:ring-primary has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60';
+  'flex min-h-12 cursor-pointer items-center justify-center gap-1 rounded-lg border border-input bg-card px-3 py-2 text-center text-card-foreground transition-colors duration-150 hover:border-foreground has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:ring-1 has-[:checked]:ring-accent has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60';
 
-export function SizePicker({ variants, value, onChange, currency }: { variants: Variant[]; value: number; onChange: (id: number) => void; currency: string }) {
-  const base = Math.min(...variants.map((v) => v.price_cents));
+export function SizePicker({ variants, value, onChange }: { variants: Variant[]; value: number; onChange: (id: number) => void; currency?: string }) {
+  const current = variants.find((v) => v.id === value);
   return (
-    <fieldset>
-      <legend className="text-sm font-semibold">Size <span className="font-normal text-muted-foreground">(inches)</span></legend>
-      <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {variants.map((v) => {
-          const d = delta(v.price_cents, base, currency);
-          return (
-            <label key={v.id} className={`${optionCard} flex-col items-start gap-0.5`} data-testid="size-option">
-              <input type="radio" name="size" value={v.id} checked={v.id === value} onChange={() => onChange(v.id)} className="sr-only" />
-              <span className="font-semibold">{v.size}</span>
-              <span className="text-sm">{fmt(v.price_cents, currency)}</span>
-              <span className="text-xs text-muted-foreground">{d || 'Base price'}</span>
-            </label>
-          );
-        })}
+    <fieldset className="min-w-0">
+      <legend className="text-sm">
+        <span className="font-semibold">Size:</span> <span className="text-muted-foreground">{current ? `${current.size} in` : 'inches'}</span>
+      </legend>
+      <div className="mt-2 grid grid-cols-4 gap-2">
+        {variants.map((v) => (
+          <label key={v.id} className={`${optionCard} font-semibold`} data-testid="size-option">
+            <input type="radio" name="size" value={v.id} checked={v.id === value} onChange={() => onChange(v.id)} className="sr-only" />
+            {v.size}<span className="sr-only"> inches</span>
+          </label>
+        ))}
       </div>
     </fieldset>
   );
 }
 
-export function BundlePicker({ unitCents, tiers, qty, onChange, currency }: { unitCents: number; tiers: BundleTier[]; qty: number; onChange: (q: number) => void; currency: string }) {
+export function BundlePicker({ unitCents, tiers, qty, onChange }: { unitCents: number; tiers: BundleTier[]; qty: number; onChange: (q: number) => void; currency?: string }) {
   const rows = bundleRows(unitCents, tiers);
   if (rows.length < 2) return null;
   return (
-    <fieldset>
-      <legend className="text-sm font-semibold">Quantity</legend>
+    <fieldset className="min-w-0">
+      <legend className="text-sm"><span className="font-semibold">Quantity:</span> <span className="text-muted-foreground">{qty === 1 ? '1 portrait' : `${qty} portraits`}</span></legend>
       <p className="text-sm text-muted-foreground">Order more copies of this portrait and save. The discount applies to portraits only.</p>
-      <div className="mt-2 grid gap-2">
+      <div className="mt-2 grid grid-cols-4 gap-2">
         {rows.map((r) => (
-          <label key={r.qty} className={optionCard} data-testid="bundle-option">
+          <label key={r.qty} className={`${optionCard} flex-col gap-0`} data-testid="bundle-option">
             <input type="radio" name="qty" value={r.qty} checked={r.qty === qty} onChange={() => onChange(r.qty)} className="sr-only" />
-            <span className="flex-1">
-              <span className="font-medium">{r.qty === 1 ? '1 portrait' : `${r.qty} portraits`}</span>
-              {r.percent_off > 0 && <span className="ml-2 rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-on-accent">Save {r.percent_off}%</span>}
-              {r.qty > 1 && <span className="block text-sm text-muted-foreground">{fmt(r.unit_cents, currency)} each</span>}
-            </span>
-            <span className="text-right">
-              <span className="font-semibold">{fmt(r.total_cents, currency)}</span>
-              {r.save_cents > 0 && <span className="block text-xs text-muted-foreground line-through">{fmt(unitCents * r.qty, currency)}</span>}
-            </span>
+            <span className="font-semibold">{r.qty}<span className="sr-only">{r.qty === 1 ? ' portrait' : ' portraits'}</span></span>
+            {r.percent_off > 0 && <span className="text-xs font-semibold text-sale">Save {r.percent_off}%</span>}
           </label>
         ))}
       </div>
@@ -77,16 +69,16 @@ export function Addons({ addons, currency, value, onChange }: { addons: Addon[];
   }
 
   return (
-    <fieldset>
+    <fieldset className="min-w-0">
       <legend className="text-sm font-semibold">Add-ons <span className="font-normal text-muted-foreground">(optional)</span></legend>
-      <div className="mt-2 grid gap-2">
+      <div className="mt-2 grid grid-cols-1 gap-2">
         {addons.map((a) => {
           const cur = value[a.id] || { on: false, text: '' };
           const st = status[a.id];
           const msgId = `addon-${a.id}-msg`;
           return (
-            <div key={a.id} className="rounded-lg border border-border bg-card text-card-foreground has-[:checked]:border-primary">
-              <label className="flex min-h-11 cursor-pointer items-start gap-3 px-4 py-3">
+            <div key={a.id} className="rounded-lg border border-input bg-card text-card-foreground transition-colors duration-150 has-[:checked]:border-accent has-[:checked]:bg-accent-soft has-[:checked]:ring-1 has-[:checked]:ring-accent">
+              <label className="flex min-h-11 cursor-pointer flex-wrap items-start gap-x-3 gap-y-1 px-4 py-3">
                 <input
                   type="checkbox"
                   className="mt-1 size-5 shrink-0 accent-accent"
@@ -102,7 +94,7 @@ export function Addons({ addons, currency, value, onChange }: { addons: Addon[];
                   <span className="font-medium">{a.title}</span>
                   {a.description && <span className="block text-sm text-muted-foreground">{a.description}</span>}
                 </span>
-                <span className="text-sm font-medium">{a.price_cents ? `+${fmt(a.price_cents, currency)}` : 'Free'}</span>
+                <span className="ml-auto text-sm font-medium tabular-nums">{a.price_cents ? `+${fmt(a.price_cents, currency)}` : 'Free'}</span>
               </label>
               {a.text_input === 1 && cur.on && (
                 <div className="px-4 pb-4">
@@ -116,7 +108,7 @@ export function Addons({ addons, currency, value, onChange }: { addons: Addon[];
                     value={cur.text}
                     onChange={(e) => onChange({ ...value, [a.id]: { ...cur, text: e.target.value } })}
                     onBlur={() => save(a, true, cur.text, value)}
-                    className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-base"
+                    className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-base"
                     placeholder="Happy birthday, Mum! Love, Sam"
                   />
                   <p className="text-xs text-muted-foreground">{cur.text.length}/250</p>

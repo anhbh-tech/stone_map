@@ -1,0 +1,645 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-30T07:43:33+00:00",
+  "title": "Design System: Pearl Atelier",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Warm Ink",
+        "canonical": "oklch(24.7% 0.024 40.5)",
+        "tonalRamp": [
+          "oklch(15% 0.014 40.5)",
+          "oklch(25% 0.014 40.5)",
+          "oklch(35% 0.024 40.5)",
+          "oklch(45% 0.024 40.5)",
+          "oklch(55% 0.024 40.5)",
+          "oklch(70% 0.024 40.5)",
+          "oklch(85% 0.014 40.5)",
+          "oklch(95% 0.014 40.5)"
+        ],
+        "dark": "#f5ede9"
+      },
+      "on-primary": {
+        "role": "neutral",
+        "displayName": "On Ink",
+        "canonical": "oklch(100.0% 0.000 89.9)",
+        "tonalRamp": [
+          "oklch(15% 0.000 89.9)",
+          "oklch(25% 0.000 89.9)",
+          "oklch(35% 0.000 89.9)",
+          "oklch(45% 0.000 89.9)",
+          "oklch(55% 0.000 89.9)",
+          "oklch(70% 0.000 89.9)",
+          "oklch(85% 0.000 89.9)",
+          "oklch(95% 0.000 89.9)"
+        ],
+        "dark": "#1a1311"
+      },
+      "on-primary-muted": {
+        "role": "neutral",
+        "displayName": "Ink Mist",
+        "canonical": "oklch(85.6% 0.016 48.5)",
+        "tonalRamp": [
+          "oklch(15% 0.009 48.5)",
+          "oklch(25% 0.009 48.5)",
+          "oklch(35% 0.016 48.5)",
+          "oklch(45% 0.016 48.5)",
+          "oklch(55% 0.016 48.5)",
+          "oklch(70% 0.016 48.5)",
+          "oklch(85% 0.009 48.5)",
+          "oklch(95% 0.009 48.5)"
+        ],
+        "dark": "#5c4a42"
+      },
+      "secondary": {
+        "role": "primary",
+        "displayName": "Cocoa",
+        "canonical": "oklch(42.5% 0.028 45.3)",
+        "tonalRamp": [
+          "oklch(15% 0.017 45.3)",
+          "oklch(25% 0.017 45.3)",
+          "oklch(35% 0.028 45.3)",
+          "oklch(45% 0.028 45.3)",
+          "oklch(55% 0.028 45.3)",
+          "oklch(70% 0.028 45.3)",
+          "oklch(85% 0.017 45.3)",
+          "oklch(95% 0.017 45.3)"
+        ],
+        "dark": "#d9cdc7"
+      },
+      "on-secondary": {
+        "role": "neutral",
+        "displayName": "On Cocoa",
+        "canonical": "oklch(100.0% 0.000 89.9)",
+        "tonalRamp": [
+          "oklch(15% 0.000 89.9)",
+          "oklch(25% 0.000 89.9)",
+          "oklch(35% 0.000 89.9)",
+          "oklch(45% 0.000 89.9)",
+          "oklch(55% 0.000 89.9)",
+          "oklch(70% 0.000 89.9)",
+          "oklch(85% 0.000 89.9)",
+          "oklch(95% 0.000 89.9)"
+        ],
+        "dark": "#1a1311"
+      },
+      "accent": {
+        "role": "secondary",
+        "displayName": "Ribbon Red",
+        "canonical": "oklch(54.1% 0.192 25.1)",
+        "tonalRamp": [
+          "oklch(15% 0.115 25.1)",
+          "oklch(25% 0.115 25.1)",
+          "oklch(35% 0.192 25.1)",
+          "oklch(45% 0.192 25.1)",
+          "oklch(55% 0.192 25.1)",
+          "oklch(70% 0.192 25.1)",
+          "oklch(85% 0.115 25.1)",
+          "oklch(95% 0.115 25.1)"
+        ],
+        "dark": "#d33a3f"
+      },
+      "on-accent": {
+        "role": "neutral",
+        "displayName": "On Ribbon",
+        "canonical": "oklch(100.0% 0.000 89.9)",
+        "tonalRamp": [
+          "oklch(15% 0.000 89.9)",
+          "oklch(25% 0.000 89.9)",
+          "oklch(35% 0.000 89.9)",
+          "oklch(45% 0.000 89.9)",
+          "oklch(55% 0.000 89.9)",
+          "oklch(70% 0.000 89.9)",
+          "oklch(85% 0.000 89.9)",
+          "oklch(95% 0.000 89.9)"
+        ],
+        "dark": "#ffffff"
+      },
+      "accent-hover": {
+        "role": "secondary",
+        "displayName": "Ribbon Red, Pressed",
+        "canonical": "oklch(47.8% 0.170 25.0)",
+        "tonalRamp": [
+          "oklch(15% 0.102 25.0)",
+          "oklch(25% 0.102 25.0)",
+          "oklch(35% 0.170 25.0)",
+          "oklch(45% 0.170 25.0)",
+          "oklch(55% 0.170 25.0)",
+          "oklch(70% 0.170 25.0)",
+          "oklch(85% 0.102 25.0)",
+          "oklch(95% 0.102 25.0)"
+        ],
+        "dark": "#bf3237"
+      },
+      "accent-soft": {
+        "role": "secondary",
+        "displayName": "Blush",
+        "canonical": "oklch(95.6% 0.019 21.6)",
+        "tonalRamp": [
+          "oklch(15% 0.011 21.6)",
+          "oklch(25% 0.011 21.6)",
+          "oklch(35% 0.019 21.6)",
+          "oklch(45% 0.019 21.6)",
+          "oklch(55% 0.019 21.6)",
+          "oklch(70% 0.019 21.6)",
+          "oklch(85% 0.011 21.6)",
+          "oklch(95% 0.011 21.6)"
+        ],
+        "dark": "#3a1c1b"
+      },
+      "sale": {
+        "role": "secondary",
+        "displayName": "Price Red",
+        "canonical": "oklch(54.1% 0.192 25.1)",
+        "tonalRamp": [
+          "oklch(15% 0.115 25.1)",
+          "oklch(25% 0.115 25.1)",
+          "oklch(35% 0.192 25.1)",
+          "oklch(45% 0.192 25.1)",
+          "oklch(55% 0.192 25.1)",
+          "oklch(70% 0.192 25.1)",
+          "oklch(85% 0.115 25.1)",
+          "oklch(95% 0.115 25.1)"
+        ],
+        "dark": "#ff7b72"
+      },
+      "background": {
+        "role": "neutral",
+        "displayName": "Product White",
+        "canonical": "oklch(100.0% 0.000 89.9)",
+        "tonalRamp": [
+          "oklch(15% 0.000 89.9)",
+          "oklch(25% 0.000 89.9)",
+          "oklch(35% 0.000 89.9)",
+          "oklch(45% 0.000 89.9)",
+          "oklch(55% 0.000 89.9)",
+          "oklch(70% 0.000 89.9)",
+          "oklch(85% 0.000 89.9)",
+          "oklch(95% 0.000 89.9)"
+        ],
+        "dark": "#1a1311"
+      },
+      "foreground": {
+        "role": "primary",
+        "displayName": "Warm Ink (text)",
+        "canonical": "oklch(24.7% 0.024 40.5)",
+        "tonalRamp": [
+          "oklch(15% 0.014 40.5)",
+          "oklch(25% 0.014 40.5)",
+          "oklch(35% 0.024 40.5)",
+          "oklch(45% 0.024 40.5)",
+          "oklch(55% 0.024 40.5)",
+          "oklch(70% 0.024 40.5)",
+          "oklch(85% 0.014 40.5)",
+          "oklch(95% 0.014 40.5)"
+        ],
+        "dark": "#f5ede9"
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "Product White (card)",
+        "canonical": "oklch(100.0% 0.000 89.9)",
+        "tonalRamp": [
+          "oklch(15% 0.000 89.9)",
+          "oklch(25% 0.000 89.9)",
+          "oklch(35% 0.000 89.9)",
+          "oklch(45% 0.000 89.9)",
+          "oklch(55% 0.000 89.9)",
+          "oklch(70% 0.000 89.9)",
+          "oklch(85% 0.000 89.9)",
+          "oklch(95% 0.000 89.9)"
+        ],
+        "dark": "#231a17"
+      },
+      "card-foreground": {
+        "role": "primary",
+        "displayName": "Warm Ink (card text)",
+        "canonical": "oklch(24.7% 0.024 40.5)",
+        "tonalRamp": [
+          "oklch(15% 0.014 40.5)",
+          "oklch(25% 0.014 40.5)",
+          "oklch(35% 0.024 40.5)",
+          "oklch(45% 0.024 40.5)",
+          "oklch(55% 0.024 40.5)",
+          "oklch(70% 0.024 40.5)",
+          "oklch(85% 0.014 40.5)",
+          "oklch(95% 0.014 40.5)"
+        ],
+        "dark": "#f5ede9"
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Linen",
+        "canonical": "oklch(96.3% 0.006 59.7)",
+        "tonalRamp": [
+          "oklch(15% 0.004 59.7)",
+          "oklch(25% 0.004 59.7)",
+          "oklch(35% 0.006 59.7)",
+          "oklch(45% 0.006 59.7)",
+          "oklch(55% 0.006 59.7)",
+          "oklch(70% 0.006 59.7)",
+          "oklch(85% 0.004 59.7)",
+          "oklch(95% 0.004 59.7)"
+        ],
+        "dark": "#2e2420"
+      },
+      "muted-foreground": {
+        "role": "neutral",
+        "displayName": "Driftwood",
+        "canonical": "oklch(49.8% 0.022 46.6)",
+        "tonalRamp": [
+          "oklch(15% 0.013 46.6)",
+          "oklch(25% 0.013 46.6)",
+          "oklch(35% 0.022 46.6)",
+          "oklch(45% 0.022 46.6)",
+          "oklch(55% 0.022 46.6)",
+          "oklch(70% 0.022 46.6)",
+          "oklch(85% 0.013 46.6)",
+          "oklch(95% 0.013 46.6)"
+        ],
+        "dark": "#bfb0a8"
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "oklch(90.9% 0.011 54.5)",
+        "tonalRamp": [
+          "oklch(15% 0.007 54.5)",
+          "oklch(25% 0.007 54.5)",
+          "oklch(35% 0.011 54.5)",
+          "oklch(45% 0.011 54.5)",
+          "oklch(55% 0.011 54.5)",
+          "oklch(70% 0.011 54.5)",
+          "oklch(85% 0.007 54.5)",
+          "oklch(95% 0.007 54.5)"
+        ],
+        "dark": "#3d312c"
+      },
+      "input": {
+        "role": "neutral",
+        "displayName": "Pebble",
+        "canonical": "oklch(65.2% 0.023 48.4)",
+        "tonalRamp": [
+          "oklch(15% 0.014 48.4)",
+          "oklch(25% 0.014 48.4)",
+          "oklch(35% 0.023 48.4)",
+          "oklch(45% 0.023 48.4)",
+          "oklch(55% 0.023 48.4)",
+          "oklch(70% 0.023 48.4)",
+          "oklch(85% 0.014 48.4)",
+          "oklch(95% 0.014 48.4)"
+        ],
+        "dark": "#7a6a62"
+      },
+      "ring": {
+        "role": "primary",
+        "displayName": "Focus Ink",
+        "canonical": "oklch(24.7% 0.024 40.5)",
+        "tonalRamp": [
+          "oklch(15% 0.014 40.5)",
+          "oklch(25% 0.014 40.5)",
+          "oklch(35% 0.024 40.5)",
+          "oklch(45% 0.024 40.5)",
+          "oklch(55% 0.024 40.5)",
+          "oklch(70% 0.024 40.5)",
+          "oklch(85% 0.014 40.5)",
+          "oklch(95% 0.014 40.5)"
+        ],
+        "dark": "#f5ede9"
+      },
+      "destructive": {
+        "role": "neutral",
+        "displayName": "Signal Red",
+        "canonical": "oklch(50.5% 0.190 27.5)",
+        "tonalRamp": [
+          "oklch(15% 0.114 27.5)",
+          "oklch(25% 0.114 27.5)",
+          "oklch(35% 0.190 27.5)",
+          "oklch(45% 0.190 27.5)",
+          "oklch(55% 0.190 27.5)",
+          "oklch(70% 0.190 27.5)",
+          "oklch(85% 0.114 27.5)",
+          "oklch(95% 0.114 27.5)"
+        ],
+        "dark": "#f87171"
+      },
+      "on-destructive": {
+        "role": "neutral",
+        "displayName": "On Signal",
+        "canonical": "oklch(100.0% 0.000 89.9)",
+        "tonalRamp": [
+          "oklch(15% 0.000 89.9)",
+          "oklch(25% 0.000 89.9)",
+          "oklch(35% 0.000 89.9)",
+          "oklch(45% 0.000 89.9)",
+          "oklch(55% 0.000 89.9)",
+          "oklch(70% 0.000 89.9)",
+          "oklch(85% 0.000 89.9)",
+          "oklch(95% 0.000 89.9)"
+        ],
+        "dark": "#1a1311"
+      },
+      "success": {
+        "role": "neutral",
+        "displayName": "Leaf",
+        "canonical": "oklch(52.7% 0.137 150.1)",
+        "tonalRamp": [
+          "oklch(15% 0.082 150.1)",
+          "oklch(25% 0.082 150.1)",
+          "oklch(35% 0.137 150.1)",
+          "oklch(45% 0.137 150.1)",
+          "oklch(55% 0.137 150.1)",
+          "oklch(70% 0.137 150.1)",
+          "oklch(85% 0.082 150.1)",
+          "oklch(95% 0.082 150.1)"
+        ],
+        "dark": "#4ade80"
+      }
+    },
+    "themes": {
+      "dark": {
+        "selector": "@media (prefers-color-scheme: dark) { :root:not([data-theme=\"light\"]) }",
+        "values": {
+          "primary": "#f5ede9",
+          "on-primary": "#1a1311",
+          "on-primary-muted": "#5c4a42",
+          "secondary": "#d9cdc7",
+          "on-secondary": "#1a1311",
+          "accent": "#d33a3f",
+          "on-accent": "#ffffff",
+          "accent-hover": "#bf3237",
+          "accent-soft": "#3a1c1b",
+          "sale": "#ff7b72",
+          "background": "#1a1311",
+          "foreground": "#f5ede9",
+          "card": "#231a17",
+          "card-foreground": "#f5ede9",
+          "muted": "#2e2420",
+          "muted-foreground": "#bfb0a8",
+          "border": "#3d312c",
+          "input": "#7a6a62",
+          "ring": "#f5ede9",
+          "success": "#4ade80",
+          "destructive": "#f87171",
+          "on-destructive": "#1a1311"
+        },
+        "note": "Every light token that changes in dark is redefined here; components read tokens only."
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Home hero headline only."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Product name, the single h1 on the product page."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section headings: Details, Customer reviews, How it works."
+      },
+      "wordmark": {
+        "displayName": "Wordmark",
+        "purpose": "Shop name in header, drawer and footer; a link, never a heading."
+      },
+      "price": {
+        "displayName": "Price",
+        "purpose": "The one live price under the product title, in Price Red, tabular numerals."
+      },
+      "step-heading": {
+        "displayName": "Step heading",
+        "purpose": "Buy-box step titles and the delivery block heading, in Figtree."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "All running copy, 65ch max for product details."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Fieldset legends, footer column titles, nav and announcement text."
+      }
+    },
+    "shadows": [
+      {
+        "name": "float",
+        "value": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+        "purpose": "Tailwind shadow-md: floating dock buttons and gallery arrows."
+      },
+      {
+        "name": "sticky-rise",
+        "value": "0 -4px 16px -8px color-mix(in srgb, var(--foreground) 30%, transparent)",
+        "purpose": "Mobile sticky buy bar once visible."
+      },
+      {
+        "name": "drawer",
+        "value": "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
+        "purpose": "Tailwind shadow-xl: mobile menu dialog, over a 40% ink backdrop."
+      },
+      {
+        "name": "rest",
+        "value": "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
+        "purpose": "Tailwind shadow-sm: home hero image, mobile sticky preview bar."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state",
+        "value": "150ms",
+        "purpose": "Colour and border transitions on buttons, tiles, chips, icon buttons."
+      },
+      {
+        "name": "sticky-slide",
+        "value": "200ms ease-out",
+        "purpose": "Sticky buy bar and sticky preview bar translate in and out; gallery dot width."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "0.01ms",
+        "purpose": "prefers-reduced-motion: reduce collapses all animation and transition durations; scroll-behavior auto."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
+    ],
+    "touchTarget": {
+      "min": "44px",
+      "purchaseControls": "48px",
+      "addToCart": "52px"
+    },
+    "container": {
+      "maxWidth": "1280px",
+      "gutters": [
+        "16px",
+        "24px @640",
+        "32px @1024"
+      ]
+    }
+  },
+  "components": [
+    {
+      "name": "Buy Button",
+      "kind": "button",
+      "refersTo": "button-buy",
+      "description": "Add to cart, sticky buy, Checkout, Place order: the only red button.",
+      "html": "<button class=\"ds-btn-buy\">Add to cart</button>",
+      "css": ".ds-btn-buy { font-family: var(--font-figtree, Figtree), system-ui, sans-serif; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; width: 100%; padding: 0 24px; border: none; border-radius: 9999px; background: var(--accent); color: var(--on-accent); font-size: 1.125rem; font-weight: 600; cursor: pointer; transition: background-color 150ms; } .ds-btn-buy:hover { background: var(--accent-hover); } .ds-btn-buy:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; } .ds-btn-buy:disabled { background: var(--muted); color: var(--muted-foreground); cursor: not-allowed; }"
+    },
+    {
+      "name": "Ink Button",
+      "kind": "button",
+      "refersTo": "button-ink",
+      "description": "Marketing and non-purchase primary actions; never red.",
+      "html": "<a class=\"ds-btn-ink\" href=\"#\">Create your portrait</a>",
+      "css": ".ds-btn-ink { font-family: var(--font-figtree, Figtree), system-ui, sans-serif; display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 28px; border-radius: 9999px; background: var(--primary); color: var(--on-primary); font-weight: 600; text-decoration: none; transition: background-color 150ms; } .ds-btn-ink:hover { background: var(--secondary); } .ds-btn-ink:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary actions such as How it works.",
+      "html": "<a class=\"ds-btn-outline\" href=\"#\">How it works</a>",
+      "css": ".ds-btn-outline { font-family: var(--font-figtree, Figtree), system-ui, sans-serif; display: inline-flex; align-items: center; min-height: 48px; padding: 0 24px; border: 1px solid var(--input); border-radius: 9999px; background: transparent; color: var(--foreground); font-weight: 500; text-decoration: none; transition: background-color 150ms; } .ds-btn-outline:hover { background: var(--muted); } .ds-btn-outline:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }"
+    },
+    {
+      "name": "Size Option Tiles",
+      "kind": "chip",
+      "refersTo": "option-card",
+      "description": "Purchase choice tiles; selected is red border, ring and Blush; no prices on tiles.",
+      "html": "<fieldset class=\"ds-opts\"><legend class=\"ds-opts-legend\"><b>Size:</b> <span>12 in</span></legend><div class=\"ds-opts-grid\"><label class=\"ds-opt\"><input type=\"radio\" name=\"ds-size\">8</label><label class=\"ds-opt\"><input type=\"radio\" name=\"ds-size\" checked>12</label><label class=\"ds-opt\"><input type=\"radio\" name=\"ds-size\">16</label><label class=\"ds-opt\"><input type=\"radio\" name=\"ds-size\">20</label></div></fieldset>",
+      "css": ".ds-opts { font-family: var(--font-figtree, Figtree), system-ui, sans-serif; border: 0; margin: 0; padding: 0; color: var(--foreground); } .ds-opts-legend { font-size: .875rem; padding: 0; } .ds-opts-legend span { color: var(--muted-foreground); } .ds-opts-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; } .ds-opt { display: flex; align-items: center; justify-content: center; min-height: 48px; padding: 8px 12px; border: 1px solid var(--input); border-radius: 8px; background: var(--card); color: var(--card-foreground); font-weight: 600; cursor: pointer; transition: border-color 150ms, background-color 150ms; } .ds-opt input { position: absolute; opacity: 0; width: 1px; height: 1px; } .ds-opt:hover { border-color: var(--foreground); } .ds-opt:has(:checked) { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 1px var(--accent); } .ds-opt:has(:focus-visible) { outline: 2px solid var(--ring); outline-offset: 2px; }"
+    },
+    {
+      "name": "Style Chip",
+      "kind": "chip",
+      "refersTo": "style-chip",
+      "description": "Pill-shaped style choice; same selected treatment as tiles.",
+      "html": "<div class=\"ds-chips\"><label class=\"ds-chip\"><input type=\"radio\" name=\"ds-style\" checked>Classic pearl</label><label class=\"ds-chip\"><input type=\"radio\" name=\"ds-style\">Gold accent</label></div>",
+      "css": ".ds-chips { display: flex; flex-wrap: wrap; gap: 8px; } .ds-chip { font-family: var(--font-figtree, Figtree), system-ui, sans-serif; display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border: 1px solid var(--input); border-radius: 9999px; background: var(--card); color: var(--card-foreground); font-size: .875rem; font-weight: 500; cursor: pointer; transition: border-color 150ms, background-color 150ms; } .ds-chip input { position: absolute; opacity: 0; width: 1px; height: 1px; } .ds-chip:hover { border-color: var(--foreground); } .ds-chip:has(:checked) { border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 1px var(--accent); } .ds-chip:has(:focus-visible) { outline: 2px solid var(--ring); outline-offset: 2px; }"
+    },
+    {
+      "name": "Price with Sale Badge",
+      "kind": "custom",
+      "refersTo": "badge-sale",
+      "description": "The one live price under the title: red price, struck compare-at, red Save pill.",
+      "html": "<div class=\"ds-price\" aria-live=\"polite\"><span class=\"ds-price-now\">$89.00</span><s class=\"ds-price-was\">$129.00</s><span class=\"ds-badge-sale\">Save 31%</span></div>",
+      "css": ".ds-price { font-family: var(--font-figtree, Figtree), system-ui, sans-serif; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; } .ds-price-now { color: var(--sale); font-size: 1.75rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; } .ds-price-was { color: var(--muted-foreground); font-size: 1.125rem; font-variant-numeric: tabular-nums; } .ds-badge-sale { border-radius: 9999px; padding: 2px 10px; background: var(--accent); color: var(--on-accent); font-size: .875rem; font-weight: 600; }"
+    },
+    {
+      "name": "Search Field",
+      "kind": "input",
+      "refersTo": "search-field",
+      "description": "Header search pill with inset round submit.",
+      "html": "<form class=\"ds-search\" role=\"search\"><label class=\"ds-sr\" for=\"ds-q\">Search products</label><input id=\"ds-q\" type=\"search\" placeholder=\"Search pet portraits\"><button type=\"submit\" aria-label=\"Search\"><svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"11\" cy=\"11\" r=\"8\"/><path d=\"m21 21-4.3-4.3\"/></svg></button></form>",
+      "css": ".ds-search { position: relative; width: 100%; max-width: 36rem; } .ds-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); } .ds-search input { font-family: var(--font-figtree, Figtree), system-ui, sans-serif; box-sizing: border-box; width: 100%; height: 44px; padding: 0 48px 0 16px; border: 1px solid var(--input); border-radius: 9999px; background: var(--background); color: var(--foreground); font-size: 1rem; caret-color: var(--foreground); } .ds-search input::placeholder { color: var(--muted-foreground); } .ds-search input:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; } .ds-search button { position: absolute; right: 0; top: 0; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 0; border-radius: 9999px; background: transparent; color: var(--foreground); cursor: pointer; transition: background-color 150ms; } .ds-search button:hover { background: var(--muted); } .ds-search button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }"
+    },
+    {
+      "name": "Header with Cart Badge",
+      "kind": "nav",
+      "refersTo": "badge-cart-count",
+      "description": "Announcement bar, wordmark, icon buttons; cart count is ink, not red.",
+      "html": "<div class=\"ds-bar\">Free US shipping on orders over $75</div><header class=\"ds-header\"><a class=\"ds-logo\" href=\"#\">Pearl Atelier</a><nav class=\"ds-nav\"><a href=\"#\">Pet portraits</a><a href=\"#\">How it works</a><a href=\"#\">Shipping</a></nav><div class=\"ds-icons\"><a class=\"ds-icon\" href=\"#\" aria-label=\"Sign in\"><svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"8\" r=\"5\"/><path d=\"M20 21a8 8 0 0 0-16 0\"/></svg></a><a class=\"ds-icon\" href=\"#\" aria-label=\"Cart, 2 items\"><svg viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z\"/><path d=\"M3 6h18\"/><path d=\"M16 10a4 4 0 0 1-8 0\"/></svg><span class=\"ds-count\" aria-hidden=\"true\">2</span></a></div></header>",
+      "css": ".ds-bar { font-family: var(--font-figtree, Figtree), system-ui, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 40px; padding: 8px 16px; background: var(--primary); color: var(--on-primary); font-size: .875rem; font-weight: 500; } .ds-header { font-family: var(--font-figtree, Figtree), system-ui, sans-serif; display: flex; align-items: center; gap: 24px; height: 72px; padding: 0 32px; border-bottom: 1px solid var(--border); background: var(--background); } .ds-logo { font-family: var(--font-caprasimo, Caprasimo), Georgia, serif; font-weight: 400; font-size: 1.75rem; line-height: 1; color: var(--foreground); text-decoration: none; } .ds-logo:hover { color: var(--secondary); } .ds-nav { display: flex; gap: 24px; flex: 1; } .ds-nav a { display: inline-flex; align-items: center; min-height: 44px; color: var(--foreground); font-size: .875rem; font-weight: 500; text-decoration: none; text-underline-offset: 3px; text-decoration-thickness: 2px; } .ds-nav a:hover { text-decoration-line: underline; } .ds-icons { display: flex; gap: 2px; } .ds-icon { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 6px; color: var(--foreground); transition: background-color 150ms; } .ds-icon:hover { background: var(--muted); } .ds-icon:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; } .ds-nav a:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; } .ds-logo:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; } .ds-count { position: absolute; right: 2px; top: 2px; min-width: 20px; padding: 0 4px; border-radius: 9999px; background: var(--primary); color: var(--on-primary); font-size: .75rem; font-weight: 600; line-height: 20px; text-align: center; box-sizing: border-box; }"
+    },
+    {
+      "name": "Mobile Sticky Buy Bar",
+      "kind": "custom",
+      "refersTo": "sticky-buy-bar",
+      "description": "Below 1024px; appears only when both price block and in-page Add to cart are off screen.",
+      "html": "<div class=\"ds-sticky\"><div class=\"ds-sticky-price\"><span class=\"ds-sticky-now\">$89.00</span> <s>$129.00</s></div><button class=\"ds-sticky-btn\">Add to cart</button></div>",
+      "css": ".ds-sticky { font-family: var(--font-figtree, Figtree), system-ui, sans-serif; display: flex; align-items: center; gap: 12px; height: 72px; padding: 0 16px; border-top: 1px solid var(--border); background: var(--card); color: var(--card-foreground); box-shadow: 0 -4px 16px -8px color-mix(in srgb, var(--foreground) 30%, transparent); } .ds-sticky-price { flex: 1; min-width: 0; } .ds-sticky-now { color: var(--sale); font-size: 1.125rem; font-weight: 700; font-variant-numeric: tabular-nums; } .ds-sticky-price s { color: var(--muted-foreground); font-size: .875rem; } .ds-sticky-btn { font-family: var(--font-figtree, Figtree), system-ui, sans-serif; min-height: 48px; padding: 0 24px; border: 0; border-radius: 9999px; background: var(--accent); color: var(--on-accent); font-weight: 600; cursor: pointer; transition: background-color 150ms; } .ds-sticky-btn:hover { background: var(--accent-hover); } .ds-sticky-btn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }"
+    },
+    {
+      "name": "Delivery Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Flat outlined card; data-driven delivery windows, prices muted.",
+      "html": "<section class=\"ds-card\"><h2>Estimated delivery</h2><ul><li><b>Standard</b> · Oct 14 – Oct 18<span>$6.95</span></li><li><b>Express</b> · Oct 10 – Oct 12<span>$19.95</span></li></ul><p>Includes 5 days to make your portrait after you approve the preview.</p></section>",
+      "css": ".ds-card { font-family: var(--font-figtree, Figtree), system-ui, sans-serif; padding: 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--card-foreground); } .ds-card h2 { margin: 0; font-size: 1.125rem; font-weight: 600; } .ds-card ul { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; font-size: .875rem; } .ds-card li { display: flex; gap: 12px; } .ds-card li span { margin-left: auto; color: var(--muted-foreground); } .ds-card li b { font-weight: 500; } .ds-card p { margin: 12px 0 0; font-size: .875rem; color: var(--muted-foreground); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Ribbon on the Box",
+    "overview": "Pearl Atelier is a Shopify store played straight: white product ground, a familiar announcement bar, two-row header, breadcrumb, gallery-left and buy-box-right product page, multi-column ink footer. Nothing in the buying path is novel on purpose. The warmth comes from two places only: a rounded, Cooper-style display face (Caprasimo) for the shop name and headings, and a warm brown-black ink instead of pure black, with warm gray hairlines.\n\nRed is the ribbon on a plain box. It appears in exactly four roles (the live price, the sale badge, the currently selected purchase option, and the buy button) and nowhere else, so a shopper's eye learns within one screen that red means \"what it costs, what you chose, where to pay\". Everything else, including hovers, the cart count, and marketing calls to action, is ink or neutral.\n\nThe world is flat and quiet: soft 10px corners on imagery, 8px on cards and option tiles, full pills on primary actions, no glass, no gradients, shadows only on things that float above the page. It rejects the cream-paper, italic-serif boutique an earlier build drifted toward; this is a gift counter, not a luxury salon.",
+    "keyCharacteristics": [
+      "White ground for product photography, warm ink (#2b1d18 family) for text and chrome.",
+      "One red with one meaning: price, sale, chosen, buy.",
+      "Caprasimo 400 for display, Figtree for every control, number and body line.",
+      "Flat surfaces separated by warm hairlines; shadow only on floating elements.",
+      "44px minimum touch targets; 48 to 52px on purchase controls.",
+      "Light and dark token sets, switched by `prefers-color-scheme`."
+    ],
+    "rules": [
+      {
+        "name": "The Ribbon Rule",
+        "body": "Red means only four things: the live price, the sale badge, the selected purchase option, the buy button. If an element is not one of those four, it is not red: not a heading, a link, an icon, a hover, a cart count, a banner, or a marketing CTA.",
+        "section": "colors"
+      },
+      {
+        "name": "The Ink Hover Rule",
+        "body": "Hovers never introduce red. Icon buttons hover to Linen, option tiles hover to an ink border, ink buttons hover to Cocoa, text links hover to an underline. The only red hover is the buy button darkening to Ribbon Red, Pressed.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Borders Rule",
+        "body": "Hairline (`border`) is for decoration; Pebble (`input`) is for anything the shopper can press or type into. A control outlined in Hairline has failed contrast.",
+        "section": "colors"
+      },
+      {
+        "name": "The One-Weight Display Rule",
+        "body": "Caprasimo ships one weight. `h1`, `h2`, `.font-display` are pinned to 400 with `font-synthesis: none`, so a `font-semibold` on a display heading never fakes bold. Emphasis in display type comes from size, not weight.",
+        "section": "typography"
+      },
+      {
+        "name": "The Figtree-for-Anything-You-Touch Rule",
+        "body": "Buttons, options, inputs, prices, badges and buy-box step headings are always Figtree. Caprasimo never appears on a control or a number.",
+        "section": "typography"
+      },
+      {
+        "name": "The 44 Rule",
+        "body": "Every interactive target is at least 44px tall (`min-h-11` / `size-11`) at touch widths. Purchase controls go larger: option tiles 48px, the sticky buy button 48px, Add to cart 52px. Text links in the breadcrumb and footer relax to 32 to 36px only from 640px, where a pointer is expected.",
+        "section": "layout"
+      },
+      {
+        "name": "The Flat Counter Rule",
+        "body": "Cards, option tiles, delivery and review blocks never cast shadows. If it scrolls with the page, it is outlined, not lifted.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** keep red to its four meanings (price, sale badge, selected purchase option, buy button) and use Warm Ink or neutrals for everything else.",
+      "**Do** show the price once, directly under the title, in Price Red at 1.75rem, and let it update with every selection.",
+      "**Do** outline pressable controls in Pebble (`input`, 3.2:1) and decorative edges in Hairline (`border`).",
+      "**Do** give every target at least 44px at touch widths, and purchase controls 48 to 52px.",
+      "**Do** set Caprasimo only at weight 400 and only on headings and the wordmark; set every control and number in Figtree.",
+      "**Do** read colour from tokens only (`bg-accent`, `text-sale`, `bg-muted`, `border-input`), so the dark set applies without per-component branches.",
+      "**Do** keep the mobile sticky buy bar mutually exclusive with the in-page Add to cart button.",
+      "**Do** honour `prefers-reduced-motion`; motion is limited to 150ms colour transitions and 200ms sticky-bar slides."
+    ],
+    "donts": [
+      "**Don't** use red for hovers, the cart count, links, icons, headings, banners or marketing CTAs; those are ink.",
+      "**Don't** repeat full prices on size or quantity tiles; show only add-on increments or a \"Save N%\" line.",
+      "**Don't** fake bold Caprasimo or set a control, price or badge in the display face.",
+      "**Don't** use gradients or glass surfaces (no translucent fills, no backdrop blur, sticky bars included), or tint the product ground cream; product imagery sits on white or Linen.",
+      "**Don't** lift cards or option tiles with shadows; shadows belong only to floating elements.",
+      "**Don't** lighten the buy button on hover; it darkens, to keep white text above 4.5:1 in both themes.",
+      "**Don't** show two buy buttons on screen at the same time."
+    ]
+  }
+}

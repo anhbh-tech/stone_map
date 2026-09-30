@@ -22,6 +22,23 @@ export function bundleRows(unitCents: number, tiers: BundleTier[]): BundleRow[] 
   });
 }
 
+export type LivePrice = { price_cents: number; compare_cents: number | null; percent_off: number | null };
+
+/**
+ * Giá duy nhất cạnh tiêu đề PDP: size × số lượng (trừ bậc giảm giá, cùng công thức với totals()) + add-on (tính 1 lần như giỏ).
+ * Giá gạch = giá gốc (compare_at nếu có) × số lượng + add-on; chỉ hiện khi thật sự cao hơn. % giảm làm tròn.
+ */
+export function livePrice(variant: Pick<Variant, 'price_cents' | 'compare_at_cents'>, qty: number, tiers: BundleTier[], addonsCents: number): LivePrice {
+  const row = bundleRows(variant.price_cents, tiers).find((r) => r.qty === qty);
+  const pct = row ? row.percent_off : bundleFor(qty, tiers).tier?.percent_off ?? 0;
+  const subtotal = variant.price_cents * qty;
+  const price = subtotal - Math.round((subtotal * pct) / 100) + addonsCents;
+  const unitRegular = variant.compare_at_cents && variant.compare_at_cents > variant.price_cents ? variant.compare_at_cents : variant.price_cents;
+  const regular = unitRegular * qty + addonsCents;
+  if (regular <= price) return { price_cents: price, compare_cents: null, percent_off: null };
+  return { price_cents: price, compare_cents: regular, percent_off: Math.round(((regular - price) / regular) * 100) };
+}
+
 /** ETA từ JobView.eta_ms (#2) — luôn là số thật, không có "a few seconds". */
 export function etaText(ms: number): string {
   if (ms <= 1000) return 'Almost done';

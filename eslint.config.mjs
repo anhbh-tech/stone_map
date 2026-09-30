@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Skill vendored (impeccable/ui-ux-pro-max): script bên thứ ba, không phải code của app.
+    ".claude/**",
   ]),
 ]);
 

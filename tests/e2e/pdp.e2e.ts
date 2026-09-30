@@ -97,15 +97,14 @@ test.describe('PDP', () => {
     await expect(page.locator('meta[name="description"]')).toHaveAttribute('content', /pearl-mosaic portrait/);
   });
 
-  test('size buttons show price and difference; ?variant= follows the size (#6)', async ({ page }) => {
+  test('size buttons carry no price; the one price near the title follows the size; ?variant= follows too (#6, PRODUCT.md)', async ({ page }) => {
     await page.goto(PDP);
     const opts = page.getByTestId('size-option');
     await expect(opts).toHaveCount(4);
-    await expect(opts.nth(0)).toContainText('$39.98');
-    await expect(opts.nth(0)).toContainText('Base price');
-    await expect(opts.nth(1)).toContainText('$59.98');
-    await expect(opts.nth(1)).toContainText('+$20.00');
-    await expect(opts.nth(3)).toContainText('+$80.00');
+    for (let i = 0; i < 4; i++) await expect(opts.nth(i)).not.toContainText('$');
+    await expect(page.getByTestId('price')).toContainText('$39.98');
+    await opts.nth(1).click();
+    await expect(page.getByTestId('price')).toContainText('$59.98');
 
     await opts.nth(2).click();
     const id = await opts.nth(2).locator('input').getAttribute('value');

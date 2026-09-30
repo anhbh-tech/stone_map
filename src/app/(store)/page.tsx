@@ -39,18 +39,17 @@ export default function Home() {
       <JsonLd data={organizationJsonLd(s)} />
       <JsonLd data={websiteJsonLd(s)} />
 
-      <section className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-10 md:grid-cols-2 md:py-16">
+      <section className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-4 py-10 sm:px-6 md:grid-cols-2 lg:px-8 md:py-16">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-widest text-accent">Personalized pet portraits</p>
-          <h1 className="mt-3 text-5xl font-semibold text-balance md:text-6xl">Your pet, recreated in pearls</h1>
+          <h1 className="text-5xl [overflow-wrap:anywhere] md:text-6xl">Your pet, recreated in pearls</h1>
           <p className="mt-4 max-w-prose text-lg text-muted-foreground">
             Upload a photo, pick a painterly style, and approve the preview before anything is printed.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            <Link href={href} className="inline-flex min-h-12 items-center gap-2 rounded-md bg-accent px-6 font-semibold text-on-accent transition-opacity hover:opacity-90">
+            <Link href={href} className="inline-flex min-h-12 items-center gap-2 rounded-full bg-primary px-7 font-semibold text-on-primary transition-colors hover:bg-secondary">
               Create your portrait <Icon name="arrowRight" size={18} />
             </Link>
-            <a href="#how-it-works" className="inline-flex min-h-12 items-center rounded-md border border-border px-5 font-medium hover:bg-muted">How it works</a>
+            <a href="#how-it-works" className="inline-flex min-h-12 items-center rounded-full border border-input px-6 font-medium hover:bg-muted">How it works</a>
           </div>
           <ul className="mt-8 grid gap-3 text-sm text-muted-foreground">
             <li className="flex items-center gap-2"><Icon name="truck" size={18} className="text-foreground" />{shippingHeadline(s)}</li>
@@ -65,7 +64,7 @@ export default function Home() {
       </section>
 
       {gallery.length > 0 && (
-        <section aria-labelledby="styles" className="mx-auto max-w-6xl px-4 py-10">
+        <section aria-labelledby="styles" className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
           <h2 id="styles" className="text-3xl font-semibold md:text-4xl">Pick a style</h2>
           <p className="mt-2 text-muted-foreground">Example portraits. Styles available today: {s.ai.styles.map((x) => x.name).join(', ')}.</p>
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -78,7 +77,7 @@ export default function Home() {
       )}
 
       <section id="how-it-works" aria-labelledby="how" className="scroll-mt-4 border-y border-border bg-card">
-        <div className="mx-auto max-w-6xl px-4 py-12">
+        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
           <h2 id="how" className="text-3xl font-semibold md:text-4xl">How it works</h2>
           <ol className="mt-8 grid gap-8 md:grid-cols-3">
             {steps.map((st, i) => (
@@ -93,10 +92,10 @@ export default function Home() {
       </section>
 
       {reviews.length > 0 && summary.average != null && (
-        <section aria-labelledby="reviews" className="mx-auto max-w-6xl px-4 py-12">
+        <section aria-labelledby="reviews" className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
           <h2 id="reviews" className="text-3xl font-semibold md:text-4xl">What customers say</h2>
           <p className="mt-2 flex items-center gap-2 text-muted-foreground">
-            <Icon name="star" size={18} filled className="text-accent" />
+            <Icon name="star" size={18} filled className="text-foreground" />
             {summary.average} out of 5 from {summary.count} {summary.count === 1 ? 'review' : 'reviews'}
             {summary.has_samples && ' (includes sample reviews)'}
           </p>
@@ -104,7 +103,7 @@ export default function Home() {
             {reviews.map((r) => (
               <li key={r.id} className="rounded-[var(--radius)] border border-border bg-card p-5">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="flex text-accent" aria-label={`${r.rating} out of 5 stars`} role="img">
+                  <span className="flex text-foreground" aria-label={`${r.rating} out of 5 stars`} role="img">
                     {Array.from({ length: 5 }, (_, i) => <Icon key={i} name="star" size={16} filled={i < r.rating} />)}
                   </span>
                   {r.is_sample && <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">Sample review</span>}
@@ -118,10 +117,10 @@ export default function Home() {
         </section>
       )}
 
-      <section className="mx-auto max-w-6xl px-4 py-12 text-center">
+      <section className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 text-center">
         <h2 className="text-3xl font-semibold md:text-4xl">Ready when you are</h2>
         <p className="mx-auto mt-2 max-w-prose text-muted-foreground">Try a style for free. You only pay once you love the preview.</p>
-        <Link href={href} className="mt-6 inline-flex min-h-12 items-center gap-2 rounded-md bg-accent px-6 font-semibold text-on-accent transition-opacity hover:opacity-90">
+        <Link href={href} className="mt-6 inline-flex min-h-12 items-center gap-2 rounded-full bg-primary px-7 font-semibold text-on-primary transition-colors hover:bg-secondary">
           Start with a photo <Icon name="arrowRight" size={18} />
         </Link>
       </section>

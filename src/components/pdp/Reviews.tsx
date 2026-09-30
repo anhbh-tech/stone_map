@@ -5,7 +5,7 @@ import { BadgeCheckIcon, FlaskIcon, StarIcon } from './icons';
 
 export function Stars({ value, size = 16 }: { value: number; size?: number }) {
   return (
-    <span className="inline-flex text-accent" aria-hidden>
+    <span className="inline-flex text-foreground" aria-hidden>
       {[1, 2, 3, 4, 5].map((n) => (
         <span key={n} className="relative inline-block" style={{ width: size, height: size }}>
           <StarIcon size={size} filled={false} className="absolute inset-0" />
@@ -66,7 +66,7 @@ export function Reviews({ summary, reviews }: { summary: ReviewSummary; reviews:
                   <li key={n} className="grid grid-cols-[3.5rem_minmax(0,1fr)_2rem] items-center gap-3 text-sm">
                     <span>{n} star{n === 1 ? '' : 's'}</span>
                     <span className="h-2 overflow-hidden rounded-full bg-muted" aria-hidden>
-                      <span className="block h-full rounded-full bg-accent" style={{ width: `${(c / summary.count) * 100}%` }} />
+                      <span className="block h-full rounded-full bg-foreground" style={{ width: `${(c / summary.count) * 100}%` }} />
                     </span>
                     <span className="text-right text-muted-foreground"><span className="sr-only">{n} stars: </span>{c}</span>
                   </li>
@@ -79,9 +79,9 @@ export function Reviews({ summary, reviews }: { summary: ReviewSummary; reviews:
               </p>
             )}
           </div>
-          <ul className="grid items-start gap-4 sm:grid-cols-2" aria-label="Reviews">
+          <ul className="gap-4 sm:columns-2" aria-label="Reviews">
             {reviews.map((r) => (
-              <li key={r.id} className="flex flex-col overflow-hidden rounded-lg border border-border bg-card text-card-foreground">
+              <li key={r.id} className="mb-4 flex break-inside-avoid flex-col overflow-hidden rounded-lg border border-border bg-card text-card-foreground">
                 {r.photo_url && (
                   <div className="relative aspect-[4/3] bg-muted">
                     <Image src={r.photo_url} alt={`Photo from ${r.author}'s review`} fill sizes="(min-width: 640px) 33vw, 100vw" className="object-cover" unoptimized={!r.photo_url.startsWith('/demo/')} />

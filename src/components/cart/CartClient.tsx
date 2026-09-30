@@ -44,7 +44,7 @@ export function CartClient({ initial, shopHref }: { initial: CartView; shopHref:
       <div>
         {title}
         <p className="mt-6 text-muted-foreground">Nothing here yet. Create a portrait and it will appear in your cart once you approve the preview.</p>
-        <Link href={shopHref} className="mt-6 inline-flex min-h-12 items-center gap-2 rounded-md bg-accent px-6 font-semibold text-on-accent hover:opacity-90">
+        <Link href={shopHref} className="mt-6 inline-flex min-h-12 items-center gap-2 rounded-full bg-primary px-6 font-semibold text-on-primary transition-colors hover:bg-secondary">
           Create your portrait <Icon name="arrowRight" size={18} />
         </Link>
       </div>
@@ -87,7 +87,7 @@ export function CartClient({ initial, shopHref }: { initial: CartView; shopHref:
         <h2 className="text-2xl font-semibold">Summary</h2>
         <Summary totals={view.totals} addons={view.addons.filter((a) => a.on)} shippingNote="Standard. Express is available at checkout." />
         <Link href="/checkout" aria-disabled={busy}
-          className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-md bg-accent px-6 font-semibold text-on-accent hover:opacity-90">
+          className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-accent px-6 font-semibold text-on-accent transition-colors hover:bg-accent-hover">
           <Icon name="lock" size={18} /> Checkout
         </Link>
         <p className="mt-3 text-center text-xs text-muted-foreground">{view.shipping_headline}</p>

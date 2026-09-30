@@ -102,7 +102,7 @@ Kiểu dữ liệu ở `src/lib/types.ts`. Lỗi luôn là `{ error: { code: str
 | 3 | Mô tả nói có khung nhưng bán khung; ship US vs Worldwide | lead: `settings`, `frame_included`, `shippingHeadline()` | grep không còn câu ship hard-code |
 | 4 | Social proof ("12,532 reviews on Trustpilot" + testimonial) | lead: bảng `reviews` + `src/lib/reviews.ts` (số sao, số review, histogram tính từ dữ liệu); C hiện trên PDP; A duyệt review. Review seed là `is_sample` → nhãn "Sample review", production tự loại. Không ghi tên nền tảng review bên ngoài khi chưa tích hợp thật với họ | e2e: có nhãn Sample ở dev; `NODE_ENV=production` không còn review mẫu |
 | 5 | URL customall hiện trong giỏ | D: `visibleProps()` + thumbnail | e2e giỏ không có chuỗi `http` trong phần thuộc tính |
-| 6 | Nút size không ghi giá | C: nút size hiện giá + chênh lệch (`delta()`) | e2e |
+| 6 | Nút size không ghi giá | C (UI-1 đổi): nút size **không** ghi giá; giá đỏ duy nhất cạnh tiêu đề đổi theo size/số lượng/add-on (`livePrice()`), có gạch + % giảm. Add-on vẫn ghi "+$x" | e2e (`pdp.e2e.ts`, `ui1-shell.e2e.ts`) |
 | 7 | "The Gril", ghi chú thiệp tính tiền, keo $32.98 | seed: lời chúc miễn phí, add-on giá hợp lý; D/C soát chính tả | — |
 | 8 | 388 request, 65 script ngoài | D: 0 script bên thứ ba, font tự host, ảnh webp/avif, JS client chỉ ở personalizer | Lighthouse / đếm request trang PDP |
 | 9 | 2 H1, meta tự sinh, 16 ảnh thiếu alt | D `seo.ts` + JSON-LD; A bắt buộc alt & meta description | e2e đếm `h1` = 1 |

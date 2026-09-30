@@ -9,7 +9,7 @@ process.env.DB_PATH = path.join(tmp, 'store.db');
 process.env.STORAGE_DIR = path.join(tmp, 'storage');
 
 const { db } = await import('./db');
-const { CartError, addLine, applyDiscountCode, ensureCart, getCart, getOrder, placeOrder, removeDiscountCode, updateLine } = await import('./cart');
+const { CartError, NOT_BETTER, addLine, applyDiscountCode, ensureCart, getCart, getOrder, placeOrder, removeDiscountCode, updateLine } = await import('./cart');
 const { evaluateDiscount, pdpCodes, rejectionMessage } = await import('./discounts');
 const { seedDiscounts } = await import('../../scripts/seed-discounts');
 
@@ -34,6 +34,7 @@ beforeEach(() => {
       ('OLD', 'percent', 20, NULL, '2020-01-01 00:00:00', NULL, 1),
       ('ONCE', 'fixed', 1000, NULL, NULL, 1, 1),
       ('SHIP', 'free_shipping', 0, NULL, NULL, NULL, 1),
+      ('QUARTER', 'percent', 25, NULL, NULL, NULL, 1),
       ('OFF', 'percent', 50, NULL, NULL, NULL, 0);`);
 });
 
@@ -50,17 +51,43 @@ describe('discount codes at checkout', () => {
     expect(err(() => applyDiscountCode(ensureCart(null), 'SAVE10'))).toMatch(/^409 cart_empty/);
   });
 
-  it('recomputes the discount on the server, after the multi-portrait discount', () => {
+  it('recomputes the code on the server; with no multi-portrait discount the code simply applies', () => {
     const id = cartWith(10);
     applyDiscountCode(id, 'save10'); // case-insensitive
-    let v = getCart(id);
+    const v = getCart(id);
     expect(v.discount).toMatchObject({ code: 'SAVE10', amount_cents: 400, free_shipping: false, summary: '10% off' });
     expect(v.totals).toMatchObject({ subtotal_cents: 3998, discount_cents: 0, code_discount_cents: 400, shipping_cents: 699, total_cents: 3998 - 400 + 699 });
+    expect(v.discount_note).toBeNull();
+  });
 
-    updateLine(id, v.lines[0].id, 3); // 3 × 39.98 = 119.94, bundle 10% = 11.99, free shipping over 79.99
-    v = getCart(id);
-    const goods = 11994 - 1199;
-    expect(v.totals).toMatchObject({ discount_cents: 1199, code_discount_cents: Math.round(goods / 10), shipping_cents: 0, total_cents: goods - Math.round(goods / 10) });
+  it('never stacks: the multi-portrait discount wins when the code is not better (ties included)', () => {
+    const id = cartWith(10, 3); // 3 × 39.98 = 119.94; bundle 10% = 11.99; code 10% = 11.99 → tie
+    applyDiscountCode(id, 'SAVE10');
+    const v = getCart(id);
+    expect(v.discount).toBeNull();
+    expect(v.discount_error).toBeNull();
+    expect(v.discount_note).toEqual({ code: 'SAVE10', message: NOT_BETTER });
+    expect(NOT_BETTER).toMatch(/^Your bundle discount is already better/);
+    expect(v.bundle.saving).toBe('10% multi-portrait discount applied');
+    expect(v.totals).toMatchObject({ discount_cents: 1199, code_discount_cents: 0, shipping_cents: 0, total_cents: 11994 - 1199 });
+    const { order_number } = placeOrder(id, checkout); // không chặn checkout
+    expect(db().prepare('SELECT discount_code, discount_cents, code_discount_cents FROM orders WHERE number = ?').get(order_number)).toEqual({ discount_code: null, discount_cents: 1199, code_discount_cents: 0 });
+  });
+
+  it('never stacks: a better code replaces the multi-portrait discount', () => {
+    const id = cartWith(10, 3);
+    applyDiscountCode(id, 'QUARTER'); // 25% of 119.94 = 29.99 > bundle 11.99
+    const v = getCart(id);
+    expect(v.discount).toMatchObject({ code: 'QUARTER', amount_cents: 2999 });
+    expect(v.discount_note).toBeNull();
+    expect(v.bundle.saving).toBeNull();
+    expect(v.totals).toMatchObject({ discount_cents: 0, code_discount_cents: 2999, shipping_cents: 0, total_cents: 11994 - 2999 });
+    updateLine(id, v.lines[0].id, 1); // hết bậc số lượng → mã vẫn áp
+    expect(getCart(id).totals).toMatchObject({ discount_cents: 0, code_discount_cents: 1000, total_cents: 3998 - 1000 + 699 });
+    updateLine(id, v.lines[0].id, 3);
+    const { order_number } = placeOrder(id, checkout);
+    expect(db().prepare('SELECT discount_code, discount_cents, code_discount_cents, total_cents FROM orders WHERE number = ?').get(order_number))
+      .toEqual({ discount_code: 'QUARTER', discount_cents: 0, code_discount_cents: 2999, total_cents: 8995 });
   });
 
   it('free-shipping codes zero the shipping line only', () => {
@@ -124,7 +151,6 @@ describe('discount codes at checkout', () => {
     expect(err(() => applyDiscountCode(id, 'pearl3'))).toBe('422 discount_min_qty: The code PEARL3 needs 3 or more portraits in your cart. Add 1 more to use it.');
     updateLine(id, getCart(id).lines[0].id, 3);
     applyDiscountCode(id, 'pearl3');
-    const goods = 11994 - 1199; // sau giảm bậc số lượng 10%
-    expect(getCart(id).totals.code_discount_cents).toBe(Math.round(goods * 0.15));
+    expect(getCart(id).totals).toMatchObject({ discount_cents: 0, code_discount_cents: 1799 }); // 15% > bậc 10%, không cộng dồn
   });
 });

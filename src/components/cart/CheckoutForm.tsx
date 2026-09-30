@@ -29,9 +29,9 @@ function validate(f: FormData): Errors {
 }
 
 /** Checkout giả lập: không thu thông tin thẻ. Lỗi hiện ngay dưới ô + bảng lỗi đầu form nhận focus (ui-ux-pro-max: error summary). */
-export function CheckoutForm({ methods, regions, addons, discount, discountError, children }: {
+export function CheckoutForm({ methods, regions, addons, discount, discountError, discountNote, children }: {
   methods: MethodOption[]; regions: string[]; addons: { title: string; price_cents: number }[];
-  discount: AppliedCode | null; discountError: { code: string; message: string } | null; children?: React.ReactNode;
+  discount: AppliedCode | null; discountError: { code: string; message: string } | null; discountNote?: { code: string; message: string } | null; children?: React.ReactNode;
 }) {
   const [method, setMethod] = useState<Method>('standard');
   const [errors, setErrors] = useState<Errors>({});
@@ -143,7 +143,7 @@ export function CheckoutForm({ methods, regions, addons, discount, discountError
       <aside aria-label="Order summary" className="h-fit rounded-[var(--radius)] border border-border bg-card p-5 lg:sticky lg:top-6">
         <h2 className="text-2xl font-semibold">Order summary</h2>
         {children}
-        <DiscountCode applied={discount} error={discountError} />
+        <DiscountCode applied={discount} error={discountError} note={discountNote} />
         <Summary totals={current.totals} addons={addons} shippingNote={current.label} code={discount} />
         <button type="submit" disabled={busy} aria-busy={busy}
           className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-accent px-6 font-semibold text-on-accent transition-colors hover:bg-accent-hover disabled:cursor-wait disabled:opacity-60">

@@ -5,7 +5,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { E2E_DB_PATH } from '../../playwright.config';
 
 const DESIGN = 'DSN-UI3DSC';
-const CODES = ['E2ESAVE10', 'E2EOLD', 'E2EMIN'];
+const CODES = ['E2ESAVE10', 'E2EOLD', 'E2EMIN', 'E2EBIG30'];
 const EMAIL = 'ui3.discounts@example.test';
 
 function sql<T>(q: string, ...args: (string | number | null)[]): T[] {
@@ -29,6 +29,7 @@ test.beforeAll(() => {
   exec("INSERT INTO discounts (code, kind, value) VALUES ('E2ESAVE10', 'percent', 10)");
   exec("INSERT INTO discounts (code, kind, value, ends_at) VALUES ('E2EOLD', 'percent', 20, '2021-03-01 00:00:00')");
   exec("INSERT INTO discounts (code, kind, value, min_subtotal_cents) VALUES ('E2EMIN', 'fixed', 500, 100000)");
+  exec("INSERT INTO discounts (code, kind, value) VALUES ('E2EBIG30', 'percent', 30)");
 });
 
 test.afterAll(() => {
@@ -125,4 +126,37 @@ test('Buy More, Save More! table on the PDP lists flagged codes, copies them, an
   await page.goto('/products/pearl-pet-portrait');
   await expect(page.getByTestId('bulk-discounts').locator('tbody tr')).toHaveCount(2);
   await expect(page.getByTestId('bulk-discounts')).not.toContainText('PEARL5');
+});
+
+test('codes never stack with the multi-portrait discount: the larger one applies and the cart says which', async ({ page }) => {
+  expect((await page.request.post('/api/cart/lines', { data: { variant_id: variant, qty: 2, design_id: DESIGN } })).ok()).toBe(true);
+  await page.goto('/cart');
+  const box = page.getByTestId('discount-code');
+  const totals = page.getByTestId('totals');
+  await expect(totals).toContainText('Multi-portrait discount');
+  const bundled = await page.getByTestId('total').innerText();
+
+  // Bundle thắng: 10% = 10% → giữ giảm theo số lượng, báo khách, không có dòng mã.
+  await box.getByLabel('Discount code').fill('E2ESAVE10');
+  await box.getByRole('button', { name: 'Apply' }).click();
+  await expect(box.getByTestId('discount-note')).toHaveText(/^Your bundle discount is already better/);
+  await expect(box.getByText('Not applied')).toBeVisible();
+  await expect(totals).toContainText('Multi-portrait discount');
+  await expect(page.getByTestId('code-discount')).toHaveCount(0);
+  await expect(page.getByTestId('total')).toHaveText(bundled);
+  await page.goto('/checkout');
+  await expect(page.getByTestId('discount-note')).toBeVisible();
+  await page.goto('/cart');
+
+  // Mã thắng: 30% > 10% → thay giảm theo số lượng.
+  await box.getByRole('button', { name: 'Remove discount code E2ESAVE10' }).click();
+  await box.getByLabel('Discount code').fill('E2EBIG30');
+  await box.getByRole('button', { name: 'Apply' }).click();
+  await expect(page.getByTestId('code-discount')).toContainText('Discount E2EBIG30');
+  await expect(totals).not.toContainText('Multi-portrait discount');
+  await expect(page.getByTestId('bundle-hint')).not.toContainText('multi-portrait discount applied');
+  const [{ price }] = sql<{ price: number }>('SELECT price_cents price FROM variants WHERE id = ?', variant);
+  const cents = Number((await page.getByTestId('total').innerText()).replace(/[^\d]/g, ''));
+  const shipping = await totals.innerText();
+  expect(cents).toBe(2 * price - Math.round(2 * price * 0.3) + (/Shipping\s*Free/.test(shipping) ? 0 : 699));
 });

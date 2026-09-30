@@ -12,8 +12,8 @@ type ApiError = { error: { code: string; message: string } };
  * Server kiểm mã và trả CartView đã tính lại; client không tự tính số tiền.
  * `onView` (giỏ) nhận CartView mới; không có thì làm mới trang server (checkout tính tổng theo từng cách ship).
  */
-export function DiscountCode({ applied, error: stored, onView }: {
-  applied: AppliedCode | null; error: { code: string; message: string } | null; onView?: (v: CartView) => void;
+export function DiscountCode({ applied, error: stored, note, onView }: {
+  applied: AppliedCode | null; error: { code: string; message: string } | null; note?: { code: string; message: string } | null; onView?: (v: CartView) => void;
 }) {
   const id = useId();
   const router = useRouter();
@@ -35,7 +35,7 @@ export function DiscountCode({ applied, error: stored, onView }: {
       const data = (await res.json()) as CartView | ApiError;
       if ('error' in data) { setError(data.error.message); return; }
       setCode('');
-      setStatus(data.discount ? `Code ${data.discount.code} applied. You save ${fmt(data.discount.amount_cents)}.` : 'Discount code removed.');
+      setStatus(data.discount ? `Code ${data.discount.code} applied. You save ${fmt(data.discount.amount_cents)}.` : data.discount_note ? data.discount_note.message : 'Discount code removed.');
       if (onView) onView(data); else router.refresh();
     } catch {
       setError('Could not reach the store. Check your connection and try again.');
@@ -47,14 +47,14 @@ export function DiscountCode({ applied, error: stored, onView }: {
   return (
     <div className="mt-4 border-t border-border pt-4" data-testid="discount-code">
       <p role="status" className="sr-only">{status}</p>
-      {applied ? (
+      {applied || note ? (
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="inline-flex min-w-0 items-center gap-2 rounded-full border border-border bg-muted px-3 py-1.5 text-sm">
+          <span className={`inline-flex min-w-0 items-center gap-2 rounded-full border px-3 py-1.5 text-sm ${applied ? 'border-border bg-muted' : 'border-dashed border-input'}`}>
             <Icon name="tag" size={16} className="shrink-0" />
-            <span className="font-semibold tracking-wide">{applied.code}</span>
-            <span className="truncate text-muted-foreground">{applied.summary}</span>
+            <span className={`font-semibold tracking-wide ${applied ? '' : 'text-muted-foreground line-through'}`}>{applied?.code ?? note?.code}</span>
+            <span className="truncate text-muted-foreground">{applied ? applied.summary : 'Not applied'}</span>
           </span>
-          <button type="button" onClick={() => call('DELETE')} disabled={busy} aria-label={`Remove discount code ${applied.code}`}
+          <button type="button" onClick={() => call('DELETE')} disabled={busy} aria-label={`Remove discount code ${applied?.code ?? note?.code}`}
             className="inline-flex min-h-11 items-center px-1 text-sm font-medium underline underline-offset-4 disabled:opacity-60">
             Remove
           </button>
@@ -75,6 +75,7 @@ export function DiscountCode({ applied, error: stored, onView }: {
         </>
       )}
       {shown && <p id={`${id}-err`} className="mt-2 text-sm text-destructive">{shown}</p>}
+      {!applied && note && !shown && <p data-testid="discount-note" className="mt-2 text-sm text-muted-foreground">{note.message}</p>}
     </div>
   );
 }

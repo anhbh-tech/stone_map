@@ -24,7 +24,7 @@ export default async function CheckoutPage() {
     <div className="mx-auto max-w-6xl px-4 py-10">
       <h1 className="text-4xl font-semibold md:text-5xl">Checkout</h1>
       <CheckoutAccountNote />
-      <CheckoutForm methods={methods} regions={s.shipping.regions} discount={standard.discount} discountError={standard.discount_error}
+      <CheckoutForm methods={methods} regions={s.shipping.regions} discount={standard.discount} discountError={standard.discount_error} discountNote={standard.discount_note}
         addons={standard.addons.filter((a) => a.on).map((a) => ({ title: a.title, price_cents: a.price_cents }))}>
         <LineList items={standard.lines.map((l) => ({ key: l.id, title: l.product_title, size: l.size, qty: l.qty, cents: l.line_cents, thumbnail_url: l.thumbnail_url, properties: l.properties }))} />
       </CheckoutForm>

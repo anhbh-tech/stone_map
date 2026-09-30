@@ -48,6 +48,8 @@ export type CartView = {
   discount: AppliedCode | null;
   /** Mã đã lưu nhưng không còn dùng được (hết hạn, giỏ dưới mức tối thiểu…): hiện lý do, không âm thầm bỏ. */
   discount_error: { code: string; message: string } | null;
+  /** Mã hợp lệ nhưng không lợi hơn giảm giá theo số lượng: giữ giảm theo số lượng, báo khách (không chặn checkout). */
+  discount_note: { code: string; message: string } | null;
   shipping_headline: string;
 };
 
@@ -111,10 +113,12 @@ export function getCart(id: string | null | undefined, method: ShippingMethod = 
   const tiers = bundleTiers();
   const qty = lines.reduce((n, l) => n + l.qty, 0);
   const on = addons.filter((a) => a.selected);
-  const base = totals(lines.map((l) => ({ unit_cents: l.price_cents, qty: l.qty })), on, tiers, s, method);
+  const priced = lines.map((l) => ({ unit_cents: l.price_cents, qty: l.qty }));
+  const base = totals(priced, on, tiers, s, method);
   const stored = cid ? (db().prepare('SELECT discount_code FROM carts WHERE id = ?').get(cid) as { discount_code: string | null }).discount_code : null;
-  const code = stored && lines.length ? applyCode(stored, base, qty) : { t: { ...base, code_discount_cents: 0 }, discount: null, error: null };
+  const code = stored && lines.length ? applyCode(stored, base, totals(priced, on, [], s, method), qty) : { t: { ...base, code_discount_cents: 0 }, discount: null, error: null, note: null };
   const t = code.t;
+  const bundle = bundleHint(qty, tiers);
   return {
     id: cid,
     count: qty,
@@ -130,30 +134,39 @@ export function getCart(id: string | null | undefined, method: ShippingMethod = 
       id: a.id, handle: a.handle, title: a.title, description: a.description, kind: a.kind, price_cents: a.price_cents,
       text_input: !!a.text_input, text_free: !!a.text_free, on: !!a.selected, text: a.text,
     })),
-    bundle: bundleHint(qty, tiers),
+    bundle: t.discount_cents ? bundle : { ...bundle, saving: null }, // mã thắng → không nói "đã áp giảm theo số lượng"
     totals: t,
     discount: code.discount,
     discount_error: code.error,
+    discount_note: code.note,
     shipping_headline: shippingHeadline(s),
   };
 }
 
-type CodeResult = { t: CartTotals; discount: AppliedCode | null; error: { code: string; message: string } | null };
+type Msg = { code: string; message: string };
+type CodeResult = { t: CartTotals; discount: AppliedCode | null; error: Msg | null; note: Msg | null };
 
-/** Tính lại mã trên Totals của server. Phần giảm tính trên hàng sau giảm theo bậc; add-on và ship không bị giảm (trừ mã miễn phí ship). */
-function applyCode(raw: string, base: Totals, qty: number): CodeResult {
-  const none = { ...base, code_discount_cents: 0 };
+export const NOT_BETTER = 'Your bundle discount is already better, so we kept it. Codes don’t combine with the multi-portrait discount.';
+
+/**
+ * Tính lại mã trên Totals của server. Không cộng dồn (quyết định của captain): so "chỉ giảm theo số lượng" (`bundled`)
+ * với "chỉ mã" (`plain` = cùng giỏ không có bậc giảm, mã tính trên subtotal) và lấy tổng thấp hơn; bằng nhau → giữ giảm theo số lượng.
+ * Add-on và ship không bị giảm, trừ mã miễn phí ship.
+ */
+function applyCode(raw: string, bundled: Totals, plain: Totals, qty: number): CodeResult {
+  const none = { ...bundled, code_discount_cents: 0 };
   const d = findDiscount(raw);
-  if (!d) return { t: none, discount: null, error: { code: raw, message: rejectionMessage(raw, 'not_found') } };
-  const cart = { subtotal_cents: base.subtotal_cents, qty, base_cents: base.subtotal_cents - base.discount_cents };
+  if (!d) return { t: none, discount: null, error: { code: raw, message: rejectionMessage(raw, 'not_found') }, note: null };
+  const cart = { subtotal_cents: plain.subtotal_cents, qty };
   const r = evaluateDiscount(d, cart, discountUses(d.code));
-  if (!r.ok) return { t: none, discount: null, error: { code: d.code, message: rejectionMessage(d.code, r.reason, d, cart) } };
-  const shipping = r.free_shipping ? 0 : base.shipping_cents;
-  const saved = r.discount_cents + (base.shipping_cents - shipping);
+  if (!r.ok) return { t: none, discount: null, error: { code: d.code, message: rejectionMessage(d.code, r.reason, d, cart) }, note: null };
+  const shipping = r.free_shipping ? 0 : plain.shipping_cents;
+  const total = plain.total_cents - r.discount_cents - (plain.shipping_cents - shipping);
+  if (bundled.discount_cents > 0 && total >= bundled.total_cents) return { t: none, discount: null, error: null, note: { code: d.code, message: NOT_BETTER } };
   return {
-    t: { ...base, shipping_cents: shipping, code_discount_cents: r.discount_cents, total_cents: base.total_cents - r.discount_cents - (base.shipping_cents - shipping) },
-    discount: { code: d.code, summary: discountSummary(d), amount_cents: saved, free_shipping: r.free_shipping },
-    error: null,
+    t: { ...plain, shipping_cents: shipping, code_discount_cents: r.discount_cents, total_cents: total },
+    discount: { code: d.code, summary: discountSummary(d), amount_cents: plain.total_cents - total, free_shipping: r.free_shipping },
+    error: null, note: null,
   };
 }
 
@@ -163,8 +176,7 @@ export function applyDiscountCode(cartId: string, code: string) {
   if (!cart.id || !cart.lines.length) throw new CartError(409, 'cart_empty', 'Add a portrait to your cart before using a code.');
   const d = findDiscount(code);
   if (!d) throw new CartError(404, 'discount_not_found', rejectionMessage(code, 'not_found'));
-  const t = cart.totals;
-  const ctx = { subtotal_cents: t.subtotal_cents, qty: cart.count, base_cents: t.subtotal_cents - t.discount_cents };
+  const ctx = { subtotal_cents: cart.totals.subtotal_cents, qty: cart.count };
   const r = evaluateDiscount(d, ctx, discountUses(d.code));
   if (!r.ok) throw new CartError(r.reason === 'min_qty' || r.reason === 'min_subtotal' ? 422 : 410, `discount_${r.reason}`, rejectionMessage(d.code, r.reason, d, ctx));
   db().prepare("UPDATE carts SET discount_code = ?, updated_at = datetime('now') WHERE id = ?").run(d.code, cartId);
@@ -310,7 +322,7 @@ export function placeOrder(cartId: string | null | undefined, data: CheckoutData
     // Giới hạn lượt dùng kiểm lại trong transaction (lượt = số đơn đã lưu mã).
     if (cart.discount) {
       const dc = findDiscount(cart.discount.code);
-      const again = dc && evaluateDiscount(dc, { subtotal_cents: t.subtotal_cents, qty: cart.count, base_cents: t.subtotal_cents - t.discount_cents }, discountUses(dc.code));
+      const again = dc && evaluateDiscount(dc, { subtotal_cents: t.subtotal_cents, qty: cart.count }, discountUses(dc.code));
       if (!dc || !again || !again.ok) throw new CartError(409, 'discount_invalid', `${rejectionMessage(cart.discount.code, dc && again && !again.ok ? again.reason : 'not_found', dc)} Remove the code to continue.`);
     }
     const order = d.prepare(`INSERT INTO orders (number, email, name, address, shipping_method, subtotal_cents, discount_cents, addons_cents, shipping_cents, total_cents, discount_code, code_discount_cents)

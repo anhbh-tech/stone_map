@@ -91,7 +91,7 @@ Kiểu dữ liệu ở `src/lib/types.ts`. Lỗi luôn là `{ error: { code: str
 - Mỗi trang đúng 1 `<h1>`; ảnh luôn có `alt`; `next/image` có width/height (CLS < 0.1).
 - Tiền là cent nguyên; format bằng `src/lib/money.ts`.
 - Câu chữ về ship / khung / số liệu chỉ lấy từ `getSettings()` + `shippingHeadline()`; `claims.* = null` thì không hiển thị con số.
-- Test: `npm test` (vitest, logic), `npm run test:e2e` (Playwright, luồng chính, fixture ở `tests/fixtures/`). Mỗi crew thêm test cho phần của mình. `npm run typecheck` và `npm run lint` phải sạch.
+- Test: `npm test` (vitest, logic), `npm run test:e2e` (Playwright, luồng chính, fixture ở `tests/fixtures/`). Mỗi crew thêm test cho phần của mình (`tests/e2e/<crew>.e2e.ts`). `playwright.config.ts` chạy mọi spec tuần tự trên một next dev + một DB tmp, nên spec nào đổi dữ liệu seed phải trả lại khi xong; `-c tests/e2e/<crew>.config.ts` chạy riêng một spec. `npm run typecheck` và `npm run lint` phải sạch.
 
 ## 6. Mogcustom → ở đâu trong hệ thống này
 

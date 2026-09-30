@@ -7,6 +7,26 @@ import { E2E_DB_PATH } from './admin.config';
 
 const db = () => new DatabaseSync(E2E_DB_PATH);
 
+// Spec này đổi settings và ẩn review mẫu; trả lại như cũ để spec crew khác (cùng DB ở lần chạy gốc) thấy dữ liệu seed.
+let snapshot: { settings: { key: string; value: string }[]; reviews: { id: number; status: string }[] };
+test.beforeAll(() => {
+  const d = db();
+  try {
+    snapshot = {
+      settings: d.prepare('SELECT key, value FROM settings').all() as typeof snapshot.settings,
+      reviews: d.prepare('SELECT id, status FROM reviews').all() as typeof snapshot.reviews,
+    };
+  } finally { d.close(); }
+});
+test.afterAll(() => {
+  const d = db();
+  try {
+    for (const r of snapshot.settings) d.prepare('UPDATE settings SET value = ? WHERE key = ?').run(r.value, r.key);
+    for (const r of snapshot.reviews) d.prepare('UPDATE reviews SET status = ? WHERE id = ?').run(r.status, r.id);
+    d.prepare("DELETE FROM reviews WHERE author = 'Alex P.'").run();
+  } finally { d.close(); }
+});
+
 async function login(page: Page, password = 'admin123') {
   await page.goto('/admin/login');
   await page.getByLabel('Username').fill('admin');
@@ -112,7 +132,7 @@ test('reviews: publish/hide works, is_sample cannot be changed, manual reviews a
   const api = page.request;
   const sample = db().prepare('SELECT id FROM reviews WHERE is_sample = 1 LIMIT 1').get() as { id: number };
 
-  const bad = await api.patch(`/api/admin/reviews/${sample.id}`, { data: { is_sample: 0 }, headers: { origin: 'http://localhost:3101' } });
+  const bad = await api.patch(`/api/admin/reviews/${sample.id}`, { data: { is_sample: 0 }, headers: { origin: new URL(page.url()).origin } });
   expect(bad.status()).toBe(422);
   expect((await bad.json()).error.code).toBe('is_sample_immutable');
   expect((await api.post('/api/admin/reviews', { data: { product_id: null, author: 'X', rating: 5, body: 'b', is_sample: 1 } })).status()).toBe(422);

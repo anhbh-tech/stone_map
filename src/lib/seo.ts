@@ -1,12 +1,13 @@
 // JSON-LD + meta dùng chung (crew D mở rộng: Breadcrumb, Organization). Không sinh meta từ mô tả thô (#9).
 import type { Product } from './catalog';
 import type { Settings } from './types';
+import type { ReviewSummary } from './reviews';
 
 export function metaDescription(p: Pick<Product, 'meta_description' | 'subtitle' | 'title'>) {
   return (p.meta_description || p.subtitle || p.title).slice(0, 160);
 }
 
-export function productJsonLd(p: Product, s: Settings, url: string) {
+export function productJsonLd(p: Product, s: Settings, url: string, reviews?: ReviewSummary) {
   const prices = p.variants.map((v) => v.price_cents);
   const ld: Record<string, unknown> = {
     '@context': 'https://schema.org',
@@ -24,9 +25,9 @@ export function productJsonLd(p: Product, s: Settings, url: string) {
       availability: 'https://schema.org/InStock',
     },
   };
-  // Chỉ khai báo điểm review khi có số thật (claims null = không có).
-  if (s.claims.rating != null && s.claims.reviews_count) {
-    ld.aggregateRating = { '@type': 'AggregateRating', ratingValue: s.claims.rating, reviewCount: s.claims.reviews_count };
+  // Điểm review chỉ từ reviewSummary() và không bao giờ khi còn review mẫu.
+  if (reviews && reviews.count && reviews.average != null && !reviews.has_samples) {
+    ld.aggregateRating = { '@type': 'AggregateRating', ratingValue: reviews.average, reviewCount: reviews.count };
   }
   return ld;
 }

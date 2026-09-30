@@ -41,6 +41,13 @@ tx(() => {
   const t = d.prepare('INSERT INTO bundle_tiers (min_qty, percent_off) VALUES (?, ?)');
   [[2, 10], [3, 15], [5, 20]].forEach(([q, o]) => t.run(q, o));
 
+  // Review MẪU cho dev (is_sample = 1): UI hiện nhãn "Sample review", production tự loại.
+  d.exec('DELETE FROM reviews WHERE is_sample = 1');
+  const r = d.prepare("INSERT INTO reviews (product_id, author, rating, title, body, photo_url, status, is_sample) VALUES (?, ?, ?, ?, ?, ?, 'published', 1)");
+  r.run(p.id, 'Sample · Jamie R.', 5, 'Looks just like Mochi', 'The pearl texture is lovely and the preview matched what arrived.', '/demo/cafe-duke.webp');
+  r.run(p.id, 'Sample · Priya S.', 4, 'Great gift', 'Took a week longer than I hoped, but my mum loved it.', null);
+  r.run(p.id, 'Sample · Tom W.', 5, null, 'Approving the preview first made me confident ordering.', '/demo/starry-king.webp');
+
   d.prepare('INSERT INTO admin_users (username, password_hash) VALUES (?, ?) ON CONFLICT(username) DO UPDATE SET password_hash = excluded.password_hash')
     .run('admin', hashPassword('admin123'));
 });

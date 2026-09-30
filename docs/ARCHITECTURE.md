@@ -34,7 +34,7 @@ Chỉ sửa file trong vùng của mình. Cần đổi file dùng chung (cột *
 
 | Module | Thư mục | Chủ |
 |---|---|---|
-| Nền dùng chung | `db/schema.sql`, `src/lib/{db,types,settings,catalog,pricing,money,ids,password,seo}.ts`, `src/app/{layout.tsx,globals.css}` | lead |
+| Nền dùng chung | `db/schema.sql`, `src/lib/{db,types,settings,catalog,pricing,money,ids,password,seo,reviews}.ts`, `src/app/{layout.tsx,globals.css}` | lead |
 | A. Admin + auth | `src/app/admin/**`, `src/app/api/admin/**`, `src/lib/auth.ts`, `src/proxy.ts` | crew A |
 | B. Personalization + worker | `src/app/api/personalize/**`, `src/lib/personalize/**`, `src/worker/**`, `src/instrumentation.ts`, `storage/` layout | crew B |
 | C. PDP + personalizer UI | `src/app/(store)/products/**`, `src/components/pdp/**`, `src/components/personalizer/**` | crew C |
@@ -100,6 +100,7 @@ Kiểu dữ liệu ở `src/lib/types.ts`. Lỗi luôn là `{ error: { code: str
 | 1 | AI bịa thú cưng từ hình không phải thú | B preflight + C so sánh cạnh nhau + tick xác nhận | e2e: `not-a-pet.jpg` bị chặn, nút Generate khoá |
 | 2 | ETA ghi "a few seconds", đứng ở 99% | B `eta_ms` từ số liệu thật; C cho chọn size/add-on khi chờ, email link | progress tăng đều, không có số cứng |
 | 3 | Mô tả nói có khung nhưng bán khung; ship US vs Worldwide | lead: `settings`, `frame_included`, `shippingHeadline()` | grep không còn câu ship hard-code |
+| 4 | Social proof ("12,532 reviews on Trustpilot" + testimonial) | lead: bảng `reviews` + `src/lib/reviews.ts` (số sao, số review, histogram tính từ dữ liệu); C hiện trên PDP; A duyệt review. Review seed là `is_sample` → nhãn "Sample review", production tự loại. Không ghi tên nền tảng review bên ngoài khi chưa tích hợp thật với họ | e2e: có nhãn Sample ở dev; `NODE_ENV=production` không còn review mẫu |
 | 5 | URL customall hiện trong giỏ | D: `visibleProps()` + thumbnail | e2e giỏ không có chuỗi `http` trong phần thuộc tính |
 | 6 | Nút size không ghi giá | C: nút size hiện giá + chênh lệch (`delta()`) | e2e |
 | 7 | "The Gril", ghi chú thiệp tính tiền, keo $32.98 | seed: lời chúc miễn phí, add-on giá hợp lý; D/C soát chính tả | — |

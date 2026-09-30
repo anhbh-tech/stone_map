@@ -263,3 +263,40 @@ test.describe('mobile 375px (#12)', () => {
     }
   });
 });
+
+test('integrates with the real personalize API and the PDP call order', async ({ page }) => {
+  // PDP lưu add-on trong lúc chờ AI, trước khi có dòng giỏ: phải tạo giỏ, không 409.
+  const [card] = sql<{ id: number }>("SELECT id FROM addons WHERE kind = 'card'");
+  const early = await page.request.put('/api/cart/addons', { data: { addon_id: card.id, on: true, text: 'For Mum' } });
+  expect(early.status()).toBe(200);
+  expect((await early.json()).lines).toHaveLength(0);
+
+  const [p] = sql<{ id: number }>("SELECT id FROM products WHERE handle = 'pearl-pet-portrait'");
+  const up = await page.request.post('/api/personalize/uploads', {
+    multipart: { consent: '1', file: { name: 'pet-ok.jpg', mimeType: 'image/jpeg', buffer: fs.readFileSync(path.join(ROOT, 'tests', 'fixtures', 'pet-ok.jpg')) } },
+  });
+  expect(up.status()).toBe(201);
+  const { upload_id } = await up.json();
+  const create = (mode: 'ai' | 'designer') => page.request.post('/api/personalize/designs', { data: { product_id: p.id, variant_id: variants[0], upload_id, mode, style: 'ocean', pet_name: 'Pip' } });
+
+  const ai = await (await create('ai')).json();
+  expect((await add(page, ai.id)).status()).toBe(409);                  // draft (chưa gen/xác nhận)
+
+  const designer = await (await create('designer')).json();
+  const submitted = await (await page.request.post(`/api/personalize/designs/${designer.id}/submit`)).json();
+  expect(submitted.status).toBe('in_review');
+  const added = await add(page, designer.id);
+  expect(added.status()).toBe(200);
+  const view = await added.json();
+  expect(view.lines[0]).toMatchObject({ design_id: designer.id, properties: { 'Pet name': 'Pip', Style: 'Designer finish' } });
+  expect(view.lines[0].thumbnail_url).toMatch(/^\/media\/uploads\//);
+  expect(view.addons.find((a: { id: number }) => a.id === card.id)).toMatchObject({ on: true, text: 'For Mum' });
+
+  // PDP điều hướng client sang /cart: header phải cập nhật số lượng dù layout không render lại.
+  await page.goto('/');
+  await expect(page.getByRole('link', { name: 'Cart, 1 item' })).toBeVisible();
+  await page.request.post('/api/cart/lines', { data: { variant_id: variants[0], qty: 1, design_id: OK } });
+  await page.getByRole('link', { name: 'Cart', exact: true }).first().click();
+  await page.waitForURL(/\/cart$/);
+  await expect(page.getByRole('link', { name: 'Cart, 2 items' })).toBeVisible();
+});

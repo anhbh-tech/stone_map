@@ -5,6 +5,7 @@ import type { Totals } from '@/lib/pricing';
 import { fmt } from '@/lib/money';
 import { Icon } from '@/components/shell/Icon';
 import { Summary } from './Summary';
+import { announceCartCount } from '@/components/shell/CartBadge';
 
 type Method = 'standard' | 'express';
 export type MethodOption = { id: Method; label: string; window: string; totals: Totals };
@@ -56,6 +57,7 @@ export function CheckoutForm({ methods, regions, addons, children }: { methods: 
       });
       const data = await res.json();
       if (res.status === 201) {
+        announceCartCount(0);
         router.push(`/orders/${encodeURIComponent(data.order_number)}`);
         router.refresh(); // layout (số lượng giỏ ở header) không tự render lại khi điều hướng client
         return;

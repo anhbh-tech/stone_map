@@ -1,12 +1,12 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import type { CartAddonView, CartLineView, CartView } from '@/lib/cart';
 import { fmt } from '@/lib/money';
 import { Icon } from '@/components/shell/Icon';
 import { Summary } from './Summary';
+import { announceCartCount } from '@/components/shell/CartBadge';
 
 type ApiError = { error: { code: string; message: string } };
 
@@ -16,7 +16,8 @@ export function CartClient({ initial, shopHref }: { initial: CartView; shopHref:
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState('');
-  const router = useRouter();
+  // Header có thể còn số cũ nếu tới đây bằng điều hướng client (PDP → /cart).
+  useEffect(() => { announceCartCount(initial.count); }, [initial.count]);
 
   async function call(url: string, method: string, body?: unknown) {
     setBusy(true);
@@ -28,7 +29,7 @@ export function CartClient({ initial, shopHref }: { initial: CartView; shopHref:
       else {
         setView(data);
         setStatus(`Cart updated: ${data.count} ${data.count === 1 ? 'item' : 'items'}, total ${fmt(data.totals.total_cents)}`);
-        router.refresh(); // header (số lượng giỏ) là server component
+        announceCartCount(data.count);
       }
     } catch {
       setError('Could not reach the store. Check your connection and try again.');
@@ -37,10 +38,12 @@ export function CartClient({ initial, shopHref }: { initial: CartView; shopHref:
     }
   }
 
+  const title = <h1 className="text-4xl font-semibold md:text-5xl">{view.lines.length ? 'Your cart' : 'Your cart is empty'}</h1>;
   if (!view.lines.length) {
     return (
-      <div className="mt-6">
-        <p className="text-muted-foreground">Nothing here yet. Create a portrait and it will appear in your cart once you approve the preview.</p>
+      <div>
+        {title}
+        <p className="mt-6 text-muted-foreground">Nothing here yet. Create a portrait and it will appear in your cart once you approve the preview.</p>
         <Link href={shopHref} className="mt-6 inline-flex min-h-12 items-center gap-2 rounded-md bg-accent px-6 font-semibold text-on-accent hover:opacity-90">
           Create your portrait <Icon name="arrowRight" size={18} />
         </Link>
@@ -49,6 +52,8 @@ export function CartClient({ initial, shopHref }: { initial: CartView; shopHref:
   }
 
   return (
+    <>
+    {title}
     <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
       <div className="min-w-0">
         <p role="status" className="sr-only">{status}</p>
@@ -88,6 +93,7 @@ export function CartClient({ initial, shopHref }: { initial: CartView; shopHref:
         <p className="mt-3 text-center text-xs text-muted-foreground">{view.shipping_headline}</p>
       </aside>
     </div>
+    </>
   );
 }
 

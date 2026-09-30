@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Icon } from './Icon';
+import { CartBadge } from './CartBadge';
 
 /** Header storefront. Logo là link chữ, không phải <h1> — mỗi trang tự có đúng 1 h1 (#9). */
 export function Header({ shopName, cartCount, shopHref }: { shopName: string; cartCount: number; shopHref: string | null }) {
@@ -12,14 +12,7 @@ export function Header({ shopName, cartCount, shopHref }: { shopName: string; ca
           {shopHref && <Link href={shopHref} className={`${link} inline-flex`}>Create yours</Link>}
           <Link href="/#how-it-works" className={`${link} hidden sm:inline-flex`}>How it works</Link>
           <Link href="/policies/shipping" className={`${link} hidden sm:inline-flex`}>Shipping</Link>
-          <Link href="/cart" aria-label={`Cart, ${cartCount} ${cartCount === 1 ? 'item' : 'items'}`} className="relative inline-flex size-11 items-center justify-center rounded-md text-foreground hover:text-accent">
-            <Icon name="bag" size={22} />
-            {cartCount > 0 && (
-              <span aria-hidden="true" className="absolute right-0.5 top-0.5 flex min-w-5 items-center justify-center rounded-full bg-accent px-1 text-xs font-semibold leading-5 text-on-accent">
-                {cartCount}
-              </span>
-            )}
-          </Link>
+          <CartBadge key={cartCount} initial={cartCount} />
         </nav>
       </div>
     </header>

@@ -1,0 +1,307 @@
+// UI-2 e2e: tài khoản khách (đăng ký / đăng nhập / đăng xuất, sổ địa chỉ, đơn gắn vào tài khoản), tra đơn,
+// tìm kiếm có gợi ý, collections (lọc / sắp xếp / phân trang). Chạy: npx playwright test -c tests/e2e/ui2.config.ts
+// Dữ liệu tạo ra (khách, đơn, design, sản phẩm tạm) bị xoá ở afterAll; seed giữ nguyên.
+import fs from 'node:fs';
+import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
+import { expect, test, type Page } from '@playwright/test';
+
+const DB = process.env.E2E_D_DB!;
+const PREVIEW = fs.readFileSync(path.join(__dirname, '..', '..', 'public', 'demo', 'cafe-duke.webp'));
+const DESIGN = 'DSN-UI2E2E';
+const EMAIL = 'ui2-e2e@example.com'; // cố định: worker khởi động lại sau lỗi vẫn dùng cùng khách
+const PASSWORD = 'pearls-and-paws';
+const TEMP_HANDLE = 'ui2-e2e-temp-product';
+
+function sql<T = unknown>(q: string, ...args: (string | number | null)[]): T[] {
+  const d = new DatabaseSync(DB);
+  try { return d.prepare(q).all(...args) as T[]; } finally { d.close(); }
+}
+function exec(q: string, ...args: (string | number | null)[]) {
+  const d = new DatabaseSync(DB);
+  try { d.prepare(q).run(...args); } finally { d.close(); }
+}
+
+test.beforeAll(() => {
+  cleanup();
+  const [p] = sql<{ id: number }>("SELECT id FROM products WHERE handle = 'pearl-pet-portrait'");
+  exec(`INSERT INTO designs (id, product_id, mode, status, style, pet_name, preview_path) VALUES (?, ?, 'ai', 'confirmed', 'royal-starry', 'Mochi', ?)
+    ON CONFLICT(id) DO UPDATE SET status = excluded.status`, DESIGN, p.id, `previews/${DESIGN}.webp`);
+});
+
+function cleanup() {
+  const orders = sql<{ id: number }>('SELECT o.id FROM orders o JOIN customers c ON c.id = o.customer_id WHERE c.email = ?', EMAIL);
+  for (const o of orders) {
+    exec('DELETE FROM order_lines WHERE order_id = ?', o.id);
+    exec('DELETE FROM order_addons WHERE order_id = ?', o.id);
+    exec('DELETE FROM orders WHERE id = ?', o.id);
+  }
+  exec('DELETE FROM customers WHERE email = ?', EMAIL);
+  exec('DELETE FROM designs WHERE id = ?', DESIGN);
+  exec('DELETE FROM products WHERE handle = ?', TEMP_HANDLE);
+}
+test.afterAll(cleanup);
+
+test.beforeEach(async ({ page }) => {
+  await page.route('**/media/**', (r) => r.fulfill({ status: 200, contentType: 'image/webp', body: PREVIEW }));
+});
+
+const oneH1 = (page: Page) => expect(page.locator('h1')).toHaveCount(1);
+const cookie = async (page: Page) => (await page.context().cookies()).find((c) => c.name === 'pa_customer');
+
+test('account: register, sign out, sign in, and address book', async ({ page }) => {
+  await page.goto('/account');
+  await expect(page).toHaveURL(/\/account\/login\?next=(%2F|\/)account$/);
+  await oneH1(page);
+
+  await page.getByRole('link', { name: 'Create an account' }).click();
+  await expect(page).toHaveURL(/\/account\/register/);
+  await oneH1(page);
+  await page.getByRole('button', { name: 'Create account' }).click();
+  await expect(page.getByText('Enter your name')).toBeVisible();
+
+  await page.getByLabel('Name').fill('Mai Tran');
+  await page.getByRole('textbox', { name: 'Email', exact: true }).fill(EMAIL);
+  await page.getByLabel('Password', { exact: true }).fill(PASSWORD);
+  await page.getByRole('button', { name: 'Show password' }).click();
+  await expect(page.getByLabel('Password', { exact: true })).toHaveAttribute('type', 'text');
+  await page.getByRole('button', { name: 'Create account' }).click();
+
+  await expect(page).toHaveURL(/\/account$/);
+  await oneH1(page);
+  await expect(page.locator('h1')).toHaveText('Hi, Mai');
+  await expect(page.getByTestId('orders-empty')).toBeVisible();
+  const c = (await cookie(page))!;
+  expect(c).toMatchObject({ httpOnly: true, sameSite: 'Lax' });
+  // DB chỉ giữ hash của token.
+  expect(sql('SELECT 1 FROM customer_sessions WHERE token = ?', c.value)).toHaveLength(0);
+
+  // Trùng email → báo lỗi ngay ô email.
+  const dup = await page.request.post('/api/account/register', { data: { name: 'X', email: EMAIL.toUpperCase(), password: 'whatever12' } });
+  expect(dup.status()).toBe(409);
+  expect((await dup.json()).error.code).toBe('email_taken');
+
+  // Sổ địa chỉ: thêm 2, đổi mặc định, xoá.
+  const book = page.getByTestId('address');
+  const addAddress = async (line1: string) => {
+    await page.getByRole('button', { name: 'Add address' }).click();
+    await page.getByLabel('Street address').fill(line1);
+    await page.getByLabel('City').fill('Austin');
+    await page.getByLabel('State').fill('TX');
+    await page.getByLabel('ZIP / postal code').fill('78701');
+    await page.getByRole('button', { name: 'Save address' }).click();
+  };
+  await page.getByRole('button', { name: 'Add address' }).click();
+  await page.getByRole('button', { name: 'Save address' }).click();
+  await expect(page.locator('#new-line1-error')).toHaveText('Enter your street address');
+  await page.getByRole('button', { name: 'Cancel' }).click();
+  await addAddress('1 Pearl Street');
+  await expect(book).toHaveCount(1);
+  await expect(book.first()).toContainText('Default');
+  await addAddress('22 Oyster Lane');
+  await expect(book).toHaveCount(2);
+  await book.filter({ hasText: '22 Oyster Lane' }).getByRole('button', { name: 'Make default' }).click();
+  await expect(book.first()).toContainText('22 Oyster Lane');
+  await expect(book.first()).toContainText('Default');
+  await book.first().getByRole('button', { name: 'Remove' }).click();
+  await book.first().getByRole('button', { name: 'Remove' }).click(); // xác nhận
+  await expect(book).toHaveCount(1);
+  await expect(book.first()).toContainText('1 Pearl Street');
+  await expect(book.first()).toContainText('Default');
+  await page.reload();
+  await expect(book).toHaveCount(1);
+
+  // Đăng xuất → /account đòi đăng nhập lại; mật khẩu sai bị từ chối.
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await expect(page).toHaveURL(/\/$|\/account\/login/);
+  expect(await cookie(page)).toBeUndefined();
+  await page.goto('/account/login');
+  await page.getByRole('textbox', { name: 'Email', exact: true }).fill(EMAIL);
+  await page.getByLabel('Password', { exact: true }).fill('wrong-password');
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page.locator('main').getByRole('alert')).toContainText('don’t match an account');
+  await page.getByLabel('Password', { exact: true }).fill(PASSWORD);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page).toHaveURL(/\/account$/);
+
+  // Chỉ chuyển hướng tới đường dẫn nội bộ.
+  await page.goto('/account/login?next=//evil.example');
+  await expect(page).toHaveURL(/\/account$/);
+
+  // Chặn yêu cầu khác origin.
+  const cross = await page.request.post('/api/account/login', { data: { email: EMAIL, password: PASSWORD }, headers: { origin: 'https://evil.example' } });
+  expect(cross.status()).toBe(403);
+});
+
+test('checkout while signed in attaches the order; track order by number + email', async ({ page, browser }) => {
+  // Không phụ thuộc test trước: tạo tài khoản nếu chưa có (409 = đã có).
+  const reg = await page.request.post('/api/account/register', { data: { name: 'Mai Tran', email: EMAIL, password: PASSWORD } });
+  expect([201, 409]).toContain(reg.status());
+  await page.context().clearCookies();
+  await page.goto('/account/login');
+  await page.getByRole('textbox', { name: 'Email', exact: true }).fill(EMAIL);
+  await page.getByLabel('Password', { exact: true }).fill(PASSWORD);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page).toHaveURL(/\/account$/);
+
+  const [p] = sql<{ id: number }>("SELECT id FROM products WHERE handle = 'pearl-pet-portrait'");
+  const [v] = sql<{ id: number }>('SELECT id FROM variants WHERE product_id = ? ORDER BY position LIMIT 1', p.id);
+  expect((await page.request.post('/api/cart/lines', { data: { variant_id: v.id, qty: 1, design_id: DESIGN } })).status()).toBe(200);
+
+  await page.goto('/checkout');
+  await expect(page.getByTestId('checkout-account-note')).toContainText(EMAIL);
+  await page.getByRole('textbox', { name: 'Email', exact: true }).fill(EMAIL);
+  await page.getByLabel('Full name').fill('Mai Tran');
+  await page.getByLabel('Address', { exact: true }).fill('1 Pearl Street');
+  await page.getByLabel('City').fill('Austin');
+  await page.getByLabel('State').fill('TX');
+  await page.getByLabel('ZIP code').fill('78701');
+  await page.getByRole('button', { name: /Place order/ }).click();
+  await page.waitForURL(/\/orders\/\d+$/);
+  const number = page.url().split('/').pop()!;
+  const [row] = sql<{ email: string }>('SELECT c.email FROM orders o JOIN customers c ON c.id = o.customer_id WHERE o.number = ?', number);
+  expect(row.email).toBe(EMAIL);
+
+  await page.goto('/account');
+  const order = page.getByTestId('order-row').filter({ hasText: `#${number}` });
+  await expect(order).toBeVisible();
+  await expect(order).toContainText('Preview approved');
+  await order.getByRole('link').first().click();
+  await expect(page).toHaveURL(new RegExp(`/account/orders/${number}$`));
+  await oneH1(page);
+  await expect(page.locator('main')).toContainText('1 Pearl Street');
+  await expect(page.locator('main')).toContainText('Mochi');
+
+  // Khách khác (chưa đăng nhập) không xem được đơn trong tài khoản, nhưng tra được bằng số đơn + email.
+  const other = await browser.newContext();
+  const guest = await other.newPage();
+  await guest.goto(`/account/orders/${number}`);
+  await expect(guest).toHaveURL(/\/account\/login/);
+  await guest.goto('/track-order');
+  await oneH1(guest);
+  await guest.getByLabel('Order number').fill(`#${number}`);
+  await guest.getByLabel('Email used at checkout').fill('someone-else@example.com');
+  await guest.getByRole('button', { name: 'Track order' }).click();
+  await expect(guest.locator('main').getByRole('alert').first()).toContainText('couldn’t find an order');
+  await expect(guest.getByTestId('tracked-order')).toHaveCount(0);
+  await guest.getByLabel('Email used at checkout').fill(EMAIL.toUpperCase());
+  await guest.getByRole('button', { name: 'Track order' }).click();
+  const tracked = guest.getByTestId('tracked-order');
+  await expect(tracked).toContainText(`#${number}`);
+  await expect(tracked).toContainText('Austin, TX');
+  await expect(tracked).not.toContainText('Pearl Street');
+  await expect(tracked.locator('[aria-current="step"]')).toContainText('Order placed');
+  await other.close();
+});
+
+test('search: suggestions while typing, keyboard selection, results, sort and empty state', async ({ page }) => {
+  await page.goto('/search');
+  await oneH1(page);
+  const box = page.getByRole('combobox', { name: 'Search products' });
+  await box.pressSequentially('ornam', { delay: 30 });
+  const list = page.getByRole('listbox', { name: 'Suggestions' });
+  await expect(list.getByRole('option', { name: /Ornament/ })).toHaveCount(2);
+  await expect(list.getByRole('option', { name: 'Search for “ornam”' })).toBeVisible();
+
+  await box.press('ArrowDown');
+  await expect(box).toHaveAttribute('aria-activedescendant', /opt-0$/);
+  await box.press('Escape');
+  await expect(list).toBeHidden();
+  await box.press('Enter');
+  await expect(page).toHaveURL(/\/search\?q=ornam$/);
+  await oneH1(page);
+  await expect(page.getByTestId('result-count')).toHaveText('2 results');
+
+  await page.goto('/search?q=christmas');
+  await expect(page.getByTestId('result-count')).toHaveText('4 results');
+  await page.getByLabel('Sort by').selectOption('price-asc');
+  await expect(page).toHaveURL(/sort=price-asc/);
+  const prices = await page.locator('main [data-testid="product-card"] [data-testid="price"]').allTextContents();
+  const cents = prices.map((s) => Number(s.replace(/[^\d.]/g, '')));
+  expect(cents).toEqual([...cents].sort((a, b) => a - b));
+
+  // Chọn gợi ý bằng bàn phím → trang sản phẩm.
+  await page.goto('/search');
+  const fetched = page.waitForResponse((r) => r.url().includes('/api/search/suggest?q=pearl%20pet%20por'));
+  await box.pressSequentially('pearl pet por', { delay: 30 });
+  await fetched;
+  await expect(list.getByRole('option').first()).toContainText('Pearl Pet Portrait');
+  await box.press('ArrowDown');
+  await box.press('Enter');
+  await expect(page).toHaveURL(/\/products\//);
+
+  await page.goto('/search?q=zzqxv');
+  await oneH1(page);
+  await expect(page.getByTestId('search-empty')).toBeVisible();
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/);
+
+  const s = await page.request.get('/api/search/suggest?q=kit');
+  expect(s.status()).toBe(200);
+  const { items } = await s.json();
+  expect(items.length).toBeGreaterThan(0);
+  expect(Object.keys(items[0]).sort()).toEqual(['handle', 'image', 'title']);
+  expect((await (await page.request.get('/api/search/suggest?q=k')).json()).items).toEqual([]);
+});
+
+test('collections: index, filters, sort and pagination', async ({ page }) => {
+  await page.goto('/collections');
+  await oneH1(page);
+  await page.getByRole('link', { name: /Christmas/ }).first().click();
+  await expect(page).toHaveURL(/\/collections\/christmas$/);
+  await oneH1(page);
+  await expect(page.getByTestId('result-count')).toHaveText('4 products');
+  await expect(page.locator('img:not([alt])')).toHaveCount(0);
+  await expect(page.getByText('Demo').first()).toBeVisible();
+
+  const filters = page.getByRole('complementary', { name: 'Filters' });
+  await filters.getByRole('link', { name: /^Ornament/ }).click();
+  await expect(page).toHaveURL(/type=ornament/);
+  await expect(page.getByTestId('result-count')).toHaveText('2 products');
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/);
+  await filters.getByRole('link', { name: /^Under \$50/ }).click();
+  await expect(page).toHaveURL(/price=under-50/);
+  await expect(page.getByTestId('result-count')).toHaveText('2 products');
+  await page.getByRole('link', { name: 'Remove filter: Ornament' }).click();
+  await expect(page).not.toHaveURL(/type=/);
+  await expect(page.getByTestId('result-count')).toHaveText('4 products'); // cả 4 sản phẩm Christmas đều dưới $50
+
+  await page.goto('/collections/pet-portraits?theme=birthday&theme=christmas&type=diy-kit');
+  await expect(page.getByTestId('result-count')).toHaveText('0 products');
+  await page.getByRole('link', { name: 'Clear filters' }).click();
+  await expect(page).toHaveURL(/\/collections\/pet-portraits$/);
+
+  await page.goto('/collections/nope');
+  await expect(page.locator('h1')).toHaveCount(1);
+  expect((await page.request.get('/collections/nope')).status()).toBe(404);
+
+  // Thêm tạm 1 sản phẩm → /collections/all có 13 sản phẩm, 2 trang.
+  exec("INSERT INTO products (handle, title) VALUES (?, 'UI2 E2E temporary product')", TEMP_HANDLE);
+  const [t] = sql<{ id: number }>('SELECT id FROM products WHERE handle = ?', TEMP_HANDLE);
+  exec("INSERT INTO variants (product_id, sku, size, price_cents, position) VALUES (?, 'UI2-E2E', '8×8', 100, 0)", t.id);
+  await page.goto('/collections/all?sort=price-asc');
+  await expect(page.getByTestId('result-count')).toHaveText('13 products');
+  await expect(page.locator('main [data-testid="product-card"]').first()).toContainText('UI2 E2E temporary product');
+  const pager = page.getByRole('navigation', { name: 'Pagination' });
+  await pager.getByRole('link', { name: 'Next' }).click();
+  await expect(page).toHaveURL(/page=2/);
+  await expect(page).toHaveURL(/sort=price-asc/);
+  await expect(page.locator('main [data-testid="product-card"]')).toHaveCount(1);
+  await expect(pager.locator('[aria-current="page"]')).toHaveText('2');
+  exec('DELETE FROM products WHERE id = ?', t.id);
+  await page.reload();
+  await expect(page.getByTestId('result-count')).toHaveText('12 products');
+});
+
+test('mobile 375: collection filter drawer and search have no horizontal scroll', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  for (const url of ['/collections', '/collections/pet-portraits', '/search?q=pet', '/account/login', '/track-order']) {
+    await page.goto(url);
+    await oneH1(page);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+  }
+  await page.goto('/collections/pet-portraits');
+  const drawer = page.locator('details').filter({ hasText: 'Filter' });
+  await drawer.locator('summary').click();
+  await drawer.getByRole('link', { name: /^Memorial/ }).click();
+  await expect(page.getByTestId('result-count')).toHaveText('1 product');
+});

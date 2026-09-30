@@ -23,7 +23,8 @@ test.beforeAll(async () => {
     const dir = path.join(SRC, t.theme);
     fs.mkdirSync(dir);
     const kinds = ['cat', 'dog', 'dog', 'cat', 'dog'] as const;
-    const finals = kinds.map((k, i) => ({ file: `f${i}.jpg`, pet_source: `/abs/pet-${i}.jpg`, pet_kind: k, cutout: `f${i}.cut.png`, pass: true, cost_usd: 0.3 }));
+    // 5 final đạt + 1 final pass=false (phải bị bỏ qua).
+    const finals = [...kinds, 'dog' as const].map((k, i) => ({ file: `f${i}.jpg`, pet_source: `/abs/pet-${i}.jpg`, pet_kind: k, cutout: `f${i}.cut.png`, pass: i < 5, cost_usd: 0.3 }));
     const files = ['template.png', ...finals.flatMap((f) => [f.file, f.cutout])];
     await Promise.all(files.map((f, i) => sharp({ create: { width: 320, height: 320, channels: 3, background: { r: 40 + n * 60, g: 30 + i * 18, b: 90 } } })
       .toFormat(f.endsWith('.jpg') ? 'jpeg' : 'png').toFile(path.join(dir, f))));
@@ -55,7 +56,7 @@ test('product page gallery: 5 finals, the empty template, then the pearl cat on 
   const slides = page.getByTestId('gallery-track').first().locator('img');
   await expect(slides).toHaveCount(7);
   const alts = await slides.evaluateAll((els) => els.map((e) => e.getAttribute('alt')));
-  expect(alts[0]).toBe('Cat recreated in pearls as The Starry King, swirling starry-night sky');
+  expect(alts[0]).toBe('Cat recreated in pearls as The Starry King against a swirling starry-night sky, shown in its frame');
   expect(alts[5]).toBe('The Starry King setting on its own, before your pet is added');
   expect(alts[6]).toBe('Pearl cat from The Starry King on its own, full face and outfit');
   // Ảnh chép vào public/ thật sự tải được (qua next/image).

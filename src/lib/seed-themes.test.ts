@@ -33,7 +33,7 @@ async function fixture(theme: string, finals: F[], extra: Record<string, unknown
     finals: finals.map((f) => ({ pet_source: `/abs/${f.file}`, cost_usd: 0.3, ...f })) };
   fs.writeFileSync(path.join(t, 'manifest.json'), JSON.stringify(manifest));
 }
-const dogs = (n: number, pass = true): F[] => Array.from({ length: n }, (_, i) => ({ file: `dog-${i}.jpg`, pet_kind: 'dog', pass, cutout: `dog-${i}.cut.png` }));
+const dogs = (n: number, pass = true, tag = pass ? 'dog' : 'nodog'): F[] => Array.from({ length: n }, (_, i) => ({ file: `${tag}-${i}.jpg`, pet_kind: 'dog', pass, cutout: `${tag}-${i}.cut.png` }));
 const load = () => T.loadRollout(d, { src: SRC, dest: DEST, urlBase: '/rollout-test' });
 const status = (h: string) => (d.prepare('SELECT status FROM products WHERE handle = ?').get(h) as { status: string }).status;
 const images = (h: string) => d.prepare('SELECT i.url, i.alt FROM product_images i JOIN products p ON p.id = i.product_id WHERE p.handle = ? ORDER BY i.position').all(h) as { url: string; alt: string }[];
@@ -41,23 +41,35 @@ const images = (h: string) => d.prepare('SELECT i.url, i.alt FROM product_images
 describe('planGallery', () => {
   const m = (finals: F[]) => T.manifestSchema.parse({ theme: 'x', template_empty: 't.png', finals });
 
-  it('takes 5 passing finals, swaps in a cat when the first five are dogs, and cuts out the cat', () => {
+  it('takes up to 5 passing finals, swaps in a passing cat when the first five are dogs, and cuts out the cat', () => {
     const p = T.planGallery(m([...dogs(5), { file: 'fail.jpg', pet_kind: 'cat', pass: false, cutout: 'f.png' }, { file: 'cat.jpg', pet_kind: 'cat', pass: true, cutout: 'cat.cut.png' }]));
     expect(p.ok).toBe(true);
     if (!p.ok) return;
     expect(p.finals.map((f) => f.file)).toEqual(['dog-0.jpg', 'dog-1.jpg', 'dog-2.jpg', 'dog-3.jpg', 'cat.jpg']);
     expect(p.cutout).toEqual({ file: 'cat.cut.png', pet_kind: 'cat' });
     expect(p.kinds).toEqual(['cat', 'dog']);
+    expect(p.skipped).toEqual(['fail.jpg']);
+    expect(p.warnings).toEqual([]);
   });
 
-  it('falls back to a dog cutout only when no cat has one', () => {
-    const p = T.planGallery(m([{ file: 'cat.jpg', pet_kind: 'cat', pass: true, cutout: null }, ...dogs(4)]));
-    expect(p.ok && p.cutout).toEqual({ file: 'dog-0.cut.png', pet_kind: 'dog' });
+  it('never loads a pass=false final, and leaves its slot empty', () => {
+    // Như manifest royal-starry thật: 2 final đạt (mèo, chó) và 3 final pass=false.
+    const p = T.planGallery(m([
+      { file: 'a.jpg', pet_kind: 'dog', pass: false, cutout: 'a.png' }, { file: 'cat.jpg', pet_kind: 'cat', pass: true, cutout: 'cat.png' },
+      { file: 'b.jpg', pet_kind: 'dog', pass: false, cutout: 'b.png' }, { file: 'c.jpg', pet_kind: 'dog', pass: false, cutout: 'c.png' },
+      { file: 'dog.jpg', pet_kind: 'dog', pass: true, cutout: 'dog.png' },
+    ]));
+    expect(p).toMatchObject({ ok: true, cutout: { file: 'cat.png', pet_kind: 'cat' }, skipped: ['a.jpg', 'b.jpg', 'c.jpg'], warnings: ['2 of 5 finals (only pass=true loaded)'] });
+    expect(p.ok && p.finals.map((f) => f.file)).toEqual(['cat.jpg', 'dog.jpg']);
+    // Mèo duy nhất pass=false: không lấy, cả cutout của nó.
+    const q = T.planGallery(m([...dogs(2), { file: 'cat.jpg', pet_kind: 'cat', pass: false, cutout: 'cat.png' }]));
+    expect(q).toMatchObject({ ok: true, cutout: { file: 'dog-0.cut.png', pet_kind: 'dog' }, warnings: ['2 of 5 finals (only pass=true loaded)', 'no passing cat final yet'] });
   });
 
-  it('refuses a gallery without 5 passing finals, a cat, or a cutout', () => {
-    expect(T.planGallery(m([...dogs(4), ...dogs(3, false)]))).toEqual({ ok: false, errors: ['needs 5 passing finals, has 4', 'needs at least one passing cat final'] });
-    expect(T.planGallery(m(dogs(5).map((f) => ({ ...f, pet_kind: 'cat' as const, cutout: null }))))).toEqual({ ok: false, errors: ['needs a pearl pet cutout on a passing final'] });
+  it('loads nothing without a passing final; a gallery without a cutout is allowed but flagged', () => {
+    expect(T.planGallery(m(dogs(3, false)))).toEqual({ ok: false, errors: ['no passing finals yet'] });
+    const p = T.planGallery(m(dogs(5).map((f) => ({ ...f, cutout: null }))));
+    expect(p).toMatchObject({ ok: true, cutout: null, warnings: ['no passing cat final yet', 'no pearl pet cutout on a passing final yet'] });
   });
 
   it('only accepts paths inside the theme folder', () => {
@@ -81,45 +93,63 @@ describe('seedThemes', () => {
 });
 
 describe('loadRollout', () => {
+  // Như rollout thật: royal-starry 2 đạt / 3 pass=false, sunflower-queen 4 đạt / 2 pass=false, cafe-duke chưa có manifest.
+  const royal = (fixed: boolean): F[] => [
+    { file: 'r-a.jpg', pet_kind: 'dog', pass: fixed, cutout: 'r-a.cut.png' }, { file: 'r-cat.jpg', pet_kind: 'cat', pass: true, cutout: 'r-cat.cut.png' },
+    { file: 'r-b.jpg', pet_kind: 'dog', pass: fixed, cutout: 'r-b.cut.png' }, { file: 'r-c.jpg', pet_kind: 'dog', pass: fixed, cutout: 'r-c.cut.png' },
+    { file: 'r-dog.jpg', pet_kind: 'dog', pass: true, cutout: 'r-dog.cut.png' },
+  ];
   beforeAll(async () => {
-    // royal-starry: đủ ảnh, có mèo ở vị trí 6. sunflower-queen: mới 4 final đạt. cafe-duke: chưa có manifest.
-    await fixture('royal-starry', [...dogs(5), { file: 'cat.jpg', pet_kind: 'cat', pass: true, cutout: 'cat.cut.png' }], { product_name_hint: 'The Starry King' });
+    await fixture('royal-starry', royal(false), { product_name_hint: 'The Starry King' });
     await fixture('sunflower-queen', [...dogs(3), { file: 'cat.jpg', pet_kind: 'cat', pass: true, cutout: 'cat.cut.png' }, ...dogs(2, false)]);
   });
 
-  it('loads a complete theme and leaves the others draft with a reason', async () => {
+  it('loads only passing finals + template + cutout per theme and leaves themes without a manifest draft', async () => {
     const r = await load();
-    expect(r.map((x) => [x.theme, x.status, x.images])).toEqual([['royal-starry', 'loaded', 7], ['sunflower-queen', 'incomplete', 0], ['cafe-duke', 'missing', 0]]);
-    expect(r[1].errors).toEqual(['needs 5 passing finals, has 4']);
+    expect(r.map((x) => [x.theme, x.status, x.finals, x.images])).toEqual([['royal-starry', 'loaded', 2, 4], ['sunflower-queen', 'loaded', 4, 6], ['cafe-duke', 'missing', 0, 0]]);
+    expect(r[0].skipped).toEqual(['r-a.jpg', 'r-b.jpg', 'r-c.jpg']);
     expect(r[2].errors[0]).toMatch(/no manifest at .*cafe-duke\/manifest\.json/);
-    expect([status('the-starry-king'), status('the-sunflower-queen'), status('the-cafe-terrace-duke')]).toEqual(['active', 'draft', 'draft']);
+    expect([status('the-starry-king'), status('the-sunflower-queen'), status('the-cafe-terrace-duke')]).toEqual(['active', 'active', 'draft']);
+    expect(T.formatLoad(r).split('\n')[0]).toBe('royal-starry: loaded 4 images (2 finals + template + pearl cat cutout); left out 3 pass=false: r-a.jpg, r-b.jpg, r-c.jpg — 2 of 5 finals (only pass=true loaded)');
   });
 
-  it('builds the gallery as 5 finals, the empty template, then the pearl cat cutout, copied as WebP', async () => {
+  it('orders the gallery finals → empty template → pearl cat cutout, copied as WebP', async () => {
     const imgs = images('the-starry-king');
-    expect(imgs.map((i) => i.url.replace(/-[0-9a-f]{10}\.webp$/, ''))).toEqual([
-      ...[1, 2, 3, 4, 5].map((n) => `/rollout-test/royal-starry/final-${n}`), '/rollout-test/royal-starry/template', '/rollout-test/royal-starry/pearl-pet',
+    expect(imgs.map((i) => i.url.replace(/-[0-9a-f]{10}\.webp$/, ''))).toEqual(
+      ['final-1', 'final-2', 'template', 'pearl-pet'].map((n) => `/rollout-test/royal-starry/${n}`));
+    expect(imgs.map((i) => i.alt)).toEqual([
+      'Cat recreated in pearls as The Starry King against a swirling starry-night sky, shown in its frame',
+      'Dog recreated in pearls as The Starry King against a swirling starry-night sky, shown in its frame',
+      'The Starry King setting on its own, before your pet is added',
+      'Pearl cat from The Starry King on its own, full face and outfit',
     ]);
-    expect(imgs[4].alt).toBe('Cat recreated in pearls as The Starry King, swirling starry-night sky');
-    expect(imgs[5].alt).toBe('The Starry King setting on its own, before your pet is added');
-    expect(imgs[6].alt).toBe('Pearl cat from The Starry King on its own, full face and outfit');
-    for (const i of imgs) {
-      const f = path.join(DEST, i.url.replace('/rollout-test/', ''));
-      expect((await sharp(f).metadata()).format).toBe('webp');
-    }
+    for (const i of imgs) expect((await sharp(path.join(DEST, i.url.replace('/rollout-test/', ''))).metadata()).format).toBe('webp');
     const tags = (d.prepare("SELECT tag FROM product_tags t JOIN products p ON p.id = t.product_id WHERE p.handle = 'the-starry-king' ORDER BY tag").all() as { tag: string }[]).map((x) => x.tag);
     expect(tags).toEqual(['cat', 'dog', 'style:royal-starry', 'theme:royal', 'theme:starry-night', 'type:canvas']);
     const col = L.getCollection('character-portraits')!;
-    expect(L.listProducts({ collectionId: col.id }, { theme: [], type: [], price: null, sort: 'featured', page: 1 }).items.map((p) => p.handle)).toEqual(['the-starry-king']);
+    expect(L.listProducts({ collectionId: col.id }, { theme: [], type: [], price: null, sort: 'featured', page: 1 }).items.map((p) => p.handle)).toEqual(['the-starry-king', 'the-sunflower-queen']);
     expect(L.suggest('starry king').map((s) => s.handle)).toContain('the-starry-king');
   });
 
-  it('rejects a manifest for the wrong theme and is safe to run again', async () => {
-    await fixture('cafe-duke', [...dogs(4), { file: 'cat.jpg', pet_kind: 'cat', pass: true, cutout: 'cat.cut.png' }], { theme: 'royal-starry' });
-    const again = await load();
-    expect(again[0]).toMatchObject({ status: 'loaded', images: 7 });
-    expect(again[2]).toMatchObject({ status: 'incomplete', errors: ['manifest theme is royal-starry, expected cafe-duke'] });
-    expect(images('the-starry-king')).toHaveLength(7);
+  it('is idempotent and picks up finals that pass after regeneration', async () => {
+    const before = images('the-starry-king');
+    await load();
+    expect(images('the-starry-king')).toEqual(before);
+    await fixture('royal-starry', royal(true));
+    const [r] = await load();
+    expect(r).toMatchObject({ status: 'loaded', finals: 5, images: 7, skipped: [], warnings: [] });
+    expect(images('the-starry-king').map((i) => i.url.replace(/-[0-9a-f]{10}\.webp$/, '').split('/').at(-1))).toEqual(
+      ['final-1', 'final-2', 'final-3', 'final-4', 'final-5', 'template', 'pearl-pet']);
+    // Thư mục đích chỉ còn đúng các file của gallery mới.
+    expect(fs.readdirSync(path.join(DEST, 'royal-starry')).sort()).toEqual(images('the-starry-king').map((i) => path.basename(i.url)).sort());
+  });
+
+  it('never mixes themes: a manifest for another theme is rejected, and a theme with no passing final stays draft', async () => {
+    await fixture('cafe-duke', dogs(5), { theme: 'royal-starry' });
+    expect((await load())[2]).toMatchObject({ status: 'incomplete', errors: ['manifest theme is royal-starry, expected cafe-duke'] });
+    await fixture('cafe-duke', dogs(3, false));
+    expect((await load())[2]).toMatchObject({ status: 'incomplete', errors: ['no passing finals yet'] });
+    expect([status('the-cafe-terrace-duke'), images('the-cafe-terrace-duke').length]).toEqual(['draft', 0]);
     // Seed lại: về draft, không còn ảnh, tới khi nạp lại.
     T.seedThemes(d);
     expect([status('the-starry-king'), images('the-starry-king').length]).toEqual(['draft', 0]);

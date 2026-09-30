@@ -1,7 +1,8 @@
 // Sản phẩm theo theme từ đợt rollout của pearl_compare: 1 sản phẩm / theme (royal-starry, sunflower-queen, cafe-duke).
 // seedThemes(): tạo sản phẩm + size + tag + collection ở trạng thái DRAFT (không có ảnh thì không bán, không hiện).
 // loadRollout(): đọc <ROLLOUT_DIR>/<theme>/manifest.json (chỉ đọc), chép ảnh (đổi sang WebP) vào public/rollout/<theme>/,
-// ghi gallery = 5 final + 1 template trống + 1 cutout pet ngọc, rồi bật ACTIVE. Thiếu manifest / manifest chưa đủ → giữ nguyên, báo lý do.
+// ghi gallery = tới 5 final pass=true + 1 template trống + 1 cutout pet ngọc, rồi bật ACTIVE. Final pass=false để trống;
+// chạy lại (idempotent: gallery dựng lại từ manifest, tên file theo nội dung) sẽ thêm final mới đạt. Thiếu manifest / manifest chưa đủ → giữ nguyên, báo lý do.
 // Không bao giờ dùng ảnh giả: fixture manifest chỉ có trong test (tạo ở thư mục tạm).
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
@@ -95,29 +96,41 @@ export type Manifest = z.infer<typeof manifestSchema>;
 type Final = Manifest['finals'][number];
 
 export type GalleryPlan =
-  | { ok: true; finals: Final[]; cutout: { file: string; pet_kind: 'cat' | 'dog' }; template: string; kinds: ('cat' | 'dog')[] }
+  | { ok: true; finals: Final[]; cutout: { file: string; pet_kind: 'cat' | 'dog' } | null; template: string; kinds: ('cat' | 'dog')[]; skipped: string[]; warnings: string[] }
   | { ok: false; errors: string[] };
 
-/** Chọn ảnh: 5 final đạt (ít nhất 1 mèo), cutout ưu tiên lấy từ final mèo, template trống. */
+/**
+ * Chọn ảnh (quyết định của captain): CHỈ final pass=true, tối đa 5 (ít nhất 1 mèo nếu có mèo đạt), kèm template_empty.
+ * Final pass=false để trống, nạp lại khi đã sinh lại và đạt. Cutout pet ngọc lấy từ final đạt, ưu tiên mèo.
+ */
 export function planGallery(m: Manifest): GalleryPlan {
   const passing = m.finals.filter((f) => f.pass);
-  const errors: string[] = [];
-  if (passing.length < GALLERY_FINALS) errors.push(`needs ${GALLERY_FINALS} passing finals, has ${passing.length}`);
-  if (!passing.some((f) => f.pet_kind === 'cat')) errors.push('needs at least one passing cat final');
+  if (!passing.length) return { ok: false, errors: ['no passing finals yet'] };
 
   let finals = passing.slice(0, GALLERY_FINALS);
-  const firstCat = passing.find((f) => f.pet_kind === 'cat');
-  if (firstCat && !finals.includes(firstCat)) finals = [...finals.slice(0, GALLERY_FINALS - 1), firstCat];
+  const cat = passing.find((f) => f.pet_kind === 'cat');
+  if (cat && !finals.includes(cat)) finals = [...finals.slice(0, GALLERY_FINALS - 1), cat];
+  const src = passing.find((f) => f.cutout && f.pet_kind === 'cat') ?? passing.find((f) => f.cutout);
 
-  const withCutout = (fs: Final[]) => fs.find((f) => f.cutout);
-  const src = withCutout(finals.filter((f) => f.pet_kind === 'cat')) ?? withCutout(passing.filter((f) => f.pet_kind === 'cat')) ?? withCutout(finals) ?? withCutout(passing);
-  if (!src) errors.push('needs a pearl pet cutout on a passing final');
-  if (errors.length) return { ok: false, errors };
-  return { ok: true, finals, cutout: { file: src!.cutout!, pet_kind: src!.pet_kind }, template: m.template_empty, kinds: [...new Set(finals.map((f) => f.pet_kind))].sort() };
+  const warnings: string[] = [];
+  if (finals.length < GALLERY_FINALS) warnings.push(`${finals.length} of ${GALLERY_FINALS} finals (only pass=true loaded)`);
+  if (!cat) warnings.push('no passing cat final yet');
+  if (!src) warnings.push('no pearl pet cutout on a passing final yet');
+  return {
+    ok: true, finals, template: m.template_empty,
+    cutout: src ? { file: src.cutout!, pet_kind: src.pet_kind } : null,
+    kinds: [...new Set(finals.map((f) => f.pet_kind))].sort(),
+    skipped: m.finals.filter((f) => !f.pass).map((f) => f.file),
+    warnings,
+  };
 }
 
-export type LoadResult = { theme: string; handle: string; status: 'loaded' | 'missing' | 'incomplete'; errors: string[]; images: number };
+export type LoadResult = {
+  theme: string; handle: string; status: 'loaded' | 'missing' | 'incomplete'; errors: string[];
+  images: number; finals: number; cutout: 'cat' | 'dog' | null; skipped: string[]; warnings: string[];
+};
 
+const OWN_FILE = /^(final-\d+|template|pearl-pet)-[0-9a-f]{10}\.webp$/;
 const Kind = (k: 'cat' | 'dog') => (k === 'cat' ? 'Cat' : 'Dog');
 
 /** Nạp ảnh từ manifest của mọi theme. `dest`/`urlBase` đổi được cho test; mặc định public/rollout → /rollout. */
@@ -127,7 +140,7 @@ export async function loadRollout(d: DatabaseSync, opts: { src?: string; dest?: 
   const dest = opts.dest ?? path.join(PUBLIC_DIR, ...urlBase.split('/').filter(Boolean));
   const out: LoadResult[] = [];
   for (const t of THEMES) {
-    const res: LoadResult = { theme: t.theme, handle: t.handle, status: 'missing', errors: [], images: 0 };
+    const res: LoadResult = { theme: t.theme, handle: t.handle, status: 'missing', errors: [], images: 0, finals: 0, cutout: null, skipped: [], warnings: [] };
     out.push(res);
     const product = d.prepare('SELECT id FROM products WHERE handle = ?').get(t.handle) as { id: number } | undefined;
     const dir = path.join(src, t.theme);
@@ -145,7 +158,7 @@ export async function loadRollout(d: DatabaseSync, opts: { src?: string; dest?: 
     if (m.theme !== t.theme) { res.errors.push(`manifest theme is ${m.theme}, expected ${t.theme}`); continue; }
     const plan = planGallery(m);
     if (!plan.ok) { res.errors.push(...plan.errors); continue; }
-    const missing = [...plan.finals.map((f) => f.file), plan.template, plan.cutout.file].filter((f) => !fs.existsSync(path.join(dir, f)));
+    const missing = [...plan.finals.map((f) => f.file), plan.template, ...(plan.cutout ? [plan.cutout.file] : [])].filter((f) => !fs.existsSync(path.join(dir, f)));
     if (missing.length) { res.errors.push(...missing.map((f) => `missing file ${f}`)); continue; }
 
     const sharp = (await import('sharp')).default;
@@ -162,10 +175,10 @@ export async function loadRollout(d: DatabaseSync, opts: { src?: string; dest?: 
     const title = m.product_name_hint?.trim() || t.title;
     const rows: { url: string; alt: string }[] = [];
     for (const [i, f] of plan.finals.entries()) {
-      rows.push({ url: await copy(f.file, `final-${i + 1}`, 2000), alt: `${Kind(f.pet_kind)} recreated in pearls as ${title}, ${t.scene}` });
+      rows.push({ url: await copy(f.file, `final-${i + 1}`, 2000), alt: `${Kind(f.pet_kind)} recreated in pearls as ${title} against a ${t.scene}, shown in its frame` });
     }
     rows.push({ url: await copy(plan.template, 'template', 2000), alt: `The ${t.style} setting on its own, before your pet is added` });
-    rows.push({ url: await copy(plan.cutout.file, 'pearl-pet', 1600), alt: `Pearl ${plan.cutout.pet_kind} from ${title} on its own, full face and outfit` });
+    if (plan.cutout) rows.push({ url: await copy(plan.cutout.file, 'pearl-pet', 1600), alt: `Pearl ${plan.cutout.pet_kind} from ${title} on its own, full face and outfit` });
 
     d.exec('BEGIN');
     try {
@@ -177,11 +190,23 @@ export async function loadRollout(d: DatabaseSync, opts: { src?: string; dest?: 
       d.prepare("UPDATE products SET status = 'active', title = ? WHERE id = ?").run(title, product.id);
       d.exec('COMMIT');
     } catch (e) { d.exec('ROLLBACK'); throw e; }
+    // Dọn file do chính loader tạo trước đây mà gallery mới không dùng (vd. final đã bị thay), để thư mục = gallery.
+    const keep = new Set(rows.map((r) => path.basename(r.url)));
+    for (const f of fs.readdirSync(outDir)) if (OWN_FILE.test(f) && !keep.has(f)) fs.unlinkSync(path.join(outDir, f));
     res.status = 'loaded';
     res.images = rows.length;
+    res.finals = plan.finals.length;
+    res.cutout = plan.cutout?.pet_kind ?? null;
+    res.skipped = plan.skipped;
+    res.warnings = plan.warnings;
   }
   return out;
 }
 
 export const formatLoad = (r: LoadResult[]) =>
-  r.map((x) => `${x.theme}: ${x.status}${x.images ? ` (${x.images} images)` : ''}${x.errors.length ? ` — ${x.errors.join('; ')}` : ''}`).join('\n');
+  r.map((x) => {
+    if (x.status !== 'loaded') return `${x.theme}: ${x.status} — ${x.errors.join('; ')}`;
+    const parts = [`${x.finals} finals`, 'template', ...(x.cutout ? [`pearl ${x.cutout} cutout`] : [])];
+    const skip = x.skipped.length ? `; left out ${x.skipped.length} pass=false: ${x.skipped.join(', ')}` : '';
+    return `${x.theme}: loaded ${x.images} images (${parts.join(' + ')})${skip}${x.warnings.length ? ` — ${x.warnings.join('; ')}` : ''}`;
+  }).join('\n');

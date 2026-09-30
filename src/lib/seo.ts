@@ -31,3 +31,36 @@ export function productJsonLd(p: Product, s: Settings, url: string, reviews?: Re
   }
   return ld;
 }
+
+// ── Crew D: Organization / WebSite / Breadcrumb + URL tuyệt đối cho canonical, sitemap, robots.
+
+/** Gốc site cho URL tuyệt đối (JSON-LD, sitemap). Cùng nguồn với metadataBase ở app/layout.tsx. */
+export const siteUrl = () => (process.env.SITE_URL || 'http://localhost:3000').replace(/\/+$/, '');
+export const absUrl = (p: string) => new URL(p, siteUrl() + '/').toString();
+
+export function organizationJsonLd(s: Settings) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: s.shop.name,
+    url: absUrl('/'),
+    email: s.shop.support_email,
+    contactPoint: { '@type': 'ContactPoint', contactType: 'customer support', email: s.shop.support_email, areaServed: s.shipping.regions },
+  };
+}
+
+export function websiteJsonLd(s: Settings) {
+  return { '@context': 'https://schema.org', '@type': 'WebSite', name: s.shop.name, url: absUrl('/') };
+}
+
+/** items: [{ name: 'Home', path: '/' }, …] — mục cuối là trang hiện tại. */
+export function breadcrumbJsonLd(items: { name: string; path: string }[]) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((it, i) => ({ '@type': 'ListItem', position: i + 1, name: it.name, item: absUrl(it.path) })),
+  };
+}
+
+/** JSON cho <script type="application/ld+json">: thoát "<" để chuỗi trong DB không phá được thẻ script. */
+export const ldJson = (data: unknown) => JSON.stringify(data).replace(/</g, '\\u003c');

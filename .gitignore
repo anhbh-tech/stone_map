@@ -41,6 +41,8 @@ yarn-error.log*
 next-env.d.ts
 
 /storage
+# ảnh theme chép từ pearl_compare outputs/rollout lúc seed / npm run load:rollout
+/public/rollout/
 .env*
 !.env.example
 /test-results

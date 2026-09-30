@@ -5,6 +5,7 @@ import { hashPassword } from '../src/lib/password';
 import type { Settings } from '../src/lib/types';
 import { seedCollections } from './seed-collections';
 import { seedDiscounts } from './seed-discounts';
+import { formatLoad, loadRollout, seedThemes } from './seed-themes';
 
 const d = db();
 tx(() => {
@@ -58,5 +59,8 @@ tx(() => {
 
   seedCollections(d); // UI-2: collections + sản phẩm demo có nhãn
   seedDiscounts(d); // UI-3: mã Buy More, Save More! trên PDP
+  seedThemes(d); // UI-2: 3 sản phẩm theme (draft tới khi có ảnh rollout)
 });
 console.log('seeded', d.prepare('SELECT count(*) n FROM variants').get());
+// Ảnh theme từ pearl_compare outputs/rollout (chỉ đọc); chưa có manifest thì sản phẩm theme giữ draft.
+loadRollout(d).then((r) => console.log(formatLoad(r)), (e) => { console.error('rollout images:', e); process.exitCode = 1; });

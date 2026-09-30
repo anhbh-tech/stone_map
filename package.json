@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "tsx scripts/seed.ts",
+    "load:rollout": "tsx scripts/load-rollout.ts",
     "worker": "tsx src/worker/index.ts",
     "test": "vitest run",
     "test:e2e": "playwright test",

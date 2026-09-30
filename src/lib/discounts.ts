@@ -7,7 +7,7 @@ import { fmt } from './money';
 export type Discount = {
   id: number; code: string; kind: 'percent' | 'fixed' | 'free_shipping'; value: number;
   min_subtotal_cents: number | null; min_qty: number | null; starts_at: string | null; ends_at: string | null;
-  usage_limit: number | null; active: 0 | 1; created_at: string;
+  usage_limit: number | null; active: 0 | 1; show_on_pdp?: 0 | 1; created_at: string;
 };
 export type DiscountState = 'active' | 'scheduled' | 'expired' | 'disabled' | 'used_up';
 
@@ -81,3 +81,16 @@ export const findDiscount = (code: string) =>
 /** Lượt dùng = số đơn đã lưu mã này (không có bộ đếm riêng để khỏi lệch). */
 export const discountUses = (code: string) =>
   (db().prepare('SELECT count(*) n FROM orders WHERE discount_code = ? COLLATE NOCASE').get(code) as { n: number }).n;
+
+export type PdpCode = { code: string; spend: string; get: string };
+
+/** Mã đang dùng được và được đánh dấu hiện trên PDP ("Buy More, Save More!"), xếp theo điều kiện tăng dần. */
+export function pdpCodes(now = new Date()): PdpCode[] {
+  const rows = db().prepare(`SELECT d.*, (SELECT count(*) FROM orders o WHERE o.discount_code = d.code COLLATE NOCASE) used
+    FROM discounts d WHERE d.show_on_pdp = 1 AND d.active = 1 ORDER BY coalesce(d.min_qty, 0), coalesce(d.min_subtotal_cents, 0), d.code`).all() as (Discount & { used: number })[];
+  return rows.filter((d) => discountState(d, d.used, now) === 'active').map((d) => ({
+    code: d.code,
+    spend: d.min_qty ? `Buy ${d.min_qty} ${d.min_qty === 1 ? 'item' : 'items'}` : d.min_subtotal_cents ? `Spend ${fmt(d.min_subtotal_cents)}` : 'Any order',
+    get: d.kind === 'percent' ? `${d.value}% off` : d.kind === 'fixed' ? `${fmt(d.value)} off` : 'Free shipping',
+  }));
+}

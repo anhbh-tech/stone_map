@@ -10,7 +10,8 @@ process.env.STORAGE_DIR = path.join(tmp, 'storage');
 
 const { db } = await import('./db');
 const { CartError, addLine, applyDiscountCode, ensureCart, getCart, getOrder, placeOrder, removeDiscountCode, updateLine } = await import('./cart');
-const { evaluateDiscount, rejectionMessage } = await import('./discounts');
+const { evaluateDiscount, pdpCodes, rejectionMessage } = await import('./discounts');
+const { seedDiscounts } = await import('../../scripts/seed-discounts');
 
 afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
@@ -105,5 +106,25 @@ describe('discount codes at checkout', () => {
     expect(evaluateDiscount(d, { subtotal_cents: 3000, qty: 1 }, 0)).toEqual({ ok: false, reason: 'min_qty' });
     expect(evaluateDiscount(d, { subtotal_cents: 3000, qty: 2, base_cents: 2700 }, 0)).toEqual({ ok: true, discount_cents: 2700, free_shipping: false });
     expect(rejectionMessage('BIG', 'min_qty', d, { subtotal_cents: 3000, qty: 1 })).toBe('The code BIG needs 2 or more portraits in your cart. Add 1 more to use it.');
+  });
+
+  it('lists only active codes flagged for the PDP, in tier order, and the seeded tiers apply by quantity', () => {
+    seedDiscounts(db());
+    seedDiscounts(db()); // chạy lại được
+    db().exec(`INSERT INTO discounts (code, kind, value, min_subtotal_cents, ends_at, active, show_on_pdp) VALUES
+      ('SPEND80', 'fixed', 800, 8000, NULL, 1, 1), ('GONE', 'percent', 30, NULL, '2020-01-01 00:00:00', 1, 1), ('PAUSED', 'percent', 30, NULL, NULL, 0, 1)`);
+    expect(pdpCodes()).toEqual([
+      { code: 'SPEND80', spend: 'Spend $80.00', get: '$8.00 off' },
+      { code: 'PEARL2', spend: 'Buy 2 items', get: '10% off' },
+      { code: 'PEARL3', spend: 'Buy 3 items', get: '15% off' },
+      { code: 'PEARL5', spend: 'Buy 5 items', get: '20% off' },
+    ]); // SAVE10 (not flagged), GONE (expired), PAUSED (disabled) stay off the PDP
+
+    const id = cartWith(10, 2);
+    expect(err(() => applyDiscountCode(id, 'pearl3'))).toBe('422 discount_min_qty: The code PEARL3 needs 3 or more portraits in your cart. Add 1 more to use it.');
+    updateLine(id, getCart(id).lines[0].id, 3);
+    applyDiscountCode(id, 'pearl3');
+    const goods = 11994 - 1199; // sau giảm bậc số lượng 10%
+    expect(getCart(id).totals.code_discount_cents).toBe(Math.round(goods * 0.15));
   });
 });

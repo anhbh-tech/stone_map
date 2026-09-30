@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { ApiForm, Checkbox, Field, MoneyField } from './form';
 
 type Kind = 'percent' | 'fixed' | 'free_shipping';
-type Initial = { id: number; code: string; kind: Kind; value: number; min_subtotal_cents: number | null; min_qty: number | null; starts_at: string | null; ends_at: string | null; usage_limit: number | null; active: 0 | 1 };
+type Initial = { id: number; code: string; kind: Kind; value: number; min_subtotal_cents: number | null; min_qty: number | null; starts_at: string | null; ends_at: string | null; usage_limit: number | null; active: 0 | 1; show_on_pdp?: 0 | 1 };
 
 const KINDS: { value: Kind; label: string; hint: string }[] = [
   { value: 'percent', label: 'Percentage', hint: 'e.g. 15% off the portraits' },
@@ -19,7 +19,7 @@ export function DiscountForm({ initial }: { initial?: Initial }) {
     ...(initial ? {} : { code: 'text' as const }),
     kind: 'text' as const,
     ...(kind === 'free_shipping' ? {} : { value: kind === 'fixed' ? ('money' as const) : ('int' as const) }),
-    min_qty: 'nullint' as const, min_subtotal_cents: 'nullmoney' as const, starts_at: 'nulltext' as const, ends_at: 'nulltext' as const, usage_limit: 'nullint' as const, active: 'bool' as const,
+    min_qty: 'nullint' as const, min_subtotal_cents: 'nullmoney' as const, starts_at: 'nulltext' as const, ends_at: 'nulltext' as const, usage_limit: 'nullint' as const, active: 'bool' as const, show_on_pdp: 'bool' as const,
   };
   return (
     <ApiForm action={initial ? `/api/admin/discounts/${initial.id}` : '/api/admin/discounts'} method={initial ? 'PATCH' : 'POST'} types={types}
@@ -48,6 +48,7 @@ export function DiscountForm({ initial }: { initial?: Initial }) {
         <Field name="usage_limit" label="Total uses allowed" type="number" inputMode="numeric" min={1} defaultValue={initial?.usage_limit ?? ''} hint="Blank for unlimited" />
       </div>
       <Checkbox name="active" label="Active" defaultChecked={initial ? !!initial.active : true} hint="Turn off to pause the code without deleting it." />
+      <Checkbox name="show_on_pdp" label="Show on product pages" defaultChecked={!!initial?.show_on_pdp} hint="Lists the code in the “Buy More, Save More!” table under the price while it is active." />
     </ApiForm>
   );
 }

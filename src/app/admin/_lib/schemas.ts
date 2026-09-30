@@ -142,6 +142,7 @@ const discountBase = z.object({
   ends_at: day,
   usage_limit: z.number().int().min(1).nullish().transform((v) => v ?? null),
   active: flag,
+  show_on_pdp: flag,
 });
 const discountRules = <T extends { kind?: string; value?: number; starts_at?: string | null; ends_at?: string | null }>(v: T, ctx: z.RefinementCtx) => {
   if (v.kind === 'percent' && v.value !== undefined && (v.value < 1 || v.value > 100)) ctx.addIssue({ code: 'custom', path: ['value'], message: 'Percent must be 1–100' });
@@ -151,6 +152,7 @@ const discountRules = <T extends { kind?: string; value?: number; starts_at?: st
 export const discountCreate = discountBase.extend({
   code: z.string().trim().toUpperCase().regex(/^[A-Z0-9][A-Z0-9_-]{2,31}$/, '3–32 letters, digits, dashes'),
   active: flag.default(1),
+  show_on_pdp: flag.default(0),
 }).superRefine(discountRules);
 export const discountPatch = discountBase.partial().superRefine(discountRules);
 

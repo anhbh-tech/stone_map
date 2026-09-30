@@ -8,6 +8,7 @@ import { listReviews, reviewSummary } from '@/lib/reviews';
 import { Gallery } from '@/components/pdp/Gallery';
 import { Delivery } from '@/components/pdp/Delivery';
 import { InfoTabs } from '@/components/pdp/InfoTabs';
+import { BulkDiscounts } from '@/components/pdp/BulkDiscounts';
 import { RatingLink, Reviews } from '@/components/pdp/Reviews';
 import { pickVariant } from '@/components/pdp/logic';
 import { Personalizer } from '@/components/personalizer/Personalizer';
@@ -89,6 +90,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
             }}
             delivery={<Delivery settings={settings} />}
           />
+          <BulkDiscounts />
           <InfoTabs product={product} className="mt-8" />
         </div>
       </div>

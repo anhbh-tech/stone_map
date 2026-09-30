@@ -4,6 +4,7 @@ import { DEFAULTS, setSetting } from '../src/lib/settings';
 import { hashPassword } from '../src/lib/password';
 import type { Settings } from '../src/lib/types';
 import { seedCollections } from './seed-collections';
+import { seedDiscounts } from './seed-discounts';
 
 const d = db();
 tx(() => {
@@ -56,5 +57,6 @@ tx(() => {
     .run('admin', hashPassword('admin123'));
 
   seedCollections(d); // UI-2: collections + sản phẩm demo có nhãn
+  seedDiscounts(d); // UI-3: mã Buy More, Save More! trên PDP
 });
 console.log('seeded', d.prepare('SELECT count(*) n FROM variants').get());

@@ -48,7 +48,7 @@ export default async function DiscountsPage({ searchParams }: { searchParams: Pr
                 <tbody>
                   {rows.map((d) => (
                     <tr key={d.id} className={tr}>
-                      <td className={td}><Link href={`/admin/discounts/${d.id}`} className={`${linkCls} font-mono`}>{d.code}</Link><div className="text-xs text-muted-foreground">{discountSummary(d, fmt)}</div></td>
+                      <td className={td}><Link href={`/admin/discounts/${d.id}`} className={`${linkCls} font-mono`}>{d.code}</Link><div className="text-xs text-muted-foreground">{discountSummary(d, fmt)}{d.show_on_pdp ? ' · On product pages' : ''}</div></td>
                       <td className={td}><StatusBadge status={d.state} label={STATE_LABEL[d.state]} /></td>
                       <td className={`${td} whitespace-nowrap text-muted-foreground`}>{d.ends_at ? fmtDay(d.ends_at) : 'No end date'}</td>
                       <td className={`${td} text-right`}>{d.used}{d.usage_limit ? <span className="text-muted-foreground"> / {d.usage_limit}</span> : ''}</td>

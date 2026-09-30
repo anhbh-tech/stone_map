@@ -1,13 +1,13 @@
 // Giỏ + checkout giả lập (crew D). Giá luôn tính lại từ DB qua pricing.totals — không tin số từ trình duyệt.
 // Properties của dòng giỏ do server sinh từ design; khách chỉ thấy visibleProps() + thumbnail, không bao giờ URL hay key "_" (#5).
-import path from 'node:path';
 import { z } from 'zod';
-import { db, json, tx, STORAGE } from './db';
+import { db, json, tx } from './db';
 import { bundleTiers, type BundleTier } from './catalog';
 import { bundleFor, totals, type Totals } from './pricing';
 import { deliveryWindow, getSettings, shippingHeadline } from './settings';
 import { fmt } from './money';
 import { newId } from './ids';
+import { mediaUrl } from './personalize/storage'; // quy tắc /media của crew B: chỉ uploads/previews/mockups công khai
 import { visibleProps, type DesignStatus, type LineProperties, type Settings } from './types';
 
 export const CART_COOKIE = 'cart_id';
@@ -52,16 +52,6 @@ export function bundleHint(qty: number, tiers: BundleTier[]) {
     hint: qty > 0 && next ? `Add ${next.min_qty - qty} more to save ${next.percent_off}%` : null,
     saving: tier ? `${tier.percent_off}% multi-portrait discount applied` : null,
   };
-}
-
-/** Đường dẫn file trong storage/ → URL /media/… (route của module personalize). Ngoài storage → null. */
-export function mediaUrl(p: string | null | undefined): string | null {
-  if (!p || /^[a-z][a-z0-9+.-]*:/i.test(p)) return null; // URL ngoài (https:, data:…) không bao giờ vào giỏ
-  if (p.startsWith('/media/')) return p.includes('..') ? null : p;
-  const abs = path.isAbsolute(p) ? p : path.join(STORAGE, p.replace(/^storage\//, '')); // 'storage/x' hay 'x' đều tương đối với STORAGE
-  const rel = path.relative(STORAGE, abs);
-  if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) return null;
-  return '/media/' + rel.split(path.sep).map(encodeURIComponent).join('/');
 }
 
 type LineRow = {

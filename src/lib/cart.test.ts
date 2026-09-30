@@ -10,7 +10,7 @@ process.env.STORAGE_DIR = path.join(tmp, 'storage');
 
 const { db } = await import('./db');
 const cart = await import('./cart');
-const { CartError, addLine, bundleHint, ensureCart, getCart, getOrder, mediaUrl, placeOrder, removeLine, setAddon, updateLine } = cart;
+const { CartError, addLine, bundleHint, ensureCart, getCart, getOrder, placeOrder, removeLine, setAddon, updateLine } = cart;
 
 afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
@@ -61,10 +61,12 @@ describe('cart lines', () => {
     expect(JSON.parse(raw.properties)).toMatchObject({ _design_id: 'DSN-OK0001', _preview_url: '/media/previews/DSN-OK0001.webp' });
   });
 
-  it('drops thumbnails that point outside storage', () => {
-    expect(mediaUrl('https://cdn.example.com/x.webp')).toBeNull();
-    expect(mediaUrl('../etc/passwd')).toBeNull();
-    expect(mediaUrl('storage/../secret')).toBeNull();
+  it('drops thumbnails that are not public storage files', () => {
+    const id = ensureCart(null);
+    addLine(id, { variant_id: 20, qty: 1, design_id: 'DSN-FRAME1' });
+    expect(getCart(id).lines[0].thumbnail_url).toBeNull();
+    const raw = db().prepare('SELECT properties FROM cart_lines WHERE cart_id = ?').get(id) as { properties: string };
+    expect(raw.properties).not.toContain('http');
   });
 
   it('merges the same design + size, updates and removes lines only in the owning cart', () => {

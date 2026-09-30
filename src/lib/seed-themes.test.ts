@@ -104,24 +104,22 @@ describe('loadRollout', () => {
     await fixture('sunflower-queen', [...dogs(3), { file: 'cat.jpg', pet_kind: 'cat', pass: true, cutout: 'cat.cut.png' }, ...dogs(2, false)]);
   });
 
-  it('loads only passing finals + template + cutout per theme and leaves themes without a manifest draft', async () => {
+  it('loads only passing finals per theme and leaves themes without a manifest draft', async () => {
     const r = await load();
-    expect(r.map((x) => [x.theme, x.status, x.finals, x.images])).toEqual([['royal-starry', 'loaded', 2, 4], ['sunflower-queen', 'loaded', 4, 6], ['cafe-duke', 'missing', 0, 0]]);
+    expect(r.map((x) => [x.theme, x.status, x.finals, x.images])).toEqual([['royal-starry', 'loaded', 2, 2], ['sunflower-queen', 'loaded', 4, 4], ['cafe-duke', 'missing', 0, 0]]);
     expect(r[0].skipped).toEqual(['r-a.jpg', 'r-b.jpg', 'r-c.jpg']);
     expect(r[2].errors[0]).toMatch(/no manifest at .*cafe-duke\/manifest\.json/);
     expect([status('the-starry-king'), status('the-sunflower-queen'), status('the-cafe-terrace-duke')]).toEqual(['active', 'active', 'draft']);
-    expect(T.formatLoad(r).split('\n')[0]).toBe('royal-starry: loaded 4 images (2 finals + template + pearl cat cutout); left out 3 pass=false: r-a.jpg, r-b.jpg, r-c.jpg — 2 of 5 finals (only pass=true loaded)');
+    expect(T.formatLoad(r).split('\n')[0]).toBe('royal-starry: loaded 2 images (2 finals); left out 3 pass=false: r-a.jpg, r-b.jpg, r-c.jpg — 2 of 5 finals (only pass=true loaded)');
   });
 
-  it('orders the gallery finals → empty template → pearl cat cutout, copied as WebP', async () => {
+  it('keeps the gallery to slider-scene finals only (no empty template, no lone cutout), copied as WebP', async () => {
     const imgs = images('the-starry-king');
     expect(imgs.map((i) => i.url.replace(/-[0-9a-f]{10}\.webp$/, ''))).toEqual(
-      ['final-1', 'final-2', 'template', 'pearl-pet'].map((n) => `/rollout-test/royal-starry/${n}`));
+      ['final-1', 'final-2'].map((n) => `/rollout-test/royal-starry/${n}`));
     expect(imgs.map((i) => i.alt)).toEqual([
       'Cat recreated in pearls as The Starry King against a swirling starry-night sky, shown in its frame',
       'Dog recreated in pearls as The Starry King against a swirling starry-night sky, shown in its frame',
-      'The Starry King setting on its own, before your pet is added',
-      'Pearl cat from The Starry King on its own, full face and outfit',
     ]);
     for (const i of imgs) expect((await sharp(path.join(DEST, i.url.replace('/rollout-test/', ''))).metadata()).format).toBe('webp');
     const tags = (d.prepare("SELECT tag FROM product_tags t JOIN products p ON p.id = t.product_id WHERE p.handle = 'the-starry-king' ORDER BY tag").all() as { tag: string }[]).map((x) => x.tag);
@@ -137,9 +135,9 @@ describe('loadRollout', () => {
     expect(images('the-starry-king')).toEqual(before);
     await fixture('royal-starry', royal(true));
     const [r] = await load();
-    expect(r).toMatchObject({ status: 'loaded', finals: 5, images: 7, skipped: [], warnings: [] });
+    expect(r).toMatchObject({ status: 'loaded', finals: 5, images: 5, skipped: [], warnings: [] });
     expect(images('the-starry-king').map((i) => i.url.replace(/-[0-9a-f]{10}\.webp$/, '').split('/').at(-1))).toEqual(
-      ['final-1', 'final-2', 'final-3', 'final-4', 'final-5', 'template', 'pearl-pet']);
+      ['final-1', 'final-2', 'final-3', 'final-4', 'final-5']);
     // Thư mục đích chỉ còn đúng các file của gallery mới.
     expect(fs.readdirSync(path.join(DEST, 'royal-starry')).sort()).toEqual(images('the-starry-king').map((i) => path.basename(i.url)).sort());
   });

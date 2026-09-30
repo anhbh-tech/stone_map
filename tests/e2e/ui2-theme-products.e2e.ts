@@ -46,24 +46,23 @@ test('Character portraits collection lists the three theme products', async ({ p
   for (const name of ['The Starry King', 'The Sunflower Queen', 'The Café Terrace Duke']) await expect(page.getByRole('link', { name }).first()).toBeVisible();
 });
 
-test('product page gallery: 5 finals, the empty template, then the pearl cat on its own', async ({ page }) => {
+test('product page gallery: only the 5 slider-scene finals', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/products/the-starry-king');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('The Starry King');
   const thumbs = page.getByRole('list', { name: 'Choose a photo' }).getByRole('button');
-  await expect(thumbs).toHaveCount(7);
+  await expect(thumbs).toHaveCount(5);
 
   const slides = page.getByTestId('gallery-track').first().locator('img');
-  await expect(slides).toHaveCount(7);
+  await expect(slides).toHaveCount(5);
   const alts = await slides.evaluateAll((els) => els.map((e) => e.getAttribute('alt')));
   expect(alts[0]).toBe('Cat recreated in pearls as The Starry King against a swirling starry-night sky, shown in its frame');
-  expect(alts[5]).toBe('The Starry King setting on its own, before your pet is added');
-  expect(alts[6]).toBe('Pearl cat from The Starry King on its own, full face and outfit');
+  expect(alts.every((a) => a?.endsWith('shown in its frame'))).toBe(true);
   // Ảnh chép vào public/ thật sự tải được (qua next/image).
   await expect.poll(() => slides.first().evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth)).toBeGreaterThan(0);
 
-  await thumbs.nth(6).click();
-  await expect(thumbs.nth(6)).toHaveAttribute('aria-current', 'true');
+  await thumbs.nth(4).click();
+  await expect(thumbs.nth(4)).toHaveAttribute('aria-current', 'true');
 });
 
 test('search finds a theme product by its character name', async ({ page }) => {

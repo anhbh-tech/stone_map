@@ -1,7 +1,7 @@
 // Sản phẩm theo theme từ đợt rollout của pearl_compare: 1 sản phẩm / theme (royal-starry, sunflower-queen, cafe-duke).
 // seedThemes(): tạo sản phẩm + size + tag + collection ở trạng thái DRAFT (không có ảnh thì không bán, không hiện).
 // loadRollout(): đọc <ROLLOUT_DIR>/<theme>/manifest.json (chỉ đọc), chép ảnh (đổi sang WebP) vào public/rollout/<theme>/,
-// ghi gallery = tới 5 final pass=true + 1 template trống + 1 cutout pet ngọc, rồi bật ACTIVE. Final pass=false để trống;
+// ghi gallery = tới 5 final pass=true (chỉ cảnh slider), rồi bật ACTIVE. Final pass=false để trống;
 // chạy lại (idempotent: gallery dựng lại từ manifest, tên file theo nội dung) sẽ thêm final mới đạt. Thiếu manifest / manifest chưa đủ → giữ nguyên, báo lý do.
 // Không bao giờ dùng ảnh giả: fixture manifest chỉ có trong test (tạo ở thư mục tạm).
 import { createHash } from 'node:crypto';
@@ -177,8 +177,7 @@ export async function loadRollout(d: DatabaseSync, opts: { src?: string; dest?: 
     for (const [i, f] of plan.finals.entries()) {
       rows.push({ url: await copy(f.file, `final-${i + 1}`, 2000), alt: `${Kind(f.pet_kind)} recreated in pearls as ${title} against a ${t.scene}, shown in its frame` });
     }
-    rows.push({ url: await copy(plan.template, 'template', 2000), alt: `The ${t.style} setting on its own, before your pet is added` });
-    if (plan.cutout) rows.push({ url: await copy(plan.cutout.file, 'pearl-pet', 1600), alt: `Pearl ${plan.cutout.pet_kind} from ${title} on its own, full face and outfit` });
+    // Captain: gallery chỉ gồm cảnh slider (final); không đưa template trống hay cutout pet đứng riêng vào gallery.
 
     d.exec('BEGIN');
     try {
@@ -206,7 +205,7 @@ export async function loadRollout(d: DatabaseSync, opts: { src?: string; dest?: 
 export const formatLoad = (r: LoadResult[]) =>
   r.map((x) => {
     if (x.status !== 'loaded') return `${x.theme}: ${x.status} — ${x.errors.join('; ')}`;
-    const parts = [`${x.finals} finals`, 'template', ...(x.cutout ? [`pearl ${x.cutout} cutout`] : [])];
+    const parts = [`${x.finals} finals`];
     const skip = x.skipped.length ? `; left out ${x.skipped.length} pass=false: ${x.skipped.join(', ')}` : '';
     return `${x.theme}: loaded ${x.images} images (${parts.join(' + ')})${skip}${x.warnings.length ? ` — ${x.warnings.join('; ')}` : ''}`;
   }).join('\n');

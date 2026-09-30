@@ -3,6 +3,7 @@ import { db, tx } from '../src/lib/db';
 import { DEFAULTS, setSetting } from '../src/lib/settings';
 import { hashPassword } from '../src/lib/password';
 import type { Settings } from '../src/lib/types';
+import { seedCollections } from './seed-collections';
 
 const d = db();
 tx(() => {
@@ -50,5 +51,7 @@ tx(() => {
 
   d.prepare('INSERT INTO admin_users (username, password_hash) VALUES (?, ?) ON CONFLICT(username) DO UPDATE SET password_hash = excluded.password_hash')
     .run('admin', hashPassword('admin123'));
+
+  seedCollections(d); // UI-2: collections + sản phẩm demo có nhãn
 });
 console.log('seeded', d.prepare('SELECT count(*) n FROM variants').get());

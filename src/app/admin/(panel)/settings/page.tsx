@@ -4,8 +4,9 @@ import { requireAdminPage } from '../../_lib/session';
 import { listStaff, staffName } from '../../_lib/staff';
 import { Card, PageHeader, StatusBadge } from '../../_components/ui';
 import { ActionButton, ApiForm, Field, MoneyField, Select, TextArea } from '../../_components/form';
+import { InfoTabsDefaultsCard } from '../../_components/info-tabs';
 
-const SECTIONS = [['shop', 'Shop'], ['shipping', 'Shipping'], ['claims', 'Marketing claims'], ['privacy', 'Privacy'], ['ai', 'AI generation'], ['preflight', 'Photo preflight'], ['staff', 'Staff']] as const;
+const SECTIONS = [['shop', 'Shop'], ['shipping', 'Shipping'], ['claims', 'Marketing claims'], ['privacy', 'Privacy'], ['ai', 'AI generation'], ['preflight', 'Photo preflight'], ['info', 'Product info tabs'], ['staff', 'Staff']] as const;
 
 export const metadata: Metadata = { title: 'Settings' };
 
@@ -87,6 +88,7 @@ export default async function SettingsPage() {
             <Field name="min_pet_confidence" label="Min pet confidence" type="number" min={0} max={1} step={0.05} required defaultValue={s.preflight.min_pet_confidence} hint="0 – 1" />
           </ApiForm>
         </Card>
+        <InfoTabsDefaultsCard id="settings-info" />
         <Card title="Staff" id="settings-staff" description="People who can sign in to this admin. Designers can be assigned designs in the queue.">
           <ul className="mb-5 divide-y divide-border rounded-[var(--radius)] border border-border">
             {staff.map((m) => (

@@ -8,6 +8,7 @@ import { getProduct } from '../../../_lib/repo';
 import { collectionsForProduct } from '../../../_lib/collections';
 import { Card, Empty, PageHeader, StatusBadge, linkCls } from '../../../_components/ui';
 import { ActionButton, ApiForm, Checkbox, CountedField, Field, MoneyField, Select, TextArea } from '../../../_components/form';
+import { ProductInfoTabsCard } from '../../../_components/info-tabs';
 
 export const metadata: Metadata = { title: 'Edit product' };
 
@@ -83,6 +84,8 @@ export default async function ProductEdit({ params }: { params: Promise<{ id: st
           </Card>
         </div>
       </div>
+
+      <ProductInfoTabsCard productId={p.id} className="mt-6" />
 
       <Card title="Sizes & prices" id="variants" className="mt-6" description="Print size is the square print file in pixels the worker renders (and the designer upload is resized to).">
         {p.variants.length === 0 ? <Empty>No sizes yet.</Empty> : (

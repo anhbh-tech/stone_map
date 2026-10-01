@@ -191,7 +191,8 @@ for (const vp of [{ name: '1440', width: 1440, height: 900, mobile: false }, { n
         await canvas(page).dispatchEvent('pointerdown', { pointerId: 7, pointerType: 'touch', clientX: box.x + box.width / 2, clientY: box.y + box.height / 2, button: 0, isPrimary: true });
         await canvas(page).dispatchEvent('pointermove', { pointerId: 7, pointerType: 'touch', clientX: box.x + box.width / 2 + 30, clientY: box.y + box.height / 2, isPrimary: true });
         await canvas(page).dispatchEvent('pointerup', { pointerId: 7, pointerType: 'touch', isPrimary: true });
-        expect((await tOf(page)).x).toBeGreaterThan(210);
+        // pointermove là cập nhật ưu tiên continuous: React commit sau khi dispatchEvent trả về → poll, không đọc một lần.
+        await expect.poll(async () => (await tOf(page)).x).toBeGreaterThan(210);
       }
 
       // OK → render với đúng transform đang thấy → dialog đóng, ảnh trên thẻ đổi sang final mới.

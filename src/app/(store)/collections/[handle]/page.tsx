@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { redirect } from 'next/navigation';
+import { notFound } from 'next/navigation';
 import { ALL_COLLECTION, COLLECTION_SORTS, facets, getCollection, listProducts, parseListQuery } from '@/lib/listing';
 import { Breadcrumbs } from '@/components/shell/Breadcrumbs';
 import { ActiveFilters, FilterPanel, activeCount } from '@/components/listing/Filters';
@@ -16,7 +16,7 @@ const find = (handle: string) => (handle === 'all' ? ALL_COLLECTION : getCollect
 
 export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const c = find((await params).handle);
-  if (!c) return {};
+  if (!c) return { title: 'Page not found' };
   const sp = await searchParams;
   // Trang đã lọc / sắp xếp / trang 2+ trỏ canonical về trang gốc và không index (tránh trùng lặp).
   const variant = Object.keys(sp).some((k) => ['theme', 'type', 'price', 'sort', 'page'].includes(k));
@@ -30,8 +30,8 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
 
 export default async function CollectionPage({ params, searchParams }: Props) {
   const c = find((await params).handle);
-  // Handle không tồn tại (link cũ, collection bị xoá/chưa seed) → về toàn bộ sản phẩm thay vì 404.
-  if (!c) redirect('/collections/all');
+  // Handle không tồn tại → 404 thật (không redirect 200 về /all: soft-404 với SEO, khách không biết link đã hỏng); trang 404 liệt kê collection.
+  if (!c) notFound();
   const state = parseListQuery(await searchParams, COLLECTION_SORTS);
   const scope = { collectionId: c.handle === 'all' ? null : c.id };
   const res = listProducts(scope, state);

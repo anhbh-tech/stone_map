@@ -1,0 +1,130 @@
+# Critique: checkout, discount codes, order email/confirmation, and the admin
+
+Critic and fixer: ps-ui3-admin. Date: 2026-10-01. Code at main `defbb62`.
+
+Method: dual-agent impeccable critique.
+- Assessment A ran as two isolated passes: a first-time gift shopper and the shop owner running one full day.
+- Assessment B was the impeccable detector: CLI plus an in-page overlay.
+
+Environment: `:3000` was down, so this ran on a private dev server (`:3310`) from the same commit. It used a fresh seed plus `load:rollout --dir …/pc-v2-template-cutout/rollout`, so the 3 theme products were active with real galleries, which is what a customer sees. Viewports were 375×812 and 1440×900. The mock AI provider was on. Payment was simulated. Orders #1001–#1004 were placed in that scratch DB.
+
+Screenshots: `.impeccable/critique/ps-ui3-admin/`. Files ending `-before` are the state before fixes; files ending `-after` are after the fixes in this branch.
+
+Benchmark: Shopify checkout and Shopify admin conventions, plus mogcustom's PDP and checkout behaviour. Nothing was copied.
+
+## Scores (1–10)
+
+| Surface | Trust | Clarity | Aesthetics | Perceived speed | Mobile |
+|---|---|---|---|---|---|
+| Shopper: cart → checkout → confirmation | 6 | 5 | 7 | 8 | 6 |
+| Owner: /admin | 6 | 7 | 7 | 8 | 7 |
+
+Nielsen heuristics (0–4 each): **shopper 26/40, admin 24/40**. The weakest heuristics are error prevention (both 1) and flexibility and efficiency on the admin (1). The strongest is error recovery: checkout scores 4. The checkout error summary and the specific discount-code messages are close to best in class.
+
+Detector (`impeccable detect`): 2 findings, both false positives.
+- `design-system-radius` at `src/app/admin/admin.css:21`: the value is `calc(var(--radius) - 4px)`, which is 6px and matches `rounded.md`.
+- `nested-cards` at `src/app/admin/_components/chart.tsx:118`: this is a transparent scroll frame inside a collapsed "View as table".
+
+The design system holds. The problems are in behaviour, not in tokens.
+
+## Verdict
+
+The look is coherent and warm. The checkout error handling and the admin designs queue are specific to this product and well made.
+
+What breaks trust is **flow truth**: what the screen says does not match what happens.
+- A Sunflower Queen order prints as Starry King. This is a P0 outside my zone (see the handoff file).
+- The cart promises a saving the shopper already has.
+- "Paid orders go to production…" never happens.
+- A refunded order that already shipped reads "Unfulfilled".
+- A guest buyer is not a "customer".
+- One click ships an order with no tracking number and emails the customer. Another click refunds an order.
+
+The end of the purchase, the confirmation page and the email, is flat for an emotional gift.
+
+## What works
+
+1. **Checkout errors.**
+   - A focused "There is a problem" summary with anchor links to each field.
+   - Per-field `aria-invalid` / `aria-describedby`.
+   - Correct `autocomplete` tokens.
+   - Field values survive a change of shipping method.
+2. **Discount honesty and arithmetic.**
+   - "Needs 2 or more portraits … Add 1 more"; "Your bundle discount is already better, so we kept it".
+   - Codes are case-insensitive and space-tolerant.
+   - Totals match across cart, checkout, confirmation and email.
+3. **Admin designs queue and dashboard.**
+   - The customer photo sits beside the artwork, with pixel size, an upscale warning and waiting time.
+   - Fulfilment is gated on approved print files.
+   - Every KPI matched SQL.
+   - The chart has a table fallback, and the empty states are honest.
+
+## Issues: shopper (cart, discounts, checkout, confirmation, email)
+
+P0 = broken or blocks the purchase. P1 = hard to use, wrong, or clearly ugly. P2 = polish. The Status column records what this branch did.
+
+| ID | Sev | Where | Repro | Screenshot | Why | Fix proposed | Status |
+|---|---|---|---|---|---|---|---|
+| S-01 | **P0** (out of zone) | PDP personalizer `src/components/personalizer/Personalizer.tsx:66` | Open /products/the-sunflower-queen. The style defaults to Starry King. Generate, approve and order. Cart, checkout, confirmation, email and admin all say "The Sunflower Queen · Style: Starry King". | shop-1440-cart-style-mismatch-before.png | The customer pays for one theme and gets another. | Default the style to the product's theme and lock the picker on theme products. | Handed off: `docs/critique/handoff-from-ps-ui3-admin.md` |
+| S-02 | P1 | /checkout `src/components/cart/CheckoutForm.tsx`, server schema | Enter State "Texass" and ZIP "7870". The order is placed. | shop-375-order-confirmation-before.png | The shop ships to the US only, yet it accepts addresses that cannot be delivered. | State becomes a `<select>`. ZIP is checked against `^\d{5}(-\d{4})?$` on client and server. | Fixed |
+| S-03 | P1 (decision) | Bundle tiers 10/15/20% vs the PDP "Buy More" codes PEARL2/3/5 at 15/20/25% `src/lib/cart.ts` | With 2 portraits the cart says "10% applied". Typing PEARL2 gives 15%. | shop-375-cart-code-applied-before.jpeg | Two rule sets answer one question. A shopper who never types the code overpays. | Pick one mechanism. This is a product decision, so it goes to the captain. In-zone mitigation: the cart now offers the better published code (S-12). | Mitigated; question to captain |
+| S-04 | P1 | Cart bundle hint `src/lib/cart.ts` (`bundleHint`) | Qty 3 with PEARL3 (20%) still shows "Add 2 more to save 20%". | shop-375-cart-code-applied-before.jpeg | It promises a saving the shopper already has. | Compare the hint against the saving actually applied. Hide it, or point to the next better tier or code. | Fixed (UI-1 on main 61b795d hides the hint once a code wins) |
+| S-05 | P1 | Discount box `src/components/cart/DiscountCode.tsx` | At qty 1, PEARL2 gives "needs 2". Press + to reach qty 2. The red error stays. | shop-375-cart-code-applied-before.jpeg | A false error makes the code look broken. | Clear the error on typing and when the cart changes. | Fixed (error clears on typing and on quantity change) |
+| S-06 | P1 | /cart at 375 `src/components/cart/CartClient.tsx` | One portrait in the cart. Checkout sits about 2,800px down, below 4 add-on cards. | shop-375-cart-before.jpeg | The main action is buried on the device most shoppers use. | On mobile, put the summary and Checkout right after the lines and move "Finishing touches" below. | Fixed |
+| S-07 | P1 | Add-ons in cart and checkout `CartClient.tsx`, `Summary.tsx` | 5 portraits plus "Gold floating frame +$13.98". One frame is charged, and nothing says so. | shop-1440-order-confirmation-before.png | A buyer of 2 copies expects 2 frames. | Say "one per order" whenever the cart holds more than one portrait. Per-portrait pricing is a product decision for the captain. | Fixed (copy); question to captain |
+| S-08 | P1 | Checkout inputs `CheckoutForm.tsx` (`border-border` #e7dfda) | Look at any checkout field on white. | shop-1440-checkout-before.png | About 1.3:1 contrast, which fails WCAG 1.4.11 and breaks DESIGN.md's Two Borders Rule. | Use `border-input`, as the discount field already does. | Fixed |
+| S-09 | P1 | /orders/[number] `src/app/(store)/orders/[number]/page.tsx` | Place an order. You see a thank-you, the receipt and "Back to the shop". | shop-375-order-confirmation-before.png | The end of the gift purchase has no next step, no tracking, no gift-card echo and no support contact. | Add "What happens next" steps, a "Track this order" link, the gift message and a support line. | Fixed |
+| S-10 | P1 | Confirmation email `src/lib/cart.ts` (template) | Open the #1001 email in /admin/emails. | admin-1440-email-confirmation-before.png | Unstyled browser-default text. No address, no preview and no order link. Add-ons sit outside a subtotal that does not add up. | Branded, inline-styled email. Per-line thumbnail, shipping address, totals in order, a "View your order" link and a track link. | Fixed |
+| S-11 | P2 | /orders/<n> on another device | Open the page without the cookie. It is a dead end. | – | A working /track-order page exists. | Link to `/track-order`. | Fixed |
+| S-12 | P2 | Cart code box `src/lib/cart.ts` | At qty 2 with no code, the cart never mentions PEARL2 (15%), which beats the 10% tier. | – | The shopper leaves money on the table. | Suggest the best published code that beats the current saving. | Fixed (UI-1 `discount_better` on main 61b795d, shown in cart and checkout) |
+| S-13 | P2 | Cart add-on checkboxes | The checkbox is 20px and the card padding does not respond to a tap. | shop-375-cart-before.jpeg | A tap on the card edge does nothing. | Make the whole card the label. | Fixed |
+| S-14 | P2 | Checkout summary `Summary.tsx` | The gift-card message is not shown before payment. | shop-375-checkout-before.jpeg | The buyer wants to proofread the card. | Show the message under the add-on. | Fixed |
+| S-15 | P2 | /checkout at 375 | The order summary sits at the very bottom, after Payment. | shop-375-checkout-before.jpeg | Shopify puts a collapsible summary at the top. | Add a collapsible summary at the top below `lg`. | Open |
+| S-16 | P2 | Cart line | The PDP shows the compare-at price and "Save 33%". The cart shows only the sale price. | – | The savings story disappears at the point of commitment. | Strike-through compare-at price plus "You save $N". | Open |
+| S-17 | P2 | Summary row order | Rows run Subtotal → Discount → add-ons → Shipping. | shop-375-checkout-before.jpeg | It reads as if the discount covers the add-ons. | Show "Discount applies to portraits only". | Open |
+| S-18 | P2 | Free-shipping nudge | "Free over $79.99" is shown with no remaining amount. | – | A proven nudge is missing. | "Add $N more for free shipping". | Fixed in cart (UI-1 on main 61b795d) |
+| S-19 | P2 | Checkout layout | Full store chrome. 16 Tabs to reach the first field. | shop-1440-checkout-before.png | Shopify's checkout is distraction-free. | A minimal checkout header. This is a layout change: ask first. | Open (style change) |
+| S-20 | P2 | Cart Remove | Removes a personalised line at once. | – | Redoing an approved preview is costly. | Inline Undo. | Open |
+| S-21 | P2 | Receipt | Shows "Design DSN-…" as jargon. | – | It means nothing to the shopper. | "Design ref (for support)". | Fixed |
+
+## Issues: owner (/admin)
+
+| ID | Sev | Where | Repro | Screenshot | Why | Fix proposed | Status |
+|---|---|---|---|---|---|---|---|
+| A-01 | P1 | Order detail fulfil `src/app/admin/(panel)/orders/[id]/page.tsx` | Leave tracking empty and click Mark as fulfilled. The order ships and "on its way" is emailed. | admin-1440-order-detail-before.png | One misclick emails the customer with no tracking number. | Confirm before shipping without tracking. | Fixed |
+| A-02 | P1 | Order status select | Status → Refunded → Update. It saves at once. | admin-1440-order-refunded-shipped-before.png | The most dangerous action shares a select with "Delivered". | Ask for confirmation on refunded or canceled, naming the amount. | Fixed |
+| A-03 | P1 | Fulfilment badge `src/app/admin/_lib/order-status.ts` | Fulfil, then refund. The order reads "Refunded · Unfulfilled". | admin-1440-order-refunded-shipped-before.png | The owner cannot tell whether a return is needed. | Derive fulfilment from the `fulfillments` rows. | Fixed |
+| A-04 | P1 | Orders never reach `in_production` | Approve the last design of a paid order. It stays in "Not started". | admin-1440-orders-before.png | The page copy promises it moves. "Not started" fills with orders that are ready. | When the last design of a paid order is approved, move it to In production and log it on the timeline. | Fixed |
+| A-05 | P1 | Design approve `src/app/api/admin/designs/[id]/route.ts` | Approve a designer-finish design. No email goes out, and the card shows "Email —". | admin-1440-designs-before.png | The storefront promises the customer a proof email. | Fall back to the order's email for the design-ready email and on the card. A full customer-approval proof flow is a product decision. | Fixed (fallback) |
+| A-06 | P1 | Customers `src/app/admin/_lib/customers.ts` | 4 orders from guests show "No customers yet". | admin-1440-customers-before.png | Lookup fails for most buyers. | List order emails as guest customers beside accounts, with a guest detail page. | Fixed |
+| A-07 | P1 | Product detail: 8+ separate forms, no dirty guard | Edit Subtitle and click Customers. The edit is lost silently. | admin-1440-product-detail-before.png | Data loss. | Warn before leaving with unsaved edits, for in-app links and reload. | Fixed |
+| A-08 | P1 | Add product image, URL only | Add image takes only a URL. There is no upload. | admin-1440-product-detail-before.png | The owner cannot add real photos. | File upload stored under `storage/` and served via `/media`. | Fixed (`POST /api/admin/images/upload` saves WebP under storage/mockups and serves it via /media; URL form kept under "Or add by URL") |
+| A-09 | P1 | Confirmation email (same as S-10) | – | admin-1440-email-confirmation-before.png | – | – | Fixed (S-10) |
+| A-10 | P2 | KPI tiles | The Orders tile includes refunds while AOV uses paid orders only. "No prior data vs $0.00". | admin-1440-dashboard-before.png | It looks wrong next to the other tiles. | Label the tile or align the definitions. "New" when the prior value is 0. | Open |
+| A-11 | P2 | Recent orders | "0 min ago". | – | Reads like a bug. | "Just now". | Fixed ("Just now" under one minute) |
+| A-12 | P2 | Orders list | Only the 44×17 order number opens the order. No bulk actions. | admin-1440-orders-before.png | Slow for batch work. | Clickable rows and bulk actions. | Open |
+| A-13 | P2 | Orders `?page=5` | "No orders yet" on a page past the end. | – | The message is wrong. | "No orders on this page". | Open |
+| A-14 | P2 | Order detail | Internal `_design_id` / `_print_url` rows, the address one field per line, "Method: standard". | admin-1440-order-detail-before.png | Noise and raw values. | Hide `_` fields, format the address, "Standard shipping". | Open |
+| A-15 | P2 | Timeline | Design assign, upload and approve are not logged. Status changes show raw values. | – | It cannot answer "where is my portrait?". | Log design events with friendly labels. | Partly (approve → production is logged) |
+| A-16 | P2 | Designs | Style slug "royal-starry". Approve is clickable without artwork. A stale error stays after upload. | admin-1440-designs-before.png | Raw values and a stale message. | Theme label, disabled Approve, clear the error. | Open |
+| A-17 | P2 | Discount duplicate | "Already exists (discounts.code)". | admin-1440-discount-new-before.png | The DB column name leaks. | Field-level message. | Open |
+| A-18 | P2 | Bundle tiers vs codes | Neither page explains that the larger saving wins. | admin-1440-bundle-tiers-before.png | The owner cannot predict the price. | One explanatory line on both pages. | Fixed (line on Bundle tiers and Discounts) |
+| A-19 | P2 | Reviews | "· has photo" with no thumbnail. | admin-1440-reviews-before.png | You cannot moderate a photo you cannot see. | Show the thumbnail. | Open |
+| A-20 | P2 | Dashboard at 375 | "Needs attention" is below the KPIs and the chart. | admin-375-dashboard-before.png | The phone owner wants the to-do list first. | Reorder on mobile. | Open |
+| A-21 | P2 | Orders tabs at 375 | The tab strip clips with no hint. | admin-375-orders-before.png | Tabs are hidden. | Edge fade. | Open |
+| A-22 | P2 | Designer select | Saves on every change. | – | Keyboard arrow keys reassign. | Save on blur. | Open |
+| A-23 | P2 | Login throttle `src/app/api/admin/login/route.ts:14` | The throttle is keyed on a client-supplied `X-Forwarded-For`. | – | The lockout can be bypassed. | Trust only the proxy or socket IP. | Open |
+| A-24 | P2 | Refund | No refund email. | – | The customer learns of it from the bank. | Optional refund email. | Open |
+
+## Personas (red flags)
+
+- **Distracted mobile shopper.** Checkout is 3.5 screens below the add-ons (S-06, fixed). The summary sits at the bottom of checkout (S-15).
+- **Gift buyer.** The card message is never echoed (S-14, fixed). The end of the purchase is flat (S-09/S-10, fixed). One frame for 5 copies is not explained (S-07).
+- **Power owner.** No bulk actions or shortcuts (A-12). Separate Save buttons with no dirty guard (A-07, fixed).
+- **Mobile owner.** Refund sits one select away from Delivered (A-02, fixed). The to-do list is below the fold (A-20).
+
+## Questions for the captain (not decided here)
+
+1. **One discount model.** Today the bundle tiers (10/15/20%, automatic) sit beside the Buy More codes (15/20/25%, typed). Should we (a) make the tiers 15/20/25 automatic and drop the codes from the PDP, or (b) auto-apply the best published code? This branch only adds a "use PEARL2 to save $X more" suggestion.
+2. **Add-on frames.** Should add-ons be priced per portrait, or stay at one per order? This branch only labels them "one per order".
+3. **Designer finish.** Should approval send a proof the customer must accept before printing, as the PDP copy promises? This branch emails the "design ready" message to the order email and moves the order to production.
+4. **Checkout layout.** Should checkout get a minimal, distraction-free header (S-19)?

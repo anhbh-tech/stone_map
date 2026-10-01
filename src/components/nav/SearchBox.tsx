@@ -136,6 +136,13 @@ export function SearchBox({ variant = 'header', defaultQuery = '' }: { variant?:
             <span className="min-w-0 flex-1 truncate"><Highlight text={it.title} query={term} /></span>
           </li>
         ))}
+        {/* Lần gõ đầu chưa có gợi ý: giữ chỗ 2 dòng để dòng "Search for …" không bị đẩy xuống ngay lúc khách định bấm. */}
+        {loading && shown.length === 0 && [0, 1].map((k) => (
+          <li key={k} role="presentation" aria-hidden="true" data-testid="suggest-skeleton" className="flex min-h-14 items-center gap-3 px-2 py-1.5">
+            <span className="size-11 shrink-0 animate-pulse rounded-md bg-muted motion-reduce:animate-none" />
+            <span className="h-3 w-2/5 animate-pulse rounded-full bg-muted motion-reduce:animate-none" />
+          </li>
+        ))}
         {ready && !loading && shown.length === 0 && (
           <li role="presentation" className="px-3 py-2 text-sm text-muted-foreground">No quick matches. Press Enter to search everything.</li>
         )}

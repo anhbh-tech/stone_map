@@ -17,6 +17,7 @@ import { LayeredPreview, LayerEditor } from './LayerEditor';
 import { StickyPreview } from './StickyPreview';
 import { StickyBuy } from './StickyBuy';
 import { Price } from './Price';
+import { stylesFor } from './styles';
 
 export type PersonalizerProps = {
   product: { id: number; title: string };
@@ -28,6 +29,8 @@ export type PersonalizerProps = {
   delivery: ReactNode;
   /** Tiêu đề (h1), phụ đề, rating — render ở server, đặt ngay trên giá. */
   header?: ReactNode;
+  /** Theme của sản phẩm (tag `style:<theme>`); có thì chỉ chọn được style đó. */
+  theme?: string | null;
   /** Trần số lượng của cart API (MAX_QTY ở src/lib/cart.ts) — ô "10+" không cho vượt. */
   maxQty?: number;
 };
@@ -56,7 +59,7 @@ function ReqError({ req, text }: { req: Req; text: string }) {
   );
 }
 
-export function Personalizer({ product, variants, initialVariantId, tiers, addons, settings, delivery, header, maxQty = 10 }: PersonalizerProps) {
+export function Personalizer({ product, variants, initialVariantId, tiers, addons, settings, delivery, header, theme, maxQty = 10 }: PersonalizerProps) {
   const router = useRouter();
   const [variantId, setVariantId] = useState(initialVariantId);
   const [qty, setQty] = useState(1);
@@ -64,7 +67,8 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
   const [mode, setMode] = useState<Mode>('ai');
   const [consent, setConsent] = useState(false);
   const [upload, setUpload] = useState<UploadState>({ status: 'idle' });
-  const [style, setStyle] = useState(settings.styles[0]?.id || '');
+  const styles = stylesFor(settings.styles, theme);
+  const [style, setStyle] = useState(styles[0]?.id || '');
   const [petName, setPetName] = useState('');
   const [notes, setNotes] = useState('');
   const [design, setDesign] = useState<(DesignView & { upload_id: string }) | null>(null);
@@ -263,7 +267,7 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
 
   // Thanh dính trên mobile bám theo khung đang hiện ảnh: preview/tiến trình AI, hoặc ô upload.
   const previewOnStage = mode === 'ai' && (running || ready);
-  const stylesName = settings.styles.find((s) => s.id === style)?.name;
+  const stylesName = styles.find((s) => s.id === style)?.name;
   const stickySrc = ready ? design!.preview_url : uploaded?.url || null;
   const stickyDetail = running && job ? `${Math.round(job.progress * 100)}% · ${variant.size} in` : `${variant.size} in · ${fmt(price.price_cents, settings.currency)}`;
   const priceNote = [qty > 1 ? `for ${qty} portraits` : null, addonsCents ? 'add-ons included' : null].filter(Boolean).join(', ');
@@ -312,11 +316,11 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
 
       <section className={step} aria-labelledby="step-style">
         <h2 id="step-style" className={h2}>{mode === 'ai' ? 'Pick a style' : 'Tell our designer about your pet'}</h2>
-        {settings.styles.length > 0 && (
+        {styles.length > 0 && (
           <fieldset className="min-w-0">
             <legend className="text-sm font-semibold">Style</legend>
             <div className="mt-2 flex flex-wrap gap-2">
-              {settings.styles.map((s) => (
+              {styles.map((s) => (
                 <label key={s.id} className={`inline-flex min-h-11 cursor-pointer items-center rounded-full border border-input bg-card px-4 text-sm font-medium text-card-foreground transition-colors duration-150 hover:border-foreground ${selectedCls} ${focusCls}`}>
                   <input type="radio" name="style" value={s.id} checked={style === s.id} onChange={() => setStyle(s.id)} className="sr-only" />
                   {s.name}

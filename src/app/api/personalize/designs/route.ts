@@ -1,11 +1,11 @@
-// POST /api/personalize/designs → 201 DesignViewV2. mode 'ai' cần preflight ok (422 preflight_failed); style bỏ trống = theme sản phẩm.
+// POST /api/personalize/designs → 201 DesignViewV2. mode 'ai' cần preflight ok (422 preflight_failed); style bỏ trống = theme sản phẩm; sản phẩm theme luôn lưu theme của nó.
 import { z } from 'zod';
 import { db } from '../../../../lib/db';
 import { designId } from '../../../../lib/ids';
 import { getSettings } from '../../../../lib/settings';
 import { designViewV2, getDesign, getUpload, nowIso, uploadAvailable, uploadPreflight } from '../../../../lib/personalize/designs';
 import { apiError, handle, ok, readJson } from '../../../../lib/personalize/http';
-import { DesignFields, checkProductVariant, checkStyle } from '../../../../lib/personalize/validate';
+import { DesignFields, checkProductVariant, checkStyle, lockedStyle } from '../../../../lib/personalize/validate';
 import { themeForProduct } from '../../../../lib/personalize/engine';
 
 const Body = z.object({
@@ -24,7 +24,8 @@ export const POST = handle(async (req: Request) => {
   const pv = checkProductVariant(b.product_id, b.variant_id ?? null);
   if (pv) return pv;
   if (b.style != null) { const e = checkStyle(b.style, s); if (e) return e; }
-  const style = b.style ?? (b.mode === 'ai' ? themeForProduct(b.product_id) : null);
+  const theme = themeForProduct(b.product_id);
+  const style = lockedStyle(theme, b.style) ?? (b.mode === 'ai' ? theme : null);
 
   const up = getUpload(b.upload_id);
   if (!up) return apiError(404, 'upload_not_found', 'We could not find that photo. Please upload it again.');

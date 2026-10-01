@@ -4,8 +4,9 @@ import { db, tx } from '../../../../../lib/db';
 import { getSettings } from '../../../../../lib/settings';
 import { designViewV2, editableFields, getDesign, nowIso, type PatchField } from '../../../../../lib/personalize/designs';
 import { apiError, handle, ok, readJson } from '../../../../../lib/personalize/http';
+import { themeForProduct } from '../../../../../lib/personalize/engine';
 import { activeJobFor, createJob, wakeWorker } from '../../../../../lib/personalize/jobs';
-import { DesignFields, checkProductVariant, checkStyle } from '../../../../../lib/personalize/validate';
+import { DesignFields, checkProductVariant, checkStyle, lockedStyle } from '../../../../../lib/personalize/validate';
 
 type Ctx = { params: Promise<{ id: string }> };
 const Body = z.object(DesignFields).strict();
@@ -29,6 +30,7 @@ export const PATCH = handle(async (req: Request, ctx: Ctx) => {
   }
   if (b.variant_id != null) { const e = checkProductVariant(d.product_id, b.variant_id); if (e) return e; }
   if (b.style != null) { const e = checkStyle(b.style, getSettings()); if (e) return e; }
+  if (b.style != null) b.style = lockedStyle(themeForProduct(d.product_id), b.style);
 
   const values: Record<string, string | number | null> = {};
   for (const f of fields) values[f] = f === 'transform' ? (b.transform ? JSON.stringify(b.transform) : null) : (b[f] as string | number | null);

@@ -22,7 +22,7 @@ export const POST = handle(async (req: Request, ctx: Ctx) => {
   const running = activeJobFor(d.id);
   if (running) return ok(jobView(running, s), 202);
 
-  const style = r.data.style ?? d.style ?? themeForProduct(d.product_id);
+  const style = themeForProduct(d.product_id) ?? r.data.style ?? d.style; // sản phẩm theme: luôn đúng theme
   if (!style) return apiError(400, 'style_required', 'Choose a style first.');
   const se = checkStyle(style, s);
   if (se) return se;

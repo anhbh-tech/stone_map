@@ -14,6 +14,7 @@ import { pickVariant } from '@/components/pdp/logic';
 import { Personalizer } from '@/components/personalizer/Personalizer';
 import { MAX_QTY } from '@/lib/cart';
 import { Breadcrumbs } from '@/components/shell/Breadcrumbs';
+import { themeForProduct } from '@/lib/personalize/engine';
 
 type Props = {
   params: Promise<{ handle: string }>;
@@ -81,6 +82,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
             tiers={bundleTiers().map(plain)}
             addons={addonsFor(product).map(plain)}
             maxQty={MAX_QTY}
+            theme={themeForProduct(product.id)}
             settings={{
               shopName: settings.shop.name,
               currency: settings.shop.currency,

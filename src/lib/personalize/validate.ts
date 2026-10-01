@@ -37,3 +37,7 @@ export function checkProductVariant(productId: number, variantId: number | null)
 export function checkStyle(style: string, s: Settings): Response | null {
   return s.ai.styles.some((x) => x.id === style) ? null : apiError(400, 'invalid_style', 'That style is not available.');
 }
+
+/** Style lưu vào design: sản phẩm theme luôn in đúng theme của nó, client gửi style khác cũng bỏ qua. */
+export const lockedStyle = (theme: string | null, requested: string | null | undefined): string | null =>
+  requested == null ? null : theme ?? requested;

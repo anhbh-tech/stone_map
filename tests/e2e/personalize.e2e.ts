@@ -104,9 +104,22 @@ test('AI flow: generate → poll with a real, rising progress → preview → co
   expect(mail.to_addr).toBe('e2e@example.com');
   expect(mail.html).toContain(`/products/pearl-pet-portrait?design=${design.id}`);
 
-  // Transform + xác nhận "This is my pet".
-  const pr = await request.patch(`/api/personalize/designs/${design.id}`, { data: { transform: { rotate: 0, zoom: 1.2, x: 0, y: 0.05 } } });
-  expect(pr.status()).toBe(200);
+  // v2: editor có template (lớp qua proxy cùng origin) + cutout; khách bấm OK → final mới theo transform.
+  const pc = job.design.pc;
+  expect(pc).toMatchObject({ theme: 'sunflower-queen', final_url: job.design.preview_url });
+  for (const u of [pc.template.urls.base, pc.template.urls.overlay, pc.template.urls.canvas_bg, pc.cutout.url]) {
+    const img = await request.get(u);
+    expect(img.status(), u).toBe(200);
+    expect(img.headers()['content-type'], u).toBe('image/png');
+  }
+  const rr = await request.post(`/api/personalize/designs/${design.id}/render`, { data: { transform: { ...pc.transform, rotate: -6, scale: pc.transform.scale * 0.9 } } });
+  expect(rr.status()).toBe(200);
+  const rendered = await rr.json();
+  expect(rendered.pc.transform.rotate).toBe(-6);
+  expect(rendered.preview_url).not.toBe(job.design.preview_url);
+  expect((await request.get(rendered.preview_url)).status()).toBe(200);
+
+  // Xác nhận "This is my pet".
   expect((await request.post(`/api/personalize/designs/${design.id}/confirm`, { data: {} })).status()).toBe(400);
   const cf = await request.post(`/api/personalize/designs/${design.id}/confirm`, { data: { confirmed: true } });
   expect(cf.status()).toBe(200);
@@ -124,6 +137,29 @@ test('AI flow: generate → poll with a real, rising progress → preview → co
   expect((await request.get(`/media/${printPath}`)).status()).toBe(404);
   expect((await request.get('/media/store.db')).status()).toBe(404);
   expect((await request.get('/media/uploads/..%2Fstore.db')).status()).toBe(404);
+});
+
+test('template slide: the theme product serves its empty-frame template', async ({ request }) => {
+  const d = sql();
+  const p = d.prepare("SELECT id FROM products WHERE handle = 'the-starry-king'").get() as { id: number } | undefined;
+  d.close();
+  const r = await request.get(p ? `/api/personalize/templates?product_id=${p.id}` : '/api/personalize/templates/royal-starry');
+  expect(r.status()).toBe(200);
+  const t = await r.json();
+  expect(t).toMatchObject({ theme: 'royal-starry', kind: 'theme' });
+  expect((await request.get(t.urls.empty)).headers()['content-type']).toBe('image/png');
+  expect((await request.get('/api/personalize/pc/outputs/ref_000000000000.jpg')).status()).toBe(404);
+});
+
+test('fallback: an AI design goes to our designers with the original photo', async ({ request }) => {
+  const { id: product_id } = product();
+  const up = await (await upload(request, 'pet-ok.jpg')).json();
+  const d = await (await request.post('/api/personalize/designs', { data: { product_id, upload_id: up.upload_id, mode: 'ai', style: 'ocean' } })).json();
+  const g = await request.post(`/api/personalize/designs/${d.id}/generate`, { data: {} });
+  expect(await g.json()).toMatchObject({ fallback: 'designer_upload' });
+  const r = await request.post(`/api/personalize/designs/${d.id}/designer`, { data: { notes: 'Make it pearl' } });
+  expect(r.status()).toBe(200);
+  expect(await r.json()).toMatchObject({ mode: 'designer', status: 'in_review', notes: 'Make it pearl' });
 });
 
 test('designer finish: a photo that fails preflight can still be submitted for review (#11)', async ({ request }) => {

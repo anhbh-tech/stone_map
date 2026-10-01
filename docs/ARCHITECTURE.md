@@ -67,6 +67,12 @@ Kiểu dữ liệu ở `src/lib/types.ts`. Lỗi luôn là `{ error: { code: str
 | GET | `/api/personalize/jobs/:id` | — | `JobView` |
 | POST | `/api/personalize/designs/:id/confirm` | `{ confirmed: true }` | `DesignView` (status `confirmed`) |
 | POST | `/api/personalize/designs/:id/submit` | — (mode designer) | `DesignView` (status `in_review`) |
+| GET | `/api/personalize/templates/:theme` · `?product_id=N` | — | `TemplateView` (slide khung trống `urls.empty`) |
+| POST | `/api/personalize/designs/:id/render` | `{ transform: PetTransform }` | `DesignViewV2` (khách bấm OK: pearl_compare render final mới) |
+| POST | `/api/personalize/designs/:id/designer` | `{ pet_name?, notes?, email? }` | `DesignViewV2` (nhánh “upload original photo for designers”, `in_review`) |
+| GET | `/api/personalize/pc/outputs/templates/:file` | — | ảnh lớp template của pearl_compare (proxy cùng origin) |
+
+v2 (pearl_compare): kiểu ở `src/lib/personalize/contract.ts` (`DesignViewV2.pc`, `JobViewV2.steps/message/fallback`). Ảnh do pearl_compare (`PEARL_COMPARE_URL`, mặc định `http://localhost:5177`) gen; tham số request cutout chỉ ở `pcConfig()` (`src/lib/personalize/pearl-compare.ts`), prompt chỉ ở pearl_compare. `settings.ai.provider = 'mock'` dùng pearl_compare giả lập offline (`pc-mock.ts`, không tốn tiền); provider khác gọi pearl_compare thật (tốn tiền). Lỗi engine trả `{ error, fallback: 'designer_upload' }`.
 | GET | `/media/:path*` | — | ảnh trong `storage/` (upload, preview, mockup); file in chỉ qua `/api/admin/...` |
 
 ### Commerce (crew D)

@@ -9,8 +9,11 @@ export function paymentStatus(status: string): PaymentStatus {
   return status === 'refunded' ? 'refunded' : status === 'canceled' ? 'voided' : 'paid';
 }
 
-export function fulfillmentStatus(status: string): FulfillmentStatus {
-  return status === 'shipped' || status === 'delivered' ? 'fulfilled' : status === 'in_production' ? 'in_production' : 'unfulfilled';
+/** `shipped` = đơn có dòng trong bảng fulfillments: hoàn tiền / huỷ sau khi gửi hàng vẫn là "Fulfilled" (cần xử lý hàng trả về). */
+export function fulfillmentStatus(status: string, shipped = false): FulfillmentStatus {
+  if (status === 'shipped' || status === 'delivered') return 'fulfilled';
+  if (shipped && (status === 'refunded' || status === 'canceled')) return 'fulfilled';
+  return status === 'in_production' ? 'in_production' : 'unfulfilled';
 }
 
 /** Giá trị orders.status ứng với một bộ lọc (dùng trong WHERE status IN (...)). */

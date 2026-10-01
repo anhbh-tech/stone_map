@@ -7,6 +7,6 @@ type P = { id: string };
 
 export const GET = admin<P>((_req, { id }) => {
   const c = getCustomer(intId(id)) ?? notFound('Customer');
-  const orders = searchOrders(listState({}, ['date'] as const, 'date', 'desc', 50), { customer_id: c.id, email: c.email }).rows;
+  const orders = searchOrders(listState({}, ['date'] as const, 'date', 'desc', 50), { customer_id: c.id ?? undefined, email: c.email }).rows;
   return Response.json({ ...c, order_list: orders });
 });

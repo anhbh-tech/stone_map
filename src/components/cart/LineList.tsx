@@ -21,7 +21,7 @@ export function LineList({ items, showDesign }: { items: Item[]; showDesign?: bo
             <div className="min-w-0 flex-1 text-sm">
               <p className="flex justify-between gap-2 font-medium"><span>{l.title} · {l.size} in{l.qty > 1 && ` × ${l.qty}`}</span><span>{fmt(l.cents)}</span></p>
               <p className="text-muted-foreground">{Object.entries(l.properties).map(([k, v]) => `${k}: ${v}`).join(' · ')}</p>
-              {showDesign && l.design_id && <p className="text-xs text-muted-foreground">Design {l.design_id}</p>}
+              {showDesign && l.design_id && <p className="text-xs text-muted-foreground">Design ref (for support): {l.design_id}</p>}
             </div>
           </li>
         );

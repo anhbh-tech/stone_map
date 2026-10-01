@@ -3,32 +3,36 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { fmt } from '@/lib/money';
 import { requireAdminPage } from '../../../_lib/session';
-import { getCustomer } from '../../../_lib/customers';
+import { getCustomer, getGuest } from '../../../_lib/customers';
 import { ORDER_SORTS, searchOrders } from '../../../_lib/orders';
 import { listState, type SearchParams } from '../../../_lib/list';
 import { Card, FulfillmentBadge, PageHeader, Pagination, PaymentBadge, SortHeader, Stat, Table, fmtDate, fmtDay, linkCls, td, tr } from '../../../_components/ui';
 
 type P = { params: Promise<{ id: string }>; searchParams: Promise<SearchParams> };
 
-export async function generateMetadata({ params }: P): Promise<Metadata> {
-  const c = getCustomer(Number((await params).id));
+// /admin/customers/<id> = tài khoản; /admin/customers/guest?email=… = khách vãng lai (chỉ có đơn).
+const load = (id: string, sp: SearchParams) =>
+  id === 'guest' ? getGuest(typeof sp.email === 'string' ? sp.email : '') : /^\d+$/.test(id) ? getCustomer(Number(id)) : null;
+
+export async function generateMetadata({ params, searchParams }: P): Promise<Metadata> {
+  const c = load((await params).id, await searchParams);
   return { title: c ? c.name || c.email : 'Customer' };
 }
 
 export default async function CustomerPage({ params, searchParams }: P) {
   await requireAdminPage();
-  const c = getCustomer(Number((await params).id));
-  if (!c) notFound();
   const sp = await searchParams;
-  const base = `/admin/customers/${c.id}`;
+  const c = load((await params).id, sp);
+  if (!c) notFound();
+  const base = c.id != null ? `/admin/customers/${c.id}` : '/admin/customers/guest';
   const s = listState(sp, ORDER_SORTS, 'date', 'desc', 10);
-  const { rows, total } = searchOrders(s, { customer_id: c.id, email: c.email });
+  const { rows, total } = searchOrders(s, c.id != null ? { customer_id: c.id, email: c.email } : { email: c.email });
   const aov = c.orders ? Math.round(c.spent_cents / Math.max(1, c.orders)) : null;
   const sortProps = { sort: s.sort, dir: s.dir, base, sp };
 
   return (
     <>
-      <PageHeader title={c.name || c.email} back={{ href: '/admin/customers', label: 'Customers' }} description={<>Customer since {fmtDay(c.created_at)}</>} />
+      <PageHeader title={c.name || c.email} back={{ href: '/admin/customers', label: 'Customers' }} description={c.id != null ? <>Customer since {fmtDay(c.created_at)}</> : <>Guest, no account · first order {fmtDay(c.created_at)}</>} />
       <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label="Orders" value={c.orders} />
         <Stat label="Amount spent" value={fmt(c.spent_cents)} hint="Excludes refunded and canceled" />
@@ -66,7 +70,9 @@ export default async function CustomerPage({ params, searchParams }: P) {
             <p className="text-sm"><a href={`mailto:${c.email}`} className={`${linkCls} break-all`}>{c.email}</a></p>
           </Card>
           <Card title="Addresses" id="addresses">
-            {c.addresses.length === 0 ? <p className="text-sm text-muted-foreground">No saved addresses.</p> : (
+            {c.addresses.length === 0 ? (c.last_address
+              ? <><p className="mb-1 text-xs font-semibold">From the latest order</p><address className="text-sm not-italic text-muted-foreground">{Object.values(c.last_address).filter(Boolean).map((v, i) => <div key={i}>{String(v)}</div>)}</address></>
+              : <p className="text-sm text-muted-foreground">No saved addresses.</p>) : (
               <ul className="grid gap-3">
                 {c.addresses.map((a) => (
                   <li key={a.id} className="text-sm">

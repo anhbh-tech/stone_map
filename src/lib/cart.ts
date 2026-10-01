@@ -11,6 +11,8 @@ import { mediaUrl } from './personalize/storage'; // quy tắc /media của crew
 import { designLineProps } from './personalize/designs';
 import { visibleProps, type DesignStatus, type LineProperties, type Settings } from './types';
 import { discountSummary, discountUses, evaluateDiscount, findDiscount, pdpCodes, rejectionMessage } from './discounts';
+import { usRegion } from './us-states';
+import { startProductionIfReady } from './production';
 
 export const CART_COOKIE = 'cart_id';
 export const ORDERS_COOKIE = 'pa_orders';
@@ -304,8 +306,12 @@ export const CheckoutInput = z.object({
     city: z.string().trim().min(2, 'Enter your city').max(100),
     region: z.string().trim().min(2, 'Enter your state').max(100),
     postal_code: z.string().trim().regex(/^[A-Za-z0-9][A-Za-z0-9 -]{2,9}$/, 'Enter a valid ZIP / postal code'),
-    country: z.string().trim().length(2, 'Choose a country'),
-  }),
+    country: z.string().trim().toUpperCase().length(2, 'Choose a country'),
+  }).superRefine((a, ctx) => {
+    if (a.country !== 'US') return;
+    if (!usRegion(a.region)) ctx.addIssue({ code: 'custom', path: ['region'], message: 'Choose a US state' });
+    if (!/^\d{5}(-\d{4})?$/.test(a.postal_code)) ctx.addIssue({ code: 'custom', path: ['postal_code'], message: 'Enter a 5-digit ZIP code' });
+  }).transform((a) => (a.country === 'US' ? { ...a, region: usRegion(a.region) ?? a.region } : a)),
   shipping_method: z.enum(['standard', 'express']),
 });
 export type CheckoutData = z.infer<typeof CheckoutInput>;
@@ -313,23 +319,52 @@ export type CheckoutData = z.infer<typeof CheckoutInput>;
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const day = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
+// Email xác nhận: HTML inline-style (mail client bỏ <style>), màu theo token DESIGN.md, link tuyệt đối qua SITE_URL.
+const C = { ink: '#2b1d18', muted: '#6e5f58', line: '#e7dfda', linen: '#f6f2ef', ok: '#15803d' };
+const FONT = "font-family:Figtree,'Helvetica Neue',Arial,sans-serif";
+const site = () => (process.env.SITE_URL || 'http://localhost:3000').replace(/\/+$/, '');
+
 function confirmationEmail(number: string, data: CheckoutData, cart: CartView, s: Settings) {
   const w = deliveryWindow(s, data.shipping_method);
+  const td = `padding:8px 0;border-bottom:1px solid ${C.line};vertical-align:top`;
   const rows = cart.lines.map((l) => {
     const props = Object.entries(l.properties).map(([k, v]) => `${esc(k)}: ${esc(v)}`).join(' · ');
-    return `<tr><td>${esc(l.product_title)} — ${esc(l.size)} × ${l.qty}<br><small>${props}${l.design_id ? ` · Design ${esc(l.design_id)}` : ''}</small></td><td align="right">${fmt(l.line_cents)}</td></tr>`;
+    const img = l.thumbnail_url
+      ? `<img src="${esc(site() + l.thumbnail_url)}" alt="Preview of your portrait" width="64" height="64" style="display:block;width:64px;height:64px;border-radius:6px;border:1px solid ${C.line};object-fit:cover">`
+      : '';
+    return `<tr><td width="76" style="${td}">${img}</td>
+<td style="${td}"><strong>${esc(l.product_title)}</strong> · ${esc(l.size)} in${l.qty > 1 ? ` × ${l.qty}` : ''}<br><span style="color:${C.muted};font-size:13px">${props}${l.design_id ? `<br>Design ref (for support): ${esc(l.design_id)}` : ''}</span></td>
+<td align="right" style="${td};white-space:nowrap">${fmt(l.line_cents)}</td></tr>`;
   }).join('');
-  const addons = cart.addons.filter((a) => a.on).map((a) => `<tr><td>${esc(a.title)}${a.text ? `<br><small>“${esc(a.text)}”</small>` : ''}</td><td align="right">${fmt(a.price_cents)}</td></tr>`).join('');
   const t = cart.totals;
-  return `<h1>Thanks for your order, ${esc(data.name.split(' ')[0])}!</h1>
-<p>Order <strong>#${number}</strong> is confirmed. Estimated delivery: ${day(w.from)} – ${day(w.to)} (${data.shipping_method}).</p>
-<table width="100%" cellpadding="6">${rows}${addons}
-<tr><td>Subtotal</td><td align="right">${fmt(t.subtotal_cents)}</td></tr>
-${t.discount_cents ? `<tr><td>Multi-portrait discount</td><td align="right">−${fmt(t.discount_cents)}</td></tr>` : ''}
-${cart.discount && t.code_discount_cents ? `<tr><td>Discount ${esc(cart.discount.code)}</td><td align="right">−${fmt(t.code_discount_cents)}</td></tr>` : ''}
-<tr><td>Shipping${cart.discount?.free_shipping ? ` (${esc(cart.discount.code)})` : ''}</td><td align="right">${t.shipping_cents ? fmt(t.shipping_cents) : 'Free'}</td></tr>
-<tr><td><strong>Total</strong></td><td align="right"><strong>${fmt(t.total_cents)}</strong></td></tr></table>
-<p>Questions? Reply to this email or write to ${esc(s.shop.support_email)}.</p>`;
+  const sum = (label: string, value: string, strong = false) =>
+    `<tr><td style="padding:4px 0;${strong ? `font-weight:700;font-size:16px;border-top:1px solid ${C.line};padding-top:10px` : ''}">${label}</td><td align="right" style="padding:4px 0;white-space:nowrap;${strong ? `font-weight:700;font-size:16px;border-top:1px solid ${C.line};padding-top:10px` : ''}">${value}</td></tr>`;
+  // Cùng thứ tự với Summary trên web: tạm tính hàng → giảm → add-on → ship → tổng.
+  const addons = cart.addons.filter((a) => a.on).map((a) =>
+    sum(`${esc(a.title)}${a.text ? `<br><span style="color:${C.muted};font-size:13px">Card message: “${esc(a.text)}”</span>` : ''}`, a.price_cents ? fmt(a.price_cents) : 'Free')).join('');
+  const a = data.address;
+  const track = `${site()}/track-order`;
+  const designer = cart.lines.some((l) => l.properties.Style === 'Designer finish');
+  return `<div style="background:${C.linen};padding:24px 12px;${FONT};color:${C.ink};font-size:15px;line-height:1.5">
+<div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid ${C.line};border-radius:10px;padding:28px 24px">
+<p style="margin:0 0 20px;font-family:Georgia,serif;font-size:22px">${esc(s.shop.name)}</p>
+<h1 style="margin:0;font-family:Georgia,serif;font-weight:400;font-size:26px;line-height:1.2">Thanks for your order, ${esc(data.name.split(' ')[0])}!</h1>
+<p style="margin:12px 0 0">Order <strong>#${number}</strong> is confirmed. Estimated delivery: <strong>${day(w.from)} – ${day(w.to)}</strong> (${data.shipping_method === 'express' ? 'Express' : 'Standard'} shipping).</p>
+<p style="margin:12px 0 0;color:${C.muted}">${designer ? 'A designer now hand-finishes your portrait from your photo, and we email you when it is ready.' : 'You approved your preview, so we make exactly that design.'} Each portrait takes about ${s.shipping.production_days} days in the studio, and we email tracking when it ships.</p>
+<p style="margin:20px 0 4px"><a href="${esc(track)}" style="display:inline-block;background:${C.ink};color:#ffffff;text-decoration:none;font-weight:600;border-radius:9999px;padding:12px 24px">Track your order</a></p>
+<p style="margin:0;color:${C.muted};font-size:13px">Use order number #${number} and ${esc(data.email)}.</p>
+<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin-top:24px;border-collapse:collapse;border-top:1px solid ${C.line}">${rows}</table>
+<table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin-top:12px;border-collapse:collapse">
+${sum('Subtotal', fmt(t.subtotal_cents))}
+${t.discount_cents ? sum('Multi-portrait discount', `−${fmt(t.discount_cents)}`) : ''}
+${cart.discount && t.code_discount_cents ? sum(`Discount ${esc(cart.discount.code)}`, `−${fmt(t.code_discount_cents)}`) : ''}
+${addons}
+${sum(`Shipping${cart.discount?.free_shipping ? ` (${esc(cart.discount.code)})` : ''}`, t.shipping_cents ? fmt(t.shipping_cents) : 'Free')}
+${sum('Total', fmt(t.total_cents), true)}</table>
+<p style="margin:24px 0 4px;font-weight:600">Shipping to</p>
+<p style="margin:0;color:${C.muted}">${esc(data.name)}<br>${esc(a.line1)}${a.line2 ? `, ${esc(a.line2)}` : ''}<br>${esc(a.city)}, ${esc(a.region)} ${esc(a.postal_code)}<br>${a.country === 'US' ? 'United States' : esc(a.country)}</p>
+<p style="margin:24px 0 0;color:${C.muted};font-size:13px">Questions? Reply to this email or write to <a href="mailto:${esc(s.shop.support_email)}" style="color:${C.ink}">${esc(s.shop.support_email)}</a>.</p>
+</div></div>`;
 }
 
 export function placeOrder(cartId: string | null | undefined, data: CheckoutData, sessionId: string | null = null): { order_number: string } {
@@ -366,6 +401,7 @@ export function placeOrder(cartId: string | null | undefined, data: CheckoutData
     for (const l of raw) ol.run(order.id, l.title, l.size, l.variant_id, l.qty, l.price_cents, l.design_id, l.properties);
     const oa = d.prepare('INSERT INTO order_addons (order_id, title, price_cents, text) VALUES (?, ?, ?, ?)');
     for (const a of cart.addons.filter((x) => x.on)) oa.run(order.id, a.title, a.price_cents, a.text);
+    startProductionIfReady(order.id); // design AI đã có file in → vào xưởng ngay
     d.prepare('DELETE FROM cart_lines WHERE cart_id = ?').run(cart.id);
     d.prepare('DELETE FROM cart_addons WHERE cart_id = ?').run(cart.id);
     d.prepare("UPDATE carts SET email = ?, discount_code = NULL, updated_at = datetime('now') WHERE id = ?").run(data.email, cart.id);

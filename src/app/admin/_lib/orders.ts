@@ -8,7 +8,7 @@ export type OrderSort = (typeof ORDER_SORTS)[number];
 
 export type OrderListRow = {
   id: number; number: string; email: string; name: string; shipping_method: string; total_cents: number;
-  status: string; created_at: string; items: number; designs_pending: number; customer_id: number | null;
+  status: string; created_at: string; items: number; designs_pending: number; customer_id: number | null; shipped: number;
   payment: PaymentStatus; fulfillment: FulfillmentStatus;
 };
 
@@ -19,7 +19,14 @@ function where(f: OrderFilter, q: string) {
   const args: (string | number)[] = [];
   const inList = (vals: readonly string[]) => { w.push(`o.status IN (${vals.map(() => '?').join(',')})`); args.push(...vals); };
   if (f.payment) inList(STATUSES_FOR.payment[f.payment]);
-  if (f.fulfillment) inList(STATUSES_FOR.fulfillment[f.fulfillment]);
+  if (f.fulfillment) {
+    // Hoàn tiền / huỷ: "fulfilled" nếu đã có shipment, ngược lại "unfulfilled" (khớp fulfillmentStatus()).
+    const closed = `(o.status IN ('refunded','canceled') AND ${f.fulfillment === 'fulfilled' ? '' : 'NOT '}EXISTS (SELECT 1 FROM fulfillments x WHERE x.order_id = o.id))`;
+    const open = STATUSES_FOR.fulfillment[f.fulfillment].filter((s) => s !== 'refunded' && s !== 'canceled');
+    const inOpen = `o.status IN (${open.map(() => '?').join(',')})`;
+    w.push(f.fulfillment === 'in_production' ? inOpen : `(${inOpen} OR ${closed})`);
+    args.push(...open);
+  }
   if (f.status) inList([f.status]);
   if (f.customer_id != null || f.email) {
     // Đơn của khách: gắn customer_id (UI-2) hoặc đơn khách vãng lai cùng email.
@@ -44,10 +51,11 @@ export function searchOrders(s: ListState<OrderSort>, f: OrderFilter = {}): { ro
   const dir = s.dir === 'asc' ? 'ASC' : 'DESC';
   const rows = d.prepare(`SELECT o.id, o.number, o.email, o.name, o.shipping_method, o.total_cents, o.status, o.created_at, o.customer_id,
       (SELECT coalesce(sum(qty), 0) FROM order_lines l WHERE l.order_id = o.id) AS items,
-      (SELECT count(*) FROM order_lines l JOIN designs g ON g.id = l.design_id WHERE l.order_id = o.id AND g.status = 'in_review') AS designs_pending
+      (SELECT count(*) FROM order_lines l JOIN designs g ON g.id = l.design_id WHERE l.order_id = o.id AND g.status = 'in_review') AS designs_pending,
+      EXISTS (SELECT 1 FROM fulfillments x WHERE x.order_id = o.id) AS shipped
     FROM orders o ${sql} ORDER BY ${order} ${dir}, o.id ${dir} LIMIT ? OFFSET ?`).all(...args, s.per, offset(s)) as Omit<OrderListRow, 'payment' | 'fulfillment'>[];
   const total = (d.prepare(`SELECT count(*) AS n FROM orders o ${sql}`).get(...args) as { n: number }).n;
-  return { rows: rows.map((r) => ({ ...r, payment: paymentStatus(r.status), fulfillment: fulfillmentStatus(r.status) })), total };
+  return { rows: rows.map((r) => ({ ...r, payment: paymentStatus(r.status), fulfillment: fulfillmentStatus(r.status, !!r.shipped) })), total };
 }
 
 /** Đếm theo tab (All / Unfulfilled / In production / Fulfilled / Refunded). */

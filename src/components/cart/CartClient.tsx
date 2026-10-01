@@ -55,8 +55,9 @@ export function CartClient({ initial, shopHref }: { initial: CartView; shopHref:
   return (
     <>
     {title}
-    <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
-      <div className="min-w-0">
+    {/* Mobile: dòng → tổng + Checkout → add-on (nút mua không bị đẩy xuống dưới 4 thẻ add-on). Desktop: tổng ở cột phải. */}
+    <div className="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:grid-rows-[auto_1fr]">
+      <div className="min-w-0 lg:col-start-1 lg:row-start-1">
         <p role="status" className="sr-only">{status}</p>
         <p role="alert" className={error ? 'mb-4 rounded-md border border-destructive px-4 py-3 text-destructive' : 'sr-only'}>{error}</p>
         {(view.bundle.hint || view.bundle.saving) && (
@@ -73,20 +74,11 @@ export function CartClient({ initial, shopHref }: { initial: CartView; shopHref:
               onRemove={() => call(`/api/cart/lines/${l.id}`, 'DELETE')} />
           ))}
         </ul>
-        {view.addons.length > 0 && (
-          <fieldset className="mt-8" disabled={busy}>
-            <legend className="font-serif text-2xl font-semibold">Finishing touches</legend>
-            <ul className="mt-4 grid gap-3">
-              {view.addons.map((a) => (
-                <Addon key={a.id} addon={a} onChange={(on, text) => call('/api/cart/addons', 'PUT', { addon_id: a.id, on, text })} />
-              ))}
-            </ul>
-          </fieldset>
-        )}
       </div>
-      <aside aria-label="Order summary" className="h-fit rounded-[var(--radius)] border border-border bg-card p-5 lg:sticky lg:top-6">
+      <aside aria-label="Order summary" className="h-fit rounded-[var(--radius)] border border-border bg-card p-5 lg:sticky lg:top-6 lg:col-start-2 lg:row-span-2 lg:row-start-1">
         <h2 className="text-2xl font-semibold">Summary</h2>
-        <DiscountCode applied={view.discount} error={view.discount_error} note={view.discount_note} better={view.discount_better} onView={(v) => { setView(v); announceCartCount(v.count); }} />
+        {/* key: đổi số lượng → bỏ lỗi mã cũ ở client (server tính lại lỗi/ghi chú nếu còn). */}
+        <DiscountCode key={view.count} applied={view.discount} error={view.discount_error} note={view.discount_note} better={view.discount_better} onView={(v) => { setView(v); announceCartCount(v.count); }} />
         <Summary totals={view.totals} addons={view.addons.filter((a) => a.on)} shippingNote="Standard. Express is available at checkout." code={view.discount} />
         <Link href="/checkout" aria-disabled={busy}
           className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-accent px-6 font-semibold text-on-accent transition-colors hover:bg-accent-hover">
@@ -96,6 +88,17 @@ export function CartClient({ initial, shopHref }: { initial: CartView; shopHref:
           {view.free_shipping_gap_cents ? <>Add <strong className="font-semibold text-foreground">{fmt(view.free_shipping_gap_cents)}</strong> more for free shipping.</> : view.shipping_headline}
         </p>
       </aside>
+      {view.addons.length > 0 && (
+        <fieldset className="min-w-0 lg:col-start-1 lg:row-start-2" disabled={busy}>
+          <legend className="font-serif text-2xl font-semibold">Finishing touches</legend>
+          {view.count > 1 && <p className="mt-1 text-sm text-muted-foreground">Each option is added once per order, not once per portrait.</p>}
+          <ul className="mt-4 grid gap-3">
+            {view.addons.map((a) => (
+              <Addon key={a.id} addon={a} onChange={(on, text) => call('/api/cart/addons', 'PUT', { addon_id: a.id, on, text })} />
+            ))}
+          </ul>
+        </fieldset>
+      )}
     </div>
     </>
   );
@@ -103,7 +106,7 @@ export function CartClient({ initial, shopHref }: { initial: CartView; shopHref:
 
 function Line({ line: l, busy, onQty, onRemove }: { line: CartLineView; busy: boolean; onQty: (q: number) => void; onRemove: () => void }) {
   const pet = l.properties['Pet name'];
-  const step = 'flex size-11 touch-manipulation items-center justify-center rounded-md border border-border hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40';
+  const step = 'flex size-11 touch-manipulation items-center justify-center rounded-md border border-input hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40';
   return (
     <li data-testid="cart-line" className="flex gap-4 p-4">
       {l.thumbnail_url ? (
@@ -144,16 +147,17 @@ function Addon({ addon: a, onChange }: { addon: CartAddonView; onChange: (on: bo
   const [text, setText] = useState(a.text ?? '');
   const id = `addon-${a.id}`;
   return (
-    <li className="rounded-[var(--radius)] border border-border bg-card p-4">
-      <div className="flex items-start gap-3">
-        <input id={id} type="checkbox" checked={a.on} onChange={(e) => onChange(e.target.checked, text || undefined)} className="mt-1 size-5 accent-[var(--accent)]" />
-        <label htmlFor={id} className="flex-1 cursor-pointer">
+    <li className="rounded-[var(--radius)] border border-input bg-card">
+      {/* Cả thẻ là vùng bấm (không chỉ ô 20px). */}
+      <label htmlFor={id} className="flex cursor-pointer items-start gap-3 p-4">
+        <input id={id} type="checkbox" checked={a.on} onChange={(e) => onChange(e.target.checked, text || undefined)} className="mt-1 size-5 shrink-0 accent-[var(--accent)]" />
+        <span className="min-w-0 flex-1">
           <span className="flex flex-wrap justify-between gap-2 font-medium"><span>{a.title}</span><span>{a.price_cents ? `+${fmt(a.price_cents)}` : 'Free'}</span></span>
           {a.description && <span className="block text-sm text-muted-foreground">{a.description}</span>}
-        </label>
-      </div>
+        </span>
+      </label>
       {a.text_input && a.on && (
-        <div className="mt-3 pl-8">
+        <div className="px-4 pb-4 pl-12">
           <label htmlFor={`${id}-text`} className="text-sm font-medium">Message{a.text_free ? ' (free)' : ''}</label>
           <textarea id={`${id}-text`} maxLength={300} rows={2} value={text} onChange={(e) => setText(e.target.value)}
             onBlur={() => { if (text !== (a.text ?? '')) onChange(true, text); }}

@@ -4,6 +4,7 @@ import { designPatch } from '@/app/admin/_lib/schemas';
 import { reviewEmail } from '@/app/admin/_lib/emails';
 import { db, tx } from '@/lib/db';
 import { getSettings } from '@/lib/settings';
+import { orderEmailForDesign, startProductionForDesign } from '@/lib/production';
 
 type P = { id: string };
 
@@ -32,10 +33,13 @@ export const PATCH = admin<P>(async (req, { id }) => {
     // Giao việc không đổi updated_at: hàng chờ xếp theo thời gian chờ.
     if (assignee_id !== undefined) db().prepare("UPDATE designs SET assignee_id = ? WHERE id = ?").run(assignee_id, id);
     if (status) db().prepare("UPDATE designs SET status = ?, updated_at = datetime('now') WHERE id = ?").run(status, id);
-    if (d.email && (status === 'approved' || status === 'rejected')) {
+    // Design làm tay thường không có email riêng: báo về email của đơn chứa nó.
+    const to = d.email ?? orderEmailForDesign(id);
+    if (to && (status === 'approved' || status === 'rejected')) {
       const m = reviewEmail(getSettings(), { id, pet_name: d.pet_name, approved: status === 'approved' });
-      db().prepare("INSERT INTO email_outbox (to_addr, kind, subject, html) VALUES (?, 'design_review', ?, ?)").run(d.email, m.subject, m.html);
+      db().prepare("INSERT INTO email_outbox (to_addr, kind, subject, html) VALUES (?, 'design_review', ?, ?)").run(to, m.subject, m.html);
     }
+    if (status === 'approved') startProductionForDesign(id);
   });
   const now = getDesignRow(id)!;
   return Response.json({ ...now, print_url: now.print_path ? `/api/admin/designs/${id}/print` : null });

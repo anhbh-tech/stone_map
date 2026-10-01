@@ -11,7 +11,7 @@ export default async function TiersPage() {
   const tiers = listTiers();
   return (
     <>
-      <PageHeader title="Bundle tiers" description="Discount by number of portraits in the cart. The cart shows the next tier to the customer." />
+      <PageHeader title="Bundle tiers" description="Discount by number of portraits in the cart. The cart shows the next tier to the customer. Savings never stack: when a code saves more than the tier, the code replaces it." />
       <Card className="mb-6">
         {tiers.length === 0 ? <Empty>No bundle discounts.</Empty> : (
           <ul className="grid gap-3">

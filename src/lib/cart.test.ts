@@ -162,7 +162,7 @@ describe('checkout', () => {
     addLine(id, { variant_id: 10, qty: 1, design_id: 'DSN-OK0001' });
     placeOrder(id, { ...checkout(), name: '<img src=x onerror=alert(1)> Jo' });
     const { html } = db().prepare('SELECT html FROM email_outbox').get() as { html: string };
-    expect(html).not.toContain('<img');
+    expect(html).not.toContain('<img src=x'); // ảnh preview hợp lệ vẫn có <img>
   });
 
   it('remembers at most 10 order numbers per browser', () => {

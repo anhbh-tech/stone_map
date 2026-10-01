@@ -24,7 +24,7 @@ type Raw = Omit<QueueItem, 'upload_url' | 'upload_size' | 'preview_url' | 'has_p
   preview_path: string | null; print_path: string | null; upload_path: string | null; width: number | null; height: number | null;
 };
 
-const SELECT = `SELECT g.id, g.mode, g.status, g.style, g.pet_name, g.notes, g.email, g.created_at, g.updated_at, g.assignee_id,
+const SELECT = `SELECT g.id, g.mode, g.status, g.style, g.pet_name, g.notes, coalesce(g.email, (SELECT o.email FROM order_lines l JOIN orders o ON o.id = l.order_id WHERE l.design_id = g.id ORDER BY o.id DESC LIMIT 1)) AS email, g.created_at, g.updated_at, g.assignee_id,
     g.preview_path, g.print_path, p.title AS product_title, v.size AS variant_size, v.print_px, u.path AS upload_path, u.width, u.height,
     coalesce(a.display_name, a.username) AS assignee
   FROM designs g LEFT JOIN products p ON p.id = g.product_id LEFT JOIN variants v ON v.id = g.variant_id

@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { getProduct } from '../../../_lib/repo';
 import { collectionsForProduct } from '../../../_lib/collections';
 import { Card, Empty, PageHeader, StatusBadge, linkCls } from '../../../_components/ui';
-import { ActionButton, ApiForm, Checkbox, CountedField, Field, MoneyField, Select, TextArea } from '../../../_components/form';
+import { ActionButton, ApiForm, Checkbox, CountedField, Field, MoneyField, Select, TextArea, UploadForm } from '../../../_components/form';
 import { ProductInfoTabsCard } from '../../../_components/info-tabs';
 
 export const metadata: Metadata = { title: 'Edit product' };
@@ -73,6 +73,18 @@ export default async function ProductEdit({ params }: { params: Promise<{ id: st
               </ul>
             )}
             <h3 className="mt-6 text-lg font-semibold">Add image</h3>
+            <div className="mt-2">
+              <UploadForm action="/api/admin/images/upload" extra={{ product_id: p.id }} label="Image file" accept="image/png,image/jpeg,image/webp,image/avif"
+                hint="PNG, JPEG, WebP or AVIF up to 20 MB. Saved as WebP, longest side 2000 px." submitLabel="Upload image" successMessage="Image added">
+                <Field name="alt" label="Alt text" required maxLength={250} />
+                <div className="grid grid-cols-2 gap-3">
+                  <Select name="kind" label="Kind" options={[{ value: 'gallery', label: 'Gallery' }, { value: 'mockup_scene', label: 'Mockup scene' }]} />
+                  <Field name="position" label="Order" type="number" min={0} defaultValue={p.images.length} />
+                </div>
+              </UploadForm>
+            </div>
+            <details className="mt-4 group">
+              <summary className="min-h-11 cursor-pointer content-center text-sm font-medium text-foreground underline-offset-4 hover:underline">Or add by URL</summary>
             <ApiForm action="/api/admin/images" extra={{ product_id: p.id }} types={{ url: 'text', alt: 'text', kind: 'text', position: 'int' }} submitLabel="Add image" successMessage="Image added" reset className="mt-2">
               <Field name="url" label="Image URL" required placeholder="/demo/starry-king.webp" hint="Site path (/…) or https:// URL, WebP or AVIF preferred." />
               <Field name="alt" label="Alt text" required maxLength={250} />
@@ -81,6 +93,7 @@ export default async function ProductEdit({ params }: { params: Promise<{ id: st
                 <Field name="position" label="Order" type="number" min={0} defaultValue={p.images.length} />
               </div>
             </ApiForm>
+            </details>
           </Card>
         </div>
       </div>

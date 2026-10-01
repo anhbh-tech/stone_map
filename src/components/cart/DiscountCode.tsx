@@ -71,7 +71,7 @@ export function DiscountCode({ applied, error: stored, note, better, onView }: {
         <>
           <label htmlFor={`${id}-code`} className="text-sm font-medium">Discount code</label>
           <div className="mt-1 flex gap-2">
-            <input id={`${id}-code`} value={code} onChange={(e) => setCode(e.target.value)} autoComplete="off" autoCapitalize="characters" spellCheck={false} maxLength={32}
+            <input id={`${id}-code`} value={code} onChange={(e) => { setCode(e.target.value); setError(null); }} autoComplete="off" autoCapitalize="characters" spellCheck={false} maxLength={32}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); call('POST'); } }}
               aria-invalid={shown ? true : undefined} aria-describedby={shown ? `${id}-err` : undefined}
               className={`block min-h-12 min-w-0 flex-1 rounded-md border bg-background px-3 uppercase placeholder:normal-case ${shown ? 'border-destructive' : 'border-input'}`} />

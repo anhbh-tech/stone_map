@@ -8,7 +8,7 @@ import { getOrder } from '../../../_lib/repo';
 import { ORDER_STATUSES } from '../../../_lib/schemas';
 import { orderFulfillments, orderTimeline } from '../../../_lib/orders';
 import { canFulfill, fulfillmentStatus, paymentStatus } from '../../../_lib/order-status';
-import { customerForOrder } from '../../../_lib/customers';
+import { customerForOrder, customerHref } from '../../../_lib/customers';
 import { Icon } from '../../../_components/icons';
 import { Timeline } from '../../../_components/timeline';
 import { Card, FulfillmentBadge, PageHeader, PaymentBadge, StatusBadge, btn, fmtDate, linkCls, statusLabel } from '../../../_components/ui';
@@ -28,10 +28,10 @@ export default async function OrderPage({ params }: P) {
   const raw = o as typeof o & { discount_code?: string | null; code_discount_cents?: number; customer_id?: number | null };
   const addr = Object.entries(o.address).filter(([, v]) => v);
   const payment = paymentStatus(o.status);
-  const fulfillment = fulfillmentStatus(o.status);
+  const shipments = orderFulfillments(o.id);
+  const fulfillment = fulfillmentStatus(o.status, shipments.length > 0);
   const fulfillable = canFulfill(o.status);
   const blocked = o.lines.filter((l) => !l.design || l.design.status === 'in_review' || !l.design.has_print);
-  const shipments = orderFulfillments(o.id);
   const timeline = orderTimeline(o.id);
   const customer = customerForOrder({ email: o.email, customer_id: raw.customer_id ?? null });
   const items = o.lines.reduce((a, l) => a + l.qty, 0);
@@ -107,7 +107,8 @@ export default async function OrderPage({ params }: P) {
                 </p>
               ) : (
                 <ApiForm action={`/api/admin/orders/${o.id}/fulfill`} types={{ carrier: 'nulltext', tracking_number: 'nulltext', tracking_url: 'nulltext', notify: 'bool' }}
-                  submitLabel="Mark as fulfilled" pendingLabel="Saving…" successMessage="Order fulfilled" ariaLabel="Fulfill order">
+                  submitLabel="Mark as fulfilled" pendingLabel="Saving…" successMessage="Order fulfilled" ariaLabel="Fulfill order"
+                  confirm={[{ field: 'tracking_number', empty: true, message: `Mark order #${o.number} as shipped without a tracking number? If "Email the customer" is ticked, ${o.email} is emailed now, and the email cannot be taken back.` }]}>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Field name="carrier" label="Carrier" placeholder="USPS" autoComplete="off" />
                     <Field name="tracking_number" label="Tracking number" autoComplete="off" />
@@ -151,7 +152,7 @@ export default async function OrderPage({ params }: P) {
                 <Link href={`/admin/customers/${customer.id}`} className={linkCls}>{customer.name || o.name}</Link>
                 <p className="text-sm text-muted-foreground">{customer.orders} order{customer.orders === 1 ? '' : 's'}</p>
               </>
-            ) : <p className="font-medium">{o.name}</p>}
+            ) : <Link href={customerHref({ id: null, email: o.email })} className={linkCls}>{o.name}</Link>}
             <p className="mt-2 text-sm"><a href={`mailto:${o.email}`} className={`${linkCls} break-all`}>{o.email}</a></p>
             {!customer && <p className="mt-1 text-xs text-muted-foreground">Guest checkout, no customer account.</p>}
             <h3 className="mt-4 text-sm font-semibold">Shipping address</h3>
@@ -170,7 +171,11 @@ export default async function OrderPage({ params }: P) {
             <p className="mt-2 text-xs text-muted-foreground">Checkout is simulated: every order is recorded as paid.</p>
           </Card>
           <Card title="Status" id="status" description="Use this for refunds, cancellations and delivery. Fulfilling sets shipped for you.">
-            <ApiForm action={`/api/admin/orders/${o.id}`} method="PATCH" types={{ status: 'text' }} submitLabel="Update status" successMessage="Status updated" tone="outline">
+            <ApiForm action={`/api/admin/orders/${o.id}`} method="PATCH" types={{ status: 'text' }} submitLabel="Update status" successMessage="Status updated" tone="outline"
+              confirm={[
+                { field: 'status', values: ['refunded'], message: `Mark order #${o.number} (${fmt(o.total_cents)}) as refunded? Checkout is simulated, so refund the money yourself. This cannot be undone from here.` },
+                { field: 'status', values: ['canceled'], message: `Cancel order #${o.number} (${fmt(o.total_cents)})? Production stops and the order leaves the to-do list.` },
+              ].filter((r) => !r.values.includes(o.status))}>
               <Select name="status" label="Order status" defaultValue={o.status} options={ORDER_STATUSES.map((s) => ({ value: s, label: statusLabel(s) }))} />
             </ApiForm>
           </Card>

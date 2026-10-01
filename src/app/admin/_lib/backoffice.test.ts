@@ -20,7 +20,7 @@ afterAll(() => fs.rmSync(dir, { recursive: true, force: true }));
 describe('order status', () => {
   it('derives payment and fulfillment from orders.status', () => {
     expect(['paid', 'in_production', 'shipped', 'delivered', 'refunded', 'canceled'].map(paymentStatus)).toEqual(['paid', 'paid', 'paid', 'paid', 'refunded', 'voided']);
-    expect(['paid', 'in_production', 'shipped', 'delivered', 'refunded', 'canceled'].map(fulfillmentStatus)).toEqual(['unfulfilled', 'in_production', 'fulfilled', 'fulfilled', 'unfulfilled', 'unfulfilled']);
+    expect(['paid', 'in_production', 'shipped', 'delivered', 'refunded', 'canceled'].map((s) => fulfillmentStatus(s))).toEqual(['unfulfilled', 'in_production', 'fulfilled', 'fulfilled', 'unfulfilled', 'unfulfilled']);
   });
   it('filter sets are the exact inverse of the derivation', () => {
     for (const [p, sts] of Object.entries(STATUSES_FOR.payment)) for (const s of sts) expect(paymentStatus(s)).toBe(p);

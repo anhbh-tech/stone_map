@@ -30,11 +30,23 @@ export default async function OrderPage({ params }: Props) {
           For your privacy, order details are only shown on the device that placed the order. Check your confirmation email, or write to{' '}
           <a href={`mailto:${s.shop.support_email}`} className="font-medium text-foreground underline">{s.shop.support_email}</a>.
         </p>
+        <Link href="/track-order" className="mt-6 inline-flex min-h-12 items-center gap-2 rounded-full bg-primary px-6 font-semibold text-on-primary transition-colors hover:bg-secondary">
+          Track it with your email <Icon name="arrowRight" size={18} />
+        </Link>
       </div>
     );
   }
 
   const w = deliveryWindow(s, order.shipping_method, new Date(order.created_at.replace(' ', 'T') + 'Z'));
+  const designer = order.lines.some((l) => l.properties.Style === 'Designer finish');
+  const steps = [
+    { done: true, title: 'Order placed', text: `We have your order and your ${designer ? 'photo' : 'approved preview'}.` },
+    designer
+      ? { done: false, title: 'Designer finish', text: 'A designer hand-finishes your portrait from your photo. We email you when it is ready.' }
+      : { done: true, title: 'Preview approved', text: 'You approved the pearl preview, so we make exactly that design.' },
+    { done: false, title: 'Made by hand', text: `About ${s.shipping.production_days} days in the studio, pearl by pearl.` },
+    { done: false, title: order.shipping_method === 'express' ? 'Express shipping' : 'Shipping', text: `Arrives ${day(w.from)} – ${day(w.to)}. We email tracking when it ships.` },
+  ];
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       <p className="flex items-center gap-2 text-sm font-semibold text-success"><Icon name="check" size={20} /> Order #{order.number} confirmed</p>
@@ -42,6 +54,22 @@ export default async function OrderPage({ params }: Props) {
       <p className="mt-3 text-muted-foreground">
         A confirmation is on its way to <strong className="text-foreground">{order.email}</strong>. Estimated delivery: <strong className="text-foreground">{day(w.from)} – {day(w.to)}</strong> ({order.shipping_method}).
       </p>
+      <section aria-labelledby="next" className="mt-8">
+        <h2 id="next" className="text-2xl font-semibold">What happens next</h2>
+        <ol className="mt-4 grid gap-4 sm:grid-cols-2">
+          {steps.map((st) => (
+            <li key={st.title} className="flex gap-3">
+              <span aria-hidden className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full border ${st.done ? 'border-success bg-success text-on-primary' : 'border-input text-muted-foreground'}`}>
+                {st.done ? <Icon name="check" size={16} /> : <span className="size-2 rounded-full bg-current" />}
+              </span>
+              <span className="min-w-0">
+                <span className="block font-semibold">{st.title}<span className="sr-only">{st.done ? ' (done)' : ' (next)'}</span></span>
+                <span className="block text-sm text-muted-foreground">{st.text}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
+      </section>
       <section aria-labelledby="items" className="mt-8 rounded-[var(--radius)] border border-border bg-card p-5">
         <h2 id="items" className="text-2xl font-semibold">Your order</h2>
         <LineList showDesign items={order.lines.map((l, i) => ({ key: i, title: l.product_title, size: l.variant_size, qty: l.qty, cents: l.unit_cents * l.qty, thumbnail_url: l.thumbnail_url, properties: l.properties, design_id: l.design_id }))} />
@@ -54,7 +82,16 @@ export default async function OrderPage({ params }: Props) {
           {order.address.city}, {order.address.region} {order.address.postal_code}<br />{order.address.country}
         </address>
       </section>
-      <Link href="/" className="mt-8 inline-flex min-h-12 items-center rounded-md border border-border px-5 font-medium hover:bg-muted">Back to the shop</Link>
+      <div className="mt-8 flex flex-wrap gap-3">
+        <Link href="/track-order" className="inline-flex min-h-12 items-center gap-2 rounded-full bg-primary px-6 font-semibold text-on-primary transition-colors hover:bg-secondary">
+          Track this order <Icon name="arrowRight" size={18} />
+        </Link>
+        <Link href="/" className="inline-flex min-h-12 items-center rounded-full border border-input px-6 font-medium hover:bg-muted">Back to the shop</Link>
+      </div>
+      <p className="mt-4 text-sm text-muted-foreground">
+        To track it later, use order number <strong className="text-foreground">#{order.number}</strong> and {order.email}. Questions about your portrait? Write to{' '}
+        <a href={`mailto:${s.shop.support_email}`} className="font-medium text-foreground underline underline-offset-4">{s.shop.support_email}</a>.
+      </p>
     </div>
   );
 }

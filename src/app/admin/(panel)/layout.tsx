@@ -3,6 +3,7 @@ import { requireAdminPage } from '../_lib/session';
 import { attention } from '../_lib/analytics';
 import { LogoutButton, MobileNav, NavLinks } from '../_components/nav';
 import { Icon } from '../_components/icons';
+import { UnsavedGuard } from '../_components/form';
 
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   const user = await requireAdminPage();
@@ -10,6 +11,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const badges = { orders: a.to_fulfill, designs: a.designs_review, reviews: a.reviews_pending };
   return (
     <>
+      <UnsavedGuard />
       <a href="#admin-main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-[var(--radius)] focus:bg-card focus:px-3 focus:py-2">Skip to content</a>
       <header className="admin-topbar sticky top-0 z-30 flex h-14 items-center gap-2 px-2 sm:gap-3 lg:px-4">
         <MobileNav badges={badges} />

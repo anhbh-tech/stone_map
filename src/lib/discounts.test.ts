@@ -154,3 +154,13 @@ describe('discount codes at checkout', () => {
     expect(getCart(id).totals).toMatchObject({ discount_cents: 0, code_discount_cents: 2399 }); // 20% > bậc tự động, không cộng dồn
   });
 });
+
+describe('US shipping address', () => {
+  it('rejects an unknown state or a malformed ZIP, and normalises the state to its code', async () => {
+    const { CheckoutInput } = await import('./cart');
+    const parse = (a: Partial<typeof address>) => CheckoutInput.safeParse({ ...checkout, address: { ...address, ...a } });
+    expect(parse({ region: 'Texass' }).error?.issues.map((i) => i.message)).toEqual(['Choose a US state']);
+    expect(parse({ postal_code: '7870' }).error?.issues.map((i) => i.message)).toEqual(['Enter a 5-digit ZIP code']);
+    expect(parse({ region: ' texas ', postal_code: '78701-1234' }).data?.address).toMatchObject({ region: 'TX', postal_code: '78701-1234' });
+  });
+});

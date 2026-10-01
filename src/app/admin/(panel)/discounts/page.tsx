@@ -24,7 +24,7 @@ export default async function DiscountsPage({ searchParams }: { searchParams: Pr
   const add = <Link href="/admin/discounts/new" className={`${btn.base} ${btn.primary}`}><Icon name="plus" /> Create discount</Link>;
   return (
     <>
-      <PageHeader title="Discounts" description="Codes customers enter at checkout, including buy-more tiers by number of portraits." actions={add} />
+      <PageHeader title="Discounts" description="Codes customers enter at checkout, including buy-more tiers by number of portraits. Savings never stack: a code applies only when it saves more than the bundle tier, and then replaces it." actions={add} />
       <section aria-label="Discount list" className="rounded-[var(--radius)] border border-border bg-card">
         <Tabs label="Discount status" items={tabs} />
         <FilterBar base={base} q={s.q} sp={sp} placeholder="Search by code" hidden={{ state }} />

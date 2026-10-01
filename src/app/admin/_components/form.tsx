@@ -3,7 +3,7 @@
 // <ApiForm types={{ price_cents: 'money' }}> đọc FormData → JSON đúng kiểu; lỗi `error.fields` hiện ngay dưới từng ô
 // (aria-describedby + aria-invalid), focus nhảy vào ô sai đầu tiên, thông báo thành công qua role=status.
 import { useRouter } from 'next/navigation';
-import { createContext, useContext, useId, useRef, useState, type ReactNode, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import { Icon, type IconName } from './icons';
 import { btn } from './ui';
 
@@ -58,16 +58,44 @@ function setPath(obj: Record<string, unknown>, path: string, value: unknown) {
   cur[keys[keys.length - 1]] = value;
 }
 
+/** Hỏi lại trước khi gửi: khi ô `field` rỗng (`empty`) hoặc mang một trong `values`. Dạng dữ liệu để server component truyền được. */
+export type ConfirmRule = { field: string; empty?: boolean; values?: string[]; message: string };
+
+// Form đang có chỉnh sửa chưa lưu (theo id): UnsavedGuard hỏi lại trước khi rời trang.
+const dirtyForms = new Set<string>();
+const LEAVE = 'You have unsaved changes on this page. Leave without saving?';
+
+/** Gắn một lần trong layout admin: chặn link nội bộ, back/forward giữ nguyên, và reload/đóng tab khi còn form chưa lưu. */
+export function UnsavedGuard() {
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (!dirtyForms.size || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const a = (e.target as Element | null)?.closest?.('a[href]') as HTMLAnchorElement | null;
+      if (!a || a.target === '_blank' || a.hasAttribute('download') || a.getAttribute('href')?.startsWith('#')) return;
+      if (!window.confirm(LEAVE)) { e.preventDefault(); e.stopPropagation(); return; }
+      dirtyForms.clear();
+    };
+    const onUnload = (e: BeforeUnloadEvent) => { if (dirtyForms.size) e.preventDefault(); };
+    document.addEventListener('click', onClick, true);
+    window.addEventListener('beforeunload', onUnload);
+    return () => { document.removeEventListener('click', onClick, true); window.removeEventListener('beforeunload', onUnload); };
+  }, []);
+  return null;
+}
+
 const FormCtx = createContext<{ errors: Record<string, string>; idFor: (n: string) => string }>({ errors: {}, idFor: (n) => n });
 
 export function ApiForm({
   action, method = 'POST', types, extra, children, submitLabel = 'Save', pendingLabel = 'Saving…', successMessage = 'Saved',
-  reset = false, redirect, tone = 'primary', className = '', inline = false, ariaLabel,
+  reset = false, redirect, tone = 'primary', className = '', inline = false, ariaLabel, confirm, trackDirty = true,
 }: {
   action: string; method?: 'POST' | 'PATCH' | 'PUT'; types: Record<string, FieldType>; extra?: Record<string, unknown>;
   children: ReactNode; submitLabel?: string; pendingLabel?: string; successMessage?: string; reset?: boolean;
   /** Sau khi tạo xong: đường dẫn, `{id}` thay bằng id trả về. */
   redirect?: string; tone?: 'primary' | 'outline'; className?: string; inline?: boolean; ariaLabel?: string;
+  confirm?: ConfirmRule[];
+  /** false cho form thao tác (lọc, ghi chú nhanh) không cần cảnh báo khi rời trang. */
+  trackDirty?: boolean;
 }) {
   const router = useRouter();
   const uid = useId();
@@ -75,6 +103,7 @@ export function ApiForm({
   const [pending, setPending] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  useEffect(() => () => { dirtyForms.delete(uid); }, [uid]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -84,6 +113,11 @@ export function ApiForm({
     for (const [name, type] of Object.entries(types)) {
       const v = convert(type, fd.get(name), fd.has(name));
       if (v !== undefined) setPath(data, name, v);
+    }
+    for (const rule of confirm ?? []) {
+      const raw = String(fd.get(rule.field) ?? '').trim();
+      const hit = rule.empty ? raw === '' : !!rule.values?.includes(raw);
+      if (hit && !window.confirm(rule.message)) return;
     }
     setPending(true); setMsg(null);
     const r = await callApi(action, method, data);
@@ -97,6 +131,7 @@ export function ApiForm({
       return;
     }
     setErrors({});
+    dirtyForms.delete(uid);
     setMsg({ ok: true, text: successMessage });
     if (reset) form.reset();
     if (redirect) router.push(redirect.replace('{id}', String((r.data as { id?: unknown } | null)?.id ?? '')));
@@ -105,7 +140,7 @@ export function ApiForm({
 
   return (
     <FormCtx.Provider value={{ errors, idFor: (n) => `${uid}-${n.replace(/\W/g, '_')}` }}>
-      <form ref={formRef} onSubmit={onSubmit} aria-label={ariaLabel} className={inline ? `flex flex-wrap items-end gap-3 ${className}` : `grid gap-4 ${className}`}>
+      <form ref={formRef} onSubmit={onSubmit} aria-label={ariaLabel} onInput={trackDirty ? () => dirtyForms.add(uid) : undefined} className={inline ? `flex flex-wrap items-end gap-3 ${className}` : `grid gap-4 ${className}`}>
         {children}
         <div className={`flex flex-wrap items-center gap-3 ${inline ? '' : 'pt-1'}`}>
           <button type="submit" disabled={pending} aria-busy={pending} className={`${btn.base} ${btn[tone]}`}>
@@ -255,8 +290,10 @@ export function ActionButton({ action, method = 'PATCH', payload, label, pending
   );
 }
 
-/** Upload file (multipart) — dùng cho bản làm tay của designer. */
-export function UploadForm({ action, label, accept, hint }: { action: string; label: string; accept: string; hint?: string }) {
+/** Upload file (multipart) — bản làm tay của designer, ảnh sản phẩm. children = field đi kèm file. */
+export function UploadForm({ action, label, accept, hint, submitLabel = 'Upload artwork', successMessage = 'Artwork uploaded', extra, children }: {
+  action: string; label: string; accept: string; hint?: string; submitLabel?: string; successMessage?: string; extra?: Record<string, string | number>; children?: ReactNode;
+}) {
   const router = useRouter();
   const uid = useId();
   const [pending, setPending] = useState(false);
@@ -265,11 +302,13 @@ export function UploadForm({ action, label, accept, hint }: { action: string; la
     e.preventDefault();
     const form = e.currentTarget;
     setPending(true); setMsg(null);
-    const r = await callApi(action, 'POST', new FormData(form));
+    const data = new FormData(form);
+    for (const [k, v] of Object.entries(extra ?? {})) data.set(k, String(v));
+    const r = await callApi(action, 'POST', data);
     setPending(false);
     if (!r.ok) { setMsg({ ok: false, text: r.error.fields?.file ?? r.error.message }); return; }
     const warning = (r.data as { warning?: string | null })?.warning;
-    setMsg({ ok: true, text: warning ? `Uploaded. ${warning}` : 'Artwork uploaded' });
+    setMsg({ ok: true, text: warning ? `Uploaded. ${warning}` : successMessage });
     form.reset();
     router.refresh();
   }
@@ -279,9 +318,10 @@ export function UploadForm({ action, label, accept, hint }: { action: string; la
       <input id={`${uid}-file`} type="file" name="file" accept={accept} required aria-describedby={hint ? `${uid}-hint` : undefined}
         className="min-h-11 w-full min-w-0 rounded-[var(--radius)] border border-input bg-background px-2 py-2 text-sm file:mr-3 file:min-h-9 file:cursor-pointer file:rounded-[var(--radius)] file:border-0 file:bg-muted file:px-3 file:text-sm file:font-medium file:text-foreground" />
       {hint && <p id={`${uid}-hint`} className="text-xs text-muted-foreground">{hint}</p>}
+      {children}
       <div className="flex flex-wrap items-center gap-3">
         <button type="submit" disabled={pending} aria-busy={pending} className={`${btn.base} ${btn.outline}`}>
-          <Icon name={pending ? 'loader' : 'upload'} className={pending ? 'animate-spin' : ''} />{pending ? 'Uploading…' : 'Upload artwork'}
+          <Icon name={pending ? 'loader' : 'upload'} className={pending ? 'animate-spin' : ''} />{pending ? 'Uploading…' : submitLabel}
         </button>
         <span role={msg && !msg.ok ? 'alert' : 'status'} className={`text-sm ${msg?.ok ? 'text-success' : 'text-destructive'}`}>{msg?.text}</span>
       </div>

@@ -43,7 +43,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
   return (
     <>
       <PageHeader title="Orders" meta={<span className="text-sm text-muted-foreground tnum">{counts.all} total</span>}
-        description="Paid orders go to production once every design has a print file. Mark them fulfilled when they ship." />
+        description="Paid orders move to In production on their own once every design has an approved print file. Mark them fulfilled when they ship." />
       <section aria-label="Order list" className="rounded-[var(--radius)] border border-border bg-card">
         <Tabs label="Order views" items={tabs} />
         <FilterBar base={base} q={s.q} sp={sp} placeholder="Search by order number, customer, email, design ID or SKU" hidden={{ tab: tab === 'all' ? undefined : tab }}

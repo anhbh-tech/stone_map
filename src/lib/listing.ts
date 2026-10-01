@@ -92,8 +92,9 @@ function filterSql(f: Filters, args: (string | number)[]) {
   return { where: where.join(' AND '), having, band };
 }
 
+// "Featured" và "Best match": sản phẩm thật trước, sản phẩm demo (tag 'demo') chỉ lấp chỗ trống phía sau.
 const ORDER: Record<Sort, string> = {
-  featured: 'featured_pos, p.id', relevance: 'rank, p.id',
+  featured: 'demo, featured_pos, p.id', relevance: 'demo, rank, p.id',
   'price-asc': 'price_cents, p.id', 'price-desc': 'price_cents DESC, p.id',
   newest: 'p.created_at DESC, p.id DESC', title: 'p.title COLLATE NOCASE, p.id',
 };

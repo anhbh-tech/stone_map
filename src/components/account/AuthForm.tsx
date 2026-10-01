@@ -5,7 +5,7 @@ import { useRef, useState } from 'react';
 import { UiIcon } from '@/components/nav/icons';
 import { Field, FormAlert, postJson, type FieldErrors } from './fields';
 
-/** Đăng nhập / đăng ký. Cho dán + trình quản lý mật khẩu (autocomplete đúng loại), nút hiện mật khẩu thay ô "nhập lại". */
+/** method="post": bấm trước khi JS chạy xong thì mật khẩu không lọt vào URL (lịch sử, log). Đăng nhập / đăng ký. Cho dán + trình quản lý mật khẩu (autocomplete đúng loại), nút hiện mật khẩu thay ô "nhập lại". */
 export function AuthForm({ mode, next }: { mode: 'login' | 'register'; next: string }) {
   const router = useRouter();
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -41,7 +41,7 @@ export function AuthForm({ mode, next }: { mode: 'login' | 'register'; next: str
   }
 
   return (
-    <form onSubmit={submit} noValidate className="grid gap-5">
+    <form onSubmit={submit} method="post" noValidate className="grid gap-5">
       <FormAlert message={alert} ref={alertRef} />
       {reg && (
         <Field id="name" label="Name" error={errors.name}>
@@ -62,6 +62,11 @@ export function AuthForm({ mode, next }: { mode: 'login' | 'register'; next: str
           </div>
         )}
       </Field>
+      {!reg && (
+        <p className="-mt-3 text-right text-sm">
+          <Link href="/account/forgot" className="inline-flex min-h-11 items-center font-medium text-foreground underline underline-offset-4 hover:decoration-2">Forgot password?</Link>
+        </p>
+      )}
       <button type="submit" disabled={busy} aria-busy={busy}
         className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-primary px-7 font-semibold text-on-primary transition-colors hover:bg-secondary disabled:opacity-60">
         {busy && <UiIcon name="loader" size={18} className="animate-spin motion-reduce:animate-none" />}

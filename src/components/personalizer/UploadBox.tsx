@@ -56,8 +56,8 @@ export function UploadBox({ shopName, privacy, minSidePx, mode, consent, onConse
       <label className="flex cursor-pointer items-start gap-3 text-sm">
         <input type="checkbox" id={CONSENT_ID} className="mt-0.5 size-5 shrink-0 accent-accent" checked={consent} onChange={(e) => onConsent(e.target.checked)} data-testid="consent" aria-describedby={!consent && describedBy ? describedBy : undefined} />
         <span>
-          I agree that {shopName} may use this photo only to make my portrait. It is processed by {privacy.processors.join(', ')} and
-          deleted {privacy.retention_days} days after upload. <a href={privacy.policy_path} target="_blank" rel="noopener" className="font-medium underline underline-offset-2">Privacy policy</a>
+          I agree that {shopName} may use this photo only to make my portrait.{' '}
+          {mode === 'ai' ? <>It is processed by {privacy.processors.join(', ')} and deleted</> : <>Our designers work from it by hand, and it is deleted</>} {privacy.retention_days} days after upload. <a href={privacy.policy_path} target="_blank" rel="noopener" className="font-medium underline underline-offset-2">Privacy policy</a>
         </span>
       </label>
 
@@ -75,16 +75,16 @@ export function UploadBox({ shopName, privacy, minSidePx, mode, consent, onConse
       />
       {state.status === 'done' ? (
         // Đã có ảnh: thumbnail (ảnh AI nếu đã gen) + Change (chọn ảnh khác, gen lại) + Edit (mở lại editor, không gen lại).
-        <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-3 text-card-foreground" data-testid="media-card">
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card p-3 text-card-foreground" data-testid="media-card">
           <Image src={thumb?.src || state.result.url} alt={thumb?.alt || 'Your uploaded pet photo'} width={64} height={64} unoptimized className="size-16 shrink-0 rounded-md bg-muted object-cover" />
-          <span className="min-w-0 flex-1">
+          <span className="min-w-0 flex-1 basis-[calc(100%-4.75rem)] min-[400px]:basis-0">
             <span className="flex items-center gap-1.5 font-medium">
               <span className="truncate">{thumb?.label || state.name}</span>
               {pf?.ok && <CheckIcon size={16} className="shrink-0 text-success" aria-label="Photo checked" />}
             </span>
             <span id="upload-hint" className="block text-xs text-muted-foreground">{thumb?.detail || (pf?.ok ? 'Original photo · looks good' : 'Original photo')}</span>
           </span>
-          <span className="flex shrink-0 gap-1.5">
+          <span className="flex shrink-0 gap-1.5 max-[399px]:w-full max-[399px]:justify-end">
             <button
               type="button" id={PHOTO_CHANGE_ID} onClick={() => fileRef.current?.click()} disabled={!consent}
               aria-label="Change photo" data-testid="media-change"

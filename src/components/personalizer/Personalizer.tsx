@@ -346,9 +346,11 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
                     type="button" id="generate-btn" onClick={tryGenerate}
                     aria-describedby={shownErr === 'generate' ? REQ_ERR.generate : aiBlocked ? 'upload-error' : undefined}
                     aria-invalid={shownErr === 'generate' || undefined}
-                    className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-primary px-5 font-semibold text-on-primary transition-opacity duration-150 hover:opacity-90 focus-visible:outline-accent"
+                    className={`inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full px-5 font-semibold transition-colors duration-150 focus-visible:outline-accent ${
+                      ready ? 'border border-input bg-background hover:border-foreground' : 'bg-primary text-on-primary hover:bg-secondary'
+                    }`}
                   >
-                    <SparklesIcon /> {ready ? `Try again in ${stylesName || 'this style'}` : 'Generate with AI'}
+                    <SparklesIcon /> {ready ? 'Regenerate' : 'Generate with AI'}
                   </button>
                   {shownErr === 'generate' && <div className="mt-2"><ReqError req="generate" text="Generate with AI is required" /></div>}
                 </div>

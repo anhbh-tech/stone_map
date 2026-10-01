@@ -77,7 +77,8 @@ export function JobProgress({ job, onEmail, savedEmail }: { job: JobView; onEmai
           <p id="ai-filter-status" className="font-medium tabular-nums" data-testid="ai-filter-pct">Applying AI filter... ({pct}%)</p>
         </div>
         <div className="h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="Portrait progress" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
-          <div className="h-full rounded-full bg-foreground transition-[width] duration-300 ease-linear" style={{ width: `${Math.max(pct, 3)}%` }} />
+          {/* scaleX thay vì width: không gây layout mỗi 250 ms */}
+          <div className="h-full origin-left rounded-full bg-foreground transition-transform duration-300 ease-linear motion-reduce:transition-none" style={{ transform: `scaleX(${Math.max(pct, 3) / 100})` }} />
         </div>
         <div className="space-y-1 text-sm text-muted-foreground">
           <p>Please wait, this may take a few seconds</p>

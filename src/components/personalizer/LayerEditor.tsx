@@ -338,16 +338,17 @@ export function LayerEditor({ open, onCancel, ...p }: Props) {
 export function LayeredPreview({ uploadUrl, finalUrl, onEdit }: { uploadUrl: string | null; finalUrl: string; onEdit?: () => void }) {
   return (
     <div className="space-y-3" data-testid="layered-preview">
-      <div className="grid grid-cols-2 gap-3">
-        <figure>
-          <div className="relative aspect-square overflow-hidden rounded-lg border border-border bg-muted">
-            {uploadUrl && <Image src={uploadUrl} alt="Your original photo" fill unoptimized sizes="(min-width: 1024px) 25vw, 50vw" className="object-contain" />}
+      {/* < 640 px: final full-width (pet là nhân vật chính), ảnh gốc là ô nhỏ chồng góc; từ 640 px: hai ô cạnh nhau. */}
+      <div className="relative sm:grid sm:grid-cols-2 sm:gap-3">
+        <figure className="absolute bottom-9 left-2 z-10 w-1/4 sm:static sm:order-first sm:w-auto">
+          <div className="relative aspect-square overflow-hidden rounded-md border-2 border-card bg-muted shadow-md sm:rounded-lg sm:border sm:border-border sm:shadow-none">
+            {uploadUrl && <Image src={uploadUrl} alt="Your original photo" fill unoptimized sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 25vw" className="object-cover sm:object-contain" />}
           </div>
-          <figcaption className="mt-1 text-center text-sm text-muted-foreground">Your photo</figcaption>
+          <figcaption className="sr-only text-center text-sm text-muted-foreground sm:not-sr-only sm:mt-1 sm:block">Your photo</figcaption>
         </figure>
         <figure>
           <div className="relative aspect-square overflow-hidden rounded-lg border border-border bg-muted">
-            <Image src={finalUrl} alt="Your portrait preview" fill unoptimized sizes="(min-width: 1024px) 25vw, 50vw" className="object-cover" />
+            <Image src={finalUrl} alt="Your portrait preview" fill unoptimized sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw" className="object-cover" />
           </div>
           <figcaption className="mt-1 text-center text-sm text-muted-foreground">Your portrait</figcaption>
         </figure>

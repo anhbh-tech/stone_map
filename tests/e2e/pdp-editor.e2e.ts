@@ -203,6 +203,11 @@ for (const vp of [{ name: '1440', width: 1440, height: 900, mobile: false }, { n
       const card = page.getByTestId('media-card');
       await expect(card.getByRole('img', { name: /portrait preview/ })).toHaveAttribute('src', /r=1/);
       await expect(page.getByTestId('layered-preview')).toBeVisible();
+      // Pet là nhân vật chính: dưới 640 px final full-width, ảnh gốc chỉ là ô nhỏ chồng góc.
+      const fw = (await page.getByTestId('layered-preview').getByRole('img', { name: 'Your portrait preview' }).boundingBox())!.width;
+      const ow = (await page.getByTestId('layered-preview').getByRole('img', { name: 'Your original photo' }).boundingBox())!.width;
+      expect(vp.mobile ? fw > 300 && ow < fw / 3 : Math.abs(fw - ow) < 2).toBe(true);
+      await expect(page.getByRole('button', { name: 'Regenerate' })).toBeVisible();
       if (SHOTS) await page.getByTestId('layered-preview').screenshot({ path: path.join(SHOTS, `after-preview-${vp.name}.png`) });
 
       // Edit trên thẻ ảnh → mở lại với transform đã lưu; Cancel → giữ, không render.

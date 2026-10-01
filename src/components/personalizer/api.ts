@@ -1,5 +1,6 @@
 // Client nhỏ cho hợp đồng API ở docs/ARCHITECTURE.md mục 4. Personalizer chỉ gọi API qua file này.
-import type { DesignView, JobView, Preflight } from '@/lib/types';
+import type { DesignView, Preflight } from '@/lib/types';
+import type { DesignViewV2, JobViewV2, PcDesign, PetTransform } from '@/lib/personalize/contract';
 
 export type Transform = { rotate: number; zoom: number; x: number; y: number };
 export type UploadResult = { upload_id: string; url: string; preflight: Preflight };
@@ -11,35 +12,8 @@ export type PatchDesignBody = { variant_id?: number; transform?: Transform; styl
 
 // ── v2 theo lớp (pearl_compare docs/OUTPUT.md): template của theme + cutout pet + transform. Editor vẽ
 // base → canvasBg → pet (cắt theo clip) → overlay; OK → POST /designs/:id/render → final phẳng mới.
-// STUB: bản sao đúng hình dạng của src/lib/personalize/contract.ts (backend pc-v2-template-cutout, commit 16a1eb0) tới khi
-// nhánh đó vào main; khi đó thay khối này bằng import từ '@/lib/personalize/contract'.
-export type Pt = [number, number];
-export type PetTransform = { x: number; y: number; scale: number; rotate: number };
-export type TemplateView = {
-  theme: string;
-  rev: string;
-  kind: 'theme' | 'scene';
-  size: { w: number; h: number };
-  quad: [Pt, Pt, Pt, Pt];
-  clip: Pt[];
-  canvas_bg: { w: number; h: number } | null;
-  urls: { base: string; canvas_bg: string | null; overlay: string; mask: string | null; empty: string | null };
-};
-export type CutoutView = { url: string; w: number; h: number; default_transform: PetTransform; bottom_cut: boolean };
-export type PcDesign = {
-  theme: string;
-  template: TemplateView;
-  cutout: CutoutView;
-  transform: PetTransform;
-  final_url: string;
-  pass: boolean | null;
-  why: string[];
-  scene: boolean;
-  rendered_at: string;
-};
-export type Fallback = 'designer_upload';
-export type DesignViewV2 = DesignView & { product_id?: number; theme?: string | null; pc?: PcDesign | null };
-export type JobViewV2 = Omit<JobView, 'design'> & { message?: string; fallback?: Fallback | null; design: DesignViewV2 | null };
+// Hợp đồng route + type: src/lib/personalize/contract.ts (chỉ type, import được từ client).
+export type { DesignViewV2, JobViewV2, PcDesign, PetTransform, Pt } from '@/lib/personalize/contract';
 
 /** Phần v2 của design (null = design v1 / designer / chưa gen xong → editor cũ). */
 export const layeredOf = (d: DesignView | null | undefined): PcDesign | null => (d as DesignViewV2 | null | undefined)?.pc ?? null;

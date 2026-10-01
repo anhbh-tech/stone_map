@@ -221,7 +221,7 @@ test.describe('PDP against the real personalize API (crew B)', () => {
   test.beforeEach(({}, info) => test.skip(info.project.name !== 'desktop', 'desktop-only'));
   test.setTimeout(90_000);
 
-  test('real preflight blocks not-a-pet; real job, rotate, confirm, then cart line (#1 #2)', async ({ page }) => {
+  test('real preflight blocks not-a-pet; real job, layered editor OK, confirm, then cart line (#1 #2)', async ({ page }) => {
     // Chỉ mock giỏ (crew D); /api/personalize/* và /media/* là thật.
     const lines: unknown[] = [];
     await page.route('**/api/cart/**', (route) => {
@@ -243,9 +243,18 @@ test.describe('PDP against the real personalize API (crew B)', () => {
     await expect(page.getByTestId('preflight-error')).toHaveCount(0, { timeout: 20_000 });
     await generateBtn(page).click();
     await expect(page.getByTestId('eta')).toHaveText(/About \d+ (seconds|minutes?) left|Almost done/);
-    await expect(page.getByTestId('preview-editor')).toBeVisible({ timeout: 60_000 });
-    for (let i = 0; i < 3; i++) await page.getByRole('button', { name: 'Rotate right' }).click(); // 270° → -90° theo TransformSchema
-    await page.getByRole('slider').fill('1.5');
+    // v2 (pearl_compare giả lập): job xong → editor theo lớp tự mở; chỉnh + OK → server render final mới.
+    const ed = page.getByRole('dialog', { name: 'Adjust your pet' });
+    await expect(ed).toBeVisible({ timeout: 60_000 });
+    await expect(ed.getByTestId('layer-canvas')).toBeVisible({ timeout: 20_000 });
+    const before = await page.getByTestId('layered-preview').getByRole('img', { name: 'Your portrait preview' }).getAttribute('src');
+    for (let i = 0; i < 2; i++) await ed.getByRole('button', { name: 'Rotate left' }).click();
+    await ed.getByRole('button', { name: 'Zoom out' }).click();
+    const render = page.waitForResponse((r) => r.url().endsWith('/render'));
+    await ed.getByRole('button', { name: 'OK' }).click();
+    expect((await (await render).json()).pc.transform.rotate).toBe(-6);
+    await expect(ed).toBeHidden();
+    await expect(page.getByTestId('layered-preview').getByRole('img', { name: 'Your portrait preview' })).not.toHaveAttribute('src', before!);
     await page.getByTestId('pet-confirm').check();
     await addToCart(page).click();
     await page.waitForURL('**/cart', { timeout: 20_000 });

@@ -52,8 +52,9 @@ export const DEMO_PRODUCTS: Demo[] = [
     sizes: [['4 in round', 2498, null]], images: ['cafe'],
   },
   {
-    handle: 'demo-royal-cat-portrait', title: 'Royal Cat Portrait', subtitle: 'Your cat crowned and caped, rendered in pearls',
-    tags: ['theme:royal', 'type:canvas', 'cat'], collections: ['pet-portraits'],
+    // Handle giữ nguyên (link/đơn cũ); tên không nói "cat" vì ảnh demo duy nhất có là chó — tên phải khớp ảnh.
+    handle: 'demo-royal-cat-portrait', title: 'Royal Robe Pet Portrait', subtitle: 'Your pet crowned and caped, rendered in pearls',
+    tags: ['theme:royal', 'type:canvas', 'dog', 'cat'], collections: ['pet-portraits'],
     sizes: [['8×8', 3998, null], ['12×12', 5998, null], ['16×16', 8998, null], ['20×20', 11998, null]], images: ['starry', 'sunflower'],
   },
   {

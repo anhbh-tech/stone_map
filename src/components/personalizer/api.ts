@@ -9,6 +9,41 @@ export type CreateDesignBody = {
 };
 export type PatchDesignBody = { variant_id?: number; transform?: Transform; style?: string; pet_name?: string; notes?: string; email?: string };
 
+// ── v2 theo lớp (pearl_compare docs/OUTPUT.md): template của theme + cutout pet + transform. Editor vẽ
+// base → canvasBg → pet (cắt theo clip) → overlay; OK → POST /designs/:id/render → final phẳng mới.
+// STUB: bản sao đúng hình dạng của src/lib/personalize/contract.ts (backend pc-v2-template-cutout, commit 16a1eb0) tới khi
+// nhánh đó vào main; khi đó thay khối này bằng import từ '@/lib/personalize/contract'.
+export type Pt = [number, number];
+export type PetTransform = { x: number; y: number; scale: number; rotate: number };
+export type TemplateView = {
+  theme: string;
+  rev: string;
+  kind: 'theme' | 'scene';
+  size: { w: number; h: number };
+  quad: [Pt, Pt, Pt, Pt];
+  clip: Pt[];
+  canvas_bg: { w: number; h: number } | null;
+  urls: { base: string; canvas_bg: string | null; overlay: string; mask: string | null; empty: string | null };
+};
+export type CutoutView = { url: string; w: number; h: number; default_transform: PetTransform; bottom_cut: boolean };
+export type PcDesign = {
+  theme: string;
+  template: TemplateView;
+  cutout: CutoutView;
+  transform: PetTransform;
+  final_url: string;
+  pass: boolean | null;
+  why: string[];
+  scene: boolean;
+  rendered_at: string;
+};
+export type Fallback = 'designer_upload';
+export type DesignViewV2 = DesignView & { product_id?: number; theme?: string | null; pc?: PcDesign | null };
+export type JobViewV2 = Omit<JobView, 'design'> & { message?: string; fallback?: Fallback | null; design: DesignViewV2 | null };
+
+/** Phần v2 của design (null = design v1 / designer / chưa gen xong → editor cũ). */
+export const layeredOf = (d: DesignView | null | undefined): PcDesign | null => (d as DesignViewV2 | null | undefined)?.pc ?? null;
+
 /** Lỗi theo hợp đồng `{ error: { code, message } }`. */
 export class ApiError extends Error {
   constructor(public status: number, public code: string, message: string) { super(message); }
@@ -38,8 +73,10 @@ export const api = {
   },
   createDesign: (body: CreateDesignBody) => call<DesignView>('/api/personalize/designs', { method: 'POST', json: body }),
   patchDesign: (id: string, body: PatchDesignBody) => call<DesignView>(`/api/personalize/designs/${id}`, { method: 'PATCH', json: body }),
-  generate: (id: string, style: string) => call<JobView>(`/api/personalize/designs/${id}/generate`, { method: 'POST', json: { style } }),
-  job: (id: string) => call<JobView>(`/api/personalize/jobs/${id}`, { cache: 'no-store' }),
+  generate: (id: string, style: string) => call<JobViewV2>(`/api/personalize/designs/${id}/generate`, { method: 'POST', json: { style } }),
+  job: (id: string) => call<JobViewV2>(`/api/personalize/jobs/${id}`, { cache: 'no-store' }),
+  /** Khách bấm OK trong editor theo lớp: server render final mới với transform này (không gọi model). */
+  render: (id: string, transform: PetTransform) => call<DesignViewV2>(`/api/personalize/designs/${id}/render`, { method: 'POST', json: { transform } }),
   confirm: (id: string) => call<DesignView>(`/api/personalize/designs/${id}/confirm`, { method: 'POST', json: { confirmed: true } }),
   submit: (id: string) => call<DesignView>(`/api/personalize/designs/${id}/submit`, { method: 'POST' }),
   addLine: (body: { variant_id: number; qty: number; design_id: string }) => call<unknown>('/api/cart/lines', { method: 'POST', json: body }),

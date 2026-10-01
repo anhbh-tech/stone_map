@@ -3,16 +3,17 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Addon, BundleTier, Variant } from '@/lib/catalog';
-import type { DesignView, JobView, Settings } from '@/lib/types';
+import type { DesignView, Settings } from '@/lib/types';
 import { fmt } from '@/lib/money';
 import { livePrice, sizeScale } from '../pdp/logic';
 import { AlertIcon, BrushIcon, LoaderIcon, SparklesIcon } from '../pdp/icons';
-import { api, ApiError, type Transform, type UploadResult } from './api';
+import { api, ApiError, layeredOf, type JobViewV2, type PetTransform, type Transform, type UploadResult } from './api';
 import { Addons, BundlePicker, QuantitySelect, SizePicker, type AddonState } from './options';
 import { CONSENT_ID, PHOTO_CHANGE_ID, PHOTO_INPUT_ID, UploadBox, type UploadState } from './UploadBox';
 import { useDesignEditor } from './editor';
 import { JobProgress } from './JobProgress';
 import { IDENTITY, PreviewEditor } from './PreviewEditor';
+import { LayeredPreview, LayerEditor } from './LayerEditor';
 import { StickyPreview } from './StickyPreview';
 import { StickyBuy } from './StickyBuy';
 import { Price } from './Price';
@@ -67,7 +68,7 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
   const [petName, setPetName] = useState('');
   const [notes, setNotes] = useState('');
   const [design, setDesign] = useState<(DesignView & { upload_id: string }) | null>(null);
-  const [job, setJob] = useState<JobView | null>(null);
+  const [job, setJob] = useState<JobViewV2 | null>(null);
   const [genError, setGenError] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [transform, setTransform] = useState<Transform>(IDENTITY);
@@ -91,6 +92,8 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
   const uploaded = upload.status === 'done' ? upload.result : null;
   const running = !!job && (job.status === 'queued' || job.status === 'running');
   const ready = mode === 'ai' && !!design && design.mode === 'ai' && !!design.preview_url && (design.status === 'ready' || design.status === 'confirmed');
+  // v2: final theo lớp (template + cutout) → editor canvas; v1 → PreviewEditor cũ.
+  const layered = ready ? layeredOf(design) : null;
 
   // Poll job mỗi 1.5 s cho tới khi xong (#2). Lỗi mạng tạm thời → thử lại, 3 lần liên tiếp mới báo.
   useEffect(() => {
@@ -104,7 +107,10 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
         if (!alive) return;
         fails = 0;
         setJob(j);
-        if (j.status === 'succeeded' && j.design) setDesign((d) => (d ? { ...j.design!, upload_id: d.upload_id } : d));
+        if (j.status === 'succeeded' && j.design) {
+          setDesign((d) => (d ? { ...j.design!, upload_id: d.upload_id } : d));
+          if (layeredOf(j.design)) editor.openEditor(); // v2: mở editor ngay khi có final mặc định (như pearl_compare)
+        }
         if (j.status === 'failed' || j.status === 'canceled') setGenError(j.error || 'We couldn’t finish this portrait.');
         if (j.status === 'queued' || j.status === 'running') t = setTimeout(tick, POLL_MS);
       } catch (e) {
@@ -179,6 +185,20 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
     } catch (e) {
       setGenError(msg(e));
     }
+  }
+
+  /** OK trong editor theo lớp: server render final mới; design mới thay ảnh trên trang. */
+  async function saveLayered(t: PetTransform) {
+    if (!design) return;
+    const d = await api.render(design.id, t);
+    setDesign({ ...d, upload_id: design.upload_id });
+    editor.closeEditor();
+  }
+
+  /** Replace photo trong editor: đóng editor, mở chọn ảnh (cùng luồng với Change → gen lại). */
+  function replacePhoto() {
+    editor.closeEditor();
+    document.getElementById(PHOTO_INPUT_ID)?.click();
   }
 
   function changeTransform(t: Transform) {
@@ -337,7 +357,7 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
                 <div role="alert" className="flex gap-2 text-sm text-destructive">
                   <AlertIcon className="mt-0.5 shrink-0" />
                   <p>{genError} You can try again, or{' '}
-                    <button type="button" className="min-h-11 font-semibold underline underline-offset-2" onClick={() => chooseMode('designer')}>ask a designer to finish it</button>.
+                    <button type="button" className="min-h-11 font-semibold underline underline-offset-2" onClick={() => chooseMode('designer')}>upload your original photo for our designers</button>.
                   </p>
                 </div>
               )}
@@ -345,11 +365,16 @@ export function Personalizer({ product, variants, initialVariantId, tiers, addon
                 <JobProgress job={job} savedEmail={email} onEmail={async (e) => { if (design) await api.patchDesign(design.id, { email: e }); setEmail(e); }} />
               )}
               <div ref={resultRef} tabIndex={-1} className="outline-none" aria-label={ready ? 'Your portrait preview' : undefined}>
-                {ready && !running && (
+                {ready && !running && (layered ? (
+                  <LayeredPreview uploadUrl={design!.upload_url} finalUrl={design!.preview_url!} onEdit={design!.status !== 'confirmed' ? editor.openEditor : undefined} />
+                ) : (
                   <PreviewEditor design={design!} transform={transform} onChange={changeTransform} sizeLabel={variant.size} scale={scale} />
-                )}
+                ))}
               </div>
-              {ready && (
+              {layered && (
+                <LayerEditor open={editor.open} layered={layered} onSave={saveLayered} onCancel={editor.closeEditor} onReplace={replacePhoto} />
+              )}
+              {ready && !layered && (
                 <editor.Editor
                   open={editor.open} onClose={editor.closeEditor}
                   design={design!} transform={transform} onChange={changeTransform} sizeLabel={variant.size} scale={scale}

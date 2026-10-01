@@ -3,7 +3,7 @@
 // % = JobView.progress thật; giữa hai lần poll (1.5 s) ước lượng tiếp từ elapsed/eta để thanh chạy đều, không bao giờ vượt 97% trước khi xong.
 // Khách vẫn được nhập email để nhận link nếu hàng đợi dài. Mount = mở, unmount (job xong/lỗi) = đóng.
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import type { JobView } from '@/lib/types';
+import type { JobViewV2 as JobView } from './api';
 import { etaText } from '../pdp/logic';
 import { MailIcon, SparklesIcon } from '../pdp/icons';
 
@@ -34,7 +34,7 @@ export function JobProgress({ job, onEmail, savedEmail }: { job: JobView; onEmai
   const ref = useRef<HTMLDialogElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const pct = useEstimatedPct(job);
-  const stage = STAGE[job.stage || job.status] || 'Working on it';
+  const stage = job.message || STAGE[job.stage || job.status] || 'Working on it'; // v2: câu theo bước của pearl_compare
 
   useEffect(() => {
     const d = ref.current;

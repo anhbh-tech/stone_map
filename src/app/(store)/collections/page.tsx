@@ -21,23 +21,24 @@ export default function CollectionsPage() {
       <h1 className="mt-4 text-4xl font-semibold text-balance md:text-5xl">Shop by collection</h1>
       <p className="mt-3 max-w-prose text-muted-foreground">Every piece starts from a photo of your pet. Pick the occasion, then the style.</p>
 
-      <ul className="mt-10 grid gap-x-5 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+      {/* < 640: lưới 2 cột ô vuông gọn (6 collection ≈ 1,5 màn hình thay vì 6); từ sm: thẻ 4:3 kèm mô tả. */}
+      <ul className="mt-8 grid grid-cols-2 gap-x-3 gap-y-6 sm:mt-10 sm:gap-x-5 sm:gap-y-10 lg:grid-cols-3">
         {cols.map((c, i) => (
           <li key={c.id} className="group relative">
-            <div className="relative aspect-[4/3] overflow-hidden rounded-[var(--radius)] border border-border bg-muted">
+            <div className="relative aspect-square overflow-hidden sm:aspect-[4/3] rounded-[var(--radius)] border border-border bg-muted">
               {c.cover && (
-                <Image src={c.cover.url} alt={c.cover.alt} fill preload={i < 3} sizes="(min-width: 1024px) 360px, (min-width: 640px) 50vw, 100vw"
+                <Image src={c.cover.url} alt={c.cover.alt} fill preload={i < 3} sizes="(min-width: 1024px) 360px, 50vw"
                   className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]" />
               )}
             </div>
-            <h2 className="mt-4 flex items-center justify-between gap-3 text-2xl font-semibold">
+            <h2 className="mt-3 flex items-center justify-between gap-2 text-lg font-semibold leading-tight sm:mt-4 sm:gap-3 sm:text-2xl">
               <Link href={`/collections/${c.handle}`} className="after:absolute after:inset-0 after:rounded-[var(--radius)] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-ring">
                 {c.title}
               </Link>
-              <UiIcon name="chevronRight" size={20} className="shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+              <UiIcon name="chevronRight" size={20} className="hidden shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 sm:block" />
             </h2>
-            {c.description && <p className="mt-1 text-sm text-muted-foreground">{c.description}</p>}
-            <p className="mt-2 text-sm font-medium text-foreground">{c.count} {c.count === 1 ? 'product' : 'products'}</p>
+            {c.description && <p className="mt-1 hidden text-sm text-muted-foreground sm:block">{c.description}</p>}
+            <p className="mt-1 text-sm text-muted-foreground sm:mt-2 sm:font-medium sm:text-foreground">{c.count} {c.count === 1 ? 'product' : 'products'}</p>
           </li>
         ))}
       </ul>

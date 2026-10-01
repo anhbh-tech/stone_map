@@ -53,6 +53,13 @@ None found. All of these worked end to end at 375 and 1440:
 | 13 | Collection covers don't match the occasion | Memorial's cover is a crowned "royal" dog; Christmas covers are sunflower and café scenes (`collections-1440.jpg`) | Tone is wrong for memorial | Needs real themed art. Captain's call: until it exists, use a neutral cover (no image) for Memorial. |
 | 14 | 8 demo products recycle 3 images | Every listing | Pads the catalogue. The badges are honest, but the grid looks repetitive. | Captain decision: keep the demos for now, or hide them once real products exist. |
 
+## From UI-1's critique (`docs/critique/ui2-account.from-ui1.md`)
+
+| # | Item | Outcome |
+|---|---|---|
+| 15 (P1) | `/search?q=dog` put 7 "Demo" products above the 3 real theme products. The same ordering pushed the real products off the "All products" grid on /collections, which shows only the first 12. | **Fixed.** The "Featured" and "Best match" sorts now put non-demo products first, and demos only fill in after them (`src/lib/listing.ts`). Unit test added. |
+| 16 (P2) | The header SearchBox measured 42 px | **No change.** The control is 44 px (`h-11`). The 42 px is the `<input>` inside its 1 px border, and the whole pill plus the 44 px submit button are the tap area. |
+
 ## Out of my zone, handed to the owners (not fixed here)
 
 | Owner | # | Where | Issue | Proposal |

@@ -37,6 +37,7 @@ function cleanup() {
     exec('DELETE FROM orders WHERE id = ?', o.id);
   }
   exec('DELETE FROM customers WHERE email = ?', EMAIL);
+  exec('DELETE FROM email_outbox WHERE to_addr = ?', EMAIL);
   exec('DELETE FROM designs WHERE id = ?', DESIGN);
   exec('DELETE FROM products WHERE handle = ?', TEMP_HANDLE);
 }
@@ -274,10 +275,11 @@ test('collections: index, filters, sort and pagination', async ({ page }) => {
   await page.getByRole('link', { name: 'Clear filters' }).click();
   await expect(page).toHaveURL(/\/collections\/pet-portraits$/);
 
-  // Handle không tồn tại → redirect về toàn bộ sản phẩm, không 404.
-  await page.goto('/collections/nope');
-  await expect(page).toHaveURL(/\/collections\/all$/);
-  await expect(page.locator('h1')).toHaveCount(1);
+  // Handle không tồn tại → 404 thật (không soft-404 về /all), trang 404 của shop dẫn sang collection.
+  const gone = await page.goto('/collections/nope');
+  expect(gone?.status()).toBe(404);
+  await expect(page).toHaveURL(/\/collections\/nope$/);
+  await expect(page.getByTestId('not-found').getByRole('link', { name: /^Christmas/ })).toHaveAttribute('href', '/collections/christmas');
 
   // Thêm tạm 1 sản phẩm → /collections/all có 13 sản phẩm, 2 trang.
   exec("INSERT INTO products (handle, title) VALUES (?, 'UI2 E2E temporary product')", TEMP_HANDLE);
@@ -334,9 +336,14 @@ test('header (UI-1) mounts SearchBox, CategoryMenu and AccountLink and they work
   await expect(page).toHaveURL(/\/search\?q=memorial$/);
   await expect(page.getByTestId('result-count')).toHaveText('3 results');
 
+  // Cách gõ tắt vẫn ra đúng sản phẩm.
+  await page.goto('/search?q=xmas');
+  await expect(page.locator('main [data-testid="product-card"]').first()).toContainText('Christmas');
+
   // Hàng category của header (desktop).
   const main = page.getByRole('navigation', { name: 'Main' });
   await expect(main.getByRole('link', { name: 'Pet portraits' })).toHaveAttribute('href', '/collections/pet-portraits');
+  await expect(main.getByRole('link', { name: 'Track order' })).toHaveAttribute('href', '/track-order');
   await main.getByRole('link', { name: 'Christmas' }).click();
   await expect(page).toHaveURL(/\/collections\/christmas$/);
   await expect(page.locator('h1')).toHaveText('Christmas');
@@ -352,4 +359,79 @@ test('mobile 375: header menu lists collections with counts', async ({ page }) =
   await expect(page).toHaveURL(/\/collections\/memorial$/);
   await expect(menu).toBeHidden();
   await expect(page.getByTestId('result-count')).toHaveText('3 products');
+
+  await page.getByRole('button', { name: 'Open menu' }).click();
+  await menu.getByRole('link', { name: 'Track order' }).click();
+  await expect(page).toHaveURL(/\/track-order$/);
+});
+
+test('mobile 375: collections index is a 2-column grid, not one tall card per screen', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('/collections');
+  const tiles = page.locator('main ul').first().locator('> li');
+  const [a, b] = [await tiles.nth(0).boundingBox(), await tiles.nth(1).boundingBox()];
+  expect(Math.abs(a!.y - b!.y)).toBeLessThan(2);
+  expect(a!.width).toBeLessThan(190);
+});
+
+test('404: unknown URLs and missing products get the shop 404 with a way back', async ({ page }) => {
+  for (const url of ['/no-such-page', '/products/no-such-product']) {
+    const res = await page.goto(url);
+    expect(res?.status()).toBe(404);
+    await expect(page).toHaveTitle('Page not found | Pearl Atelier');
+    await oneH1(page);
+    await expect(page.locator('h1')).toHaveText('We couldn’t find that page');
+    await expect(page.locator('header').getByRole('combobox', { name: 'Search products' })).toBeVisible(); // vẫn trong khung shop
+    await expect(page.getByTestId('not-found').getByRole('link', { name: 'Track your order' })).toHaveAttribute('href', '/track-order');
+  }
+  await page.getByTestId('not-found').getByRole('combobox', { name: 'Search the shop' }).fill('kit');
+  await page.getByTestId('not-found').getByRole('button', { name: 'Search', exact: true }).click();
+  await expect(page).toHaveURL(/\/search\?q=kit$/);
+});
+
+test('forgot password: emailed one-time link sets a new password and signs in', async ({ page }) => {
+  const reg = await page.request.post('/api/account/register', { data: { name: 'Mai Tran', email: EMAIL, password: PASSWORD } });
+  expect([201, 409]).toContain(reg.status());
+  await page.context().clearCookies();
+  await page.goto('/account/login');
+  await page.getByRole('link', { name: 'Forgot password?' }).click();
+  await expect(page).toHaveURL(/\/account\/forgot$/);
+  await oneH1(page);
+
+  // Email không có tài khoản: cùng câu trả lời, không gửi gì.
+  await page.getByRole('textbox', { name: 'Email' }).fill('nobody-ui2@example.com');
+  await page.getByRole('button', { name: 'Send reset link' }).click();
+  await expect(page.getByTestId('forgot-sent')).toContainText('If an account uses nobody-ui2@example.com');
+  expect(sql("SELECT 1 FROM email_outbox WHERE to_addr = 'nobody-ui2@example.com'")).toHaveLength(0);
+
+  await page.getByRole('button', { name: 'try another email' }).click();
+  await page.getByRole('textbox', { name: 'Email' }).fill(EMAIL.toUpperCase());
+  await page.getByRole('button', { name: 'Send reset link' }).click();
+  await expect(page.getByTestId('forgot-sent')).toBeVisible();
+  const [mail] = sql<{ html: string }>("SELECT html FROM email_outbox WHERE to_addr = ? AND kind = 'password_reset' ORDER BY id DESC LIMIT 1", EMAIL);
+  const link = new URL(mail.html.match(/href="([^"]+)"/)![1].replace(/&#38;/g, '&'));
+
+  await page.goto(link.pathname + link.search, { waitUntil: 'networkidle' });
+  await oneH1(page);
+  await page.getByLabel('New password').fill('short');
+  await page.getByRole('button', { name: 'Save new password' }).click();
+  await expect(page.getByText('Use at least 8 characters')).toBeVisible();
+  await page.getByLabel('New password').fill('new-pearls-2026');
+  await page.getByRole('button', { name: 'Save new password' }).click();
+  await expect(page).toHaveURL(/\/account$/);
+
+  // Link chỉ dùng một lần; mật khẩu mới đăng nhập được, mật khẩu cũ thì không.
+  await page.goto(link.pathname + link.search, { waitUntil: 'networkidle' });
+  await page.getByLabel('New password').fill('again-and-again');
+  await page.getByRole('button', { name: 'Save new password' }).click();
+  await expect(page.getByRole('main').getByRole('alert')).toContainText('expired or was already used');
+  expect(page.url()).not.toContain('again-and-again');
+  await expect(page.getByRole('link', { name: 'Send a new reset link' })).toBeVisible();
+  expect((await page.request.post('/api/account/login', { data: { email: EMAIL, password: PASSWORD } })).status()).toBe(401);
+  expect((await page.request.post('/api/account/login', { data: { email: EMAIL, password: 'new-pearls-2026' } })).status()).toBe(200);
+  // Trả lại mật khẩu cũ (qua chính luồng đặt lại) cho các test khác dùng chung khách này.
+  expect((await page.request.post('/api/account/forgot', { data: { email: EMAIL } })).status()).toBe(200);
+  const [again] = sql<{ html: string }>("SELECT html FROM email_outbox WHERE to_addr = ? AND kind = 'password_reset' ORDER BY id DESC LIMIT 1", EMAIL);
+  const token = new URL(again.html.match(/href="([^"]+)"/)![1]).searchParams.get('token');
+  expect((await page.request.post('/api/account/reset', { data: { token, password: PASSWORD } })).status()).toBe(200);
 });

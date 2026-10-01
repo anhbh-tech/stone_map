@@ -25,6 +25,12 @@ describe('ftsQuery', () => {
     expect(L.ftsQuery('"*) OR (')).toBe('"or"*');
     expect(L.ftsQuery('  -- ')).toBeNull();
   });
+
+  it('expands common shorthand (xmas, kitty, puppy) so it still finds the catalogue word', () => {
+    expect(L.ftsQuery('xmas kit')).toBe('("xmas"* OR "christmas"*) "kit"*');
+    expect(L.ftsQuery('Kitty')).toBe('("kitty"* OR "cat"*)');
+    expect(L.listProducts({ fts: L.ftsQuery('xmas')! }, q({ sort: 'relevance' })).total).toBeGreaterThan(0);
+  });
 });
 
 describe('search', () => {
@@ -109,6 +115,33 @@ describe('customer accounts', () => {
     expect(C.customerForToken(token, new Date(now.getTime() + C.CUSTOMER_TTL_S * 1000 + 1))).toBeNull();
     C.destroyCustomerSession(token);
     expect(C.customerForToken(token, now)).toBeNull();
+  });
+
+  it('password reset: emails a one-time, 1-hour link only for real accounts, then replaces the password', () => {
+    const now = new Date('2026-10-01T10:00:00Z');
+    const outbox = () => d.prepare("SELECT to_addr, html FROM email_outbox WHERE kind = 'password_reset' ORDER BY id").all() as { to_addr: string; html: string }[];
+    expect(C.requestPasswordReset('nobody@example.com', now)).toBeNull();
+    expect(outbox()).toHaveLength(0);
+
+    const token = C.requestPasswordReset('MAI@example.com', now)!;
+    expect(token).toMatch(/^[\w-]{43}$/);
+    const mail = outbox().at(-1)!;
+    expect(mail.to_addr).toBe('mai@example.com');
+    expect(mail.html).toContain(`/account/reset?token=${token}`);
+    expect(d.prepare('SELECT count(*) AS n FROM customer_password_resets WHERE token = ?').get(token)).toEqual({ n: 0 });
+
+    const { token: session } = C.createCustomerSession(C.checkCustomer('mai@example.com', 'correct horse')!.id, now);
+    expect(() => C.resetPassword(token, 'new pearls 2026', new Date(now.getTime() + 3601_000))).toThrow(/expired/);
+    expect(C.resetPassword(token, 'new pearls 2026', now).email).toBe('mai@example.com');
+    expect(C.checkCustomer('mai@example.com', 'new pearls 2026')).not.toBeNull();
+    expect(C.checkCustomer('mai@example.com', 'correct horse')).toBeNull();
+    expect(C.customerForToken(session, now)).toBeNull(); // phiên cũ ở máy khác bị đăng xuất
+    expect(() => C.resetPassword(token, 'again again', now)).toThrow(/expired or was already used/);
+
+    // Tối đa 3 email / giờ / tài khoản: không spam hộp thư của khách.
+    for (let i = 0; i < 5; i++) C.requestPasswordReset('mai@example.com', new Date(now.getTime() + i * 1000));
+    expect(outbox()).toHaveLength(3);
+    C.resetPassword(C.requestPasswordReset('mai@example.com', new Date(now.getTime() + 3700_000))!, 'correct horse', new Date(now.getTime() + 3700_000));
   });
 
   it('only redirects to internal paths after sign in', () => {

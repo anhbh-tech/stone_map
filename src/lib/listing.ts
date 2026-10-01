@@ -54,10 +54,13 @@ export function parseListQuery(sp: Record<string, string | string[] | undefined>
   return { theme: many(sp.theme), type: many(sp.type), price, sort, page };
 }
 
-/** Chuỗi khách gõ → biểu thức FTS5 an toàn: mỗi từ thành "tu"* (prefix), nối AND. Không có từ nào → null. */
+// Cách gọi tắt / thân mật khách hay gõ → từ có trong catalog. Giữ cả từ gốc (OR) để không mất kết quả đang có.
+const SYNONYMS: Record<string, string> = { xmas: 'christmas', kitty: 'cat', kitten: 'cat', kitties: 'cat', puppy: 'dog', pup: 'dog', doggy: 'dog' };
+
+/** Chuỗi khách gõ → biểu thức FTS5 an toàn: mỗi từ thành "tu"* (prefix), nối AND; từ đồng nghĩa thành ("tu"* OR "goc"*). Không có từ nào → null. */
 export function ftsQuery(q: string): string | null {
   const words = q.toLowerCase().normalize('NFKC').match(/[\p{L}\p{N}]+/gu)?.slice(0, 8) ?? [];
-  return words.length ? words.map((w) => `"${w}"*`).join(' ') : null;
+  return words.length ? words.map((w) => (SYNONYMS[w] ? `("${w}"* OR "${SYNONYMS[w]}"*)` : `"${w}"*`)).join(' ') : null;
 }
 
 // ── SQL dùng chung

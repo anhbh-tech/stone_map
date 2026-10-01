@@ -26,6 +26,23 @@ describe('ftsQuery', () => {
     expect(L.ftsQuery('  -- ')).toBeNull();
   });
 
+  it('ranks real products above demo listings for best match and featured', () => {
+    const real = d.prepare("INSERT INTO products (handle, title, subtitle) VALUES ('ui2-real-dog', 'Zebra Portrait', 'Real one') RETURNING id").get() as { id: number };
+    d.prepare("INSERT INTO variants (product_id, sku, size, price_cents, position) VALUES (?, 'ZD-8', '8×8', 3998, 0)").run(real.id);
+    d.prepare("INSERT INTO product_tags (product_id, tag) VALUES (?, 'dog')").run(real.id);
+    d.exec("INSERT INTO products_fts(products_fts) VALUES ('rebuild')");
+    try {
+      const demosLast = (items: { demo: boolean }[]) => items.findIndex((i) => i.demo) > items.findLastIndex((i) => !i.demo);
+      const best = L.listProducts({ fts: L.ftsQuery('dog')! }, q({ sort: 'relevance' }), 100).items;
+      expect(best.some((i) => i.demo) && best.some((i) => !i.demo)).toBe(true);
+      expect(demosLast(best)).toBe(true);
+      expect(demosLast(L.listProducts({ collectionId: null }, q(), 100).items)).toBe(true);
+    } finally {
+      d.prepare('DELETE FROM products WHERE id = ?').run(real.id);
+      d.exec("INSERT INTO products_fts(products_fts) VALUES ('rebuild')");
+    }
+  });
+
   it('expands common shorthand (xmas, kitty, puppy) so it still finds the catalogue word', () => {
     expect(L.ftsQuery('xmas kit')).toBe('("xmas"* OR "christmas"*) "kit"*');
     expect(L.ftsQuery('Kitty')).toBe('("kitty"* OR "cat"*)');

@@ -2,14 +2,18 @@
 import { db, json } from '../db';
 import { newId } from '../ids';
 import { getSettings } from '../settings';
-import type { JobStage, JobStatus, JobView, Settings } from '../types';
-import { designView, getDesign, nowIso } from './designs';
-import { DEFAULT_REAL_MS, DEFAULT_RENDER_MS, HISTORY_SIZE, etaMs, progressOf, typicalMs, type QueueItem } from './eta';
+import type { JobStage, JobStatus, Settings } from '../types';
+import { FAILED_MESSAGE, STEP_MESSAGES, type JobStepView, type JobViewV2 } from './contract';
+import { designViewV2, getDesign, nowIso } from './designs';
+import { engineName } from './engine';
+import { pcConfig } from './pearl-compare';
+import { DEFAULT_PC_MS, DEFAULT_REAL_MS, DEFAULT_RENDER_MS, HISTORY_SIZE, etaMs, progressOf, typicalMs, type QueueItem } from './eta';
 
 export type JobKind = 'ai_generate' | 'render_print';
 export type JobRow = {
   id: string; design_id: string; kind: JobKind; status: JobStatus; stage: JobStage | null; provider: string; model: string;
   attempts: number; error: string | null; check_result: string | null; queued_at: string; started_at: string | null; finished_at: string | null;
+  ext_id: string | null; progress: number | null; steps: string | null;   // v2: job pearl_compare, progress thật, JobStepView[]
 };
 
 /** Parse cả ISO của JS lẫn 'YYYY-MM-DD HH:MM:SS' (UTC) của datetime('now'). */
@@ -25,8 +29,10 @@ export const activeJobFor = (designId: string, kind: JobKind = 'ai_generate') =>
 
 export function createJob(designId: string, kind: JobKind, s: Settings): JobRow {
   const id = newId('job');
-  const provider = kind === 'ai_generate' ? s.ai.provider : 'render';
-  const model = kind === 'ai_generate' ? s.ai.model : 'sharp';
+  // ai_generate chạy ở pearl_compare (thật) hoặc bản giả lập (provider mock); model thật do pearl_compare chọn theo pcConfig().
+  const engine = engineName(s);
+  const provider = kind === 'ai_generate' ? engine : 'render';
+  const model = kind === 'ai_generate' ? (engine === 'mock' ? s.ai.model : pcConfig().modelId) : 'sharp';
   db().prepare("INSERT INTO jobs (id, design_id, kind, status, stage, provider, model, queued_at) VALUES (?, ?, ?, 'queued', 'queued', ?, ?, ?)")
     .run(id, designId, kind, provider, model, nowIso());
   return getJob(id)!;
@@ -41,10 +47,13 @@ export function recentDurations(kind: string, provider: string): number[] {
 
 export function fallbackMs(kind: string, provider: string, s: Settings) {
   if (kind === 'render_print') return DEFAULT_RENDER_MS;
-  return provider === 'mock' ? s.ai.mock_ms : DEFAULT_REAL_MS;
+  if (provider === 'mock') return s.ai.mock_ms;
+  return provider === 'pearl_compare' ? DEFAULT_PC_MS : DEFAULT_REAL_MS;
 }
 
-export function jobView(job: JobRow, s: Settings = getSettings(), now = Date.now()): JobView {
+export const stepsOf = (j: JobRow) => json<JobStepView[]>(j.steps, []);
+
+export function jobView(job: JobRow, s: Settings = getSettings(), now = Date.now()): JobViewV2 {
   const queued = parseTs(job.queued_at) ?? now;
   const finished = parseTs(job.finished_at);
   const elapsed = Math.max(0, (finished ?? now) - queued);
@@ -73,7 +82,16 @@ export function jobView(job: JobRow, s: Settings = getSettings(), now = Date.now
     queuePosition = job.status === 'queued' ? ahead.length : 0;
     eta = etaMs(item(job), ahead.map(item));
   }
+  // Progress thật của pearl_compare khi đã có; ETA theo đó: phần còn lại = thời gian đã chạy × (1 − p) / p.
+  const real = job.status === 'running' && job.progress != null ? Math.max(0, Math.min(0.99, job.progress)) : null;
+  if (real != null && real >= 0.05) {
+    const ran = Math.max(1, now - (parseTs(job.started_at) ?? now));
+    eta = Math.max(1000, Math.round((ran * (1 - real)) / real));
+  }
+  const steps = stepsOf(job);
+  const current = [...steps].reverse().find((x) => x.status === 'running') ?? steps.at(-1);
   const design = job.status === 'succeeded' ? getDesign(job.design_id) : undefined;
+  const failed = job.status === 'failed' && job.kind === 'ai_generate';
   return {
     id: job.id,
     design_id: job.design_id,
@@ -82,9 +100,12 @@ export function jobView(job: JobRow, s: Settings = getSettings(), now = Date.now
     queue_position: queuePosition,
     elapsed_ms: elapsed,
     eta_ms: eta,
-    progress: job.status === 'succeeded' ? 1 : done ? 0 : progressOf(elapsed, eta),
+    progress: job.status === 'succeeded' ? 1 : done ? 0 : real ?? progressOf(elapsed, eta),
     error: job.error,
-    design: design ? designView(design) : null,
+    message: failed ? (job.error ?? FAILED_MESSAGE) : job.status === 'queued' || !current ? STEP_MESSAGES.queued : STEP_MESSAGES[current.stage],
+    steps,
+    fallback: failed ? 'designer_upload' : null,
+    design: design ? designViewV2(design) : null,
   };
 }
 
@@ -96,6 +117,10 @@ export function claimNext(): JobRow | null {
 }
 
 export const setStage = (id: string, stage: JobStage) => db().prepare('UPDATE jobs SET stage = ? WHERE id = ?').run(stage, id);
+/** Ghi tiến độ pearl_compare: progress chỉ tăng (pearl_compare đã không giảm; chặn thêm ở đây cho chắc). */
+export const setProgress = (id: string, v: { ext_id?: string; progress: number; steps: JobStepView[]; stage: JobStage }) =>
+  db().prepare('UPDATE jobs SET ext_id = COALESCE(?, ext_id), progress = MAX(COALESCE(progress, 0), ?), steps = ?, stage = ? WHERE id = ?')
+    .run(v.ext_id ?? null, v.progress, JSON.stringify(v.steps), v.stage, id);
 export const setCheckResult = (id: string, v: unknown) => db().prepare('UPDATE jobs SET check_result = ? WHERE id = ?').run(JSON.stringify(v), id);
 export const checkResultOf = <T>(j: JobRow, fallback: T) => json<T>(j.check_result, fallback);
 

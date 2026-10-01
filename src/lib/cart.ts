@@ -8,6 +8,7 @@ import { deliveryWindow, getSettings, shippingHeadline } from './settings';
 import { fmt } from './money';
 import { newId } from './ids';
 import { mediaUrl } from './personalize/storage'; // quy tắc /media của crew B: chỉ uploads/previews/mockups công khai
+import { designLineProps } from './personalize/designs';
 import { visibleProps, type DesignStatus, type LineProperties, type Settings } from './types';
 import { discountSummary, discountUses, evaluateDiscount, findDiscount, pdpCodes, rejectionMessage } from './discounts';
 
@@ -239,6 +240,7 @@ function lineProperties(d: DesignRow, s: Settings): LineProperties {
   if (thumb) props._preview_url = thumb;
   if (d.pet_name?.trim()) props['Pet name'] = d.pet_name.trim();
   props.Style = d.mode === 'designer' ? 'Designer finish' : s.ai.styles.find((x) => x.id === d.style)?.name ?? 'Custom';
+  Object.assign(props, designLineProps(d.id));   // v2: transform + final pearl_compare (ẩn, theo dòng sang đơn)
   return props;
 }
 

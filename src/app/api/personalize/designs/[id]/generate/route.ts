@@ -1,11 +1,12 @@
-// POST /api/personalize/designs/:id/generate { style } → 202 JobView. Đã có job đang chạy → trả job đó (idempotent).
+// POST /api/personalize/designs/:id/generate { style? } → 202 JobViewV2 (job pearl_compare chạy ở worker). Đã có job đang chạy → trả job đó (idempotent).
 import { z } from 'zod';
 import { tx } from '../../../../../../lib/db';
 import { getSettings } from '../../../../../../lib/settings';
 import { getDesign, getUpload, nextStatus, transition, uploadAvailable, uploadPreflight } from '../../../../../../lib/personalize/designs';
-import { apiError, handle, ok, readJson } from '../../../../../../lib/personalize/http';
+import { apiError, engineError, handle, ok, readJson } from '../../../../../../lib/personalize/http';
 import { activeJobFor, createJob, jobView, wakeWorker } from '../../../../../../lib/personalize/jobs';
 import { checkStyle } from '../../../../../../lib/personalize/validate';
+import { isPcTheme, themeForProduct } from '../../../../../../lib/personalize/engine';
 
 type Ctx = { params: Promise<{ id: string }> };
 const Body = z.object({ style: z.string().min(1).max(64).optional() });
@@ -21,10 +22,11 @@ export const POST = handle(async (req: Request, ctx: Ctx) => {
   const running = activeJobFor(d.id);
   if (running) return ok(jobView(running, s), 202);
 
-  const style = r.data.style ?? d.style;
+  const style = r.data.style ?? d.style ?? themeForProduct(d.product_id);
   if (!style) return apiError(400, 'style_required', 'Choose a style first.');
   const se = checkStyle(style, s);
   if (se) return se;
+  if (!isPcTheme(style)) return engineError({ code: 'not_found', message: `style ${style} has no pearl_compare theme` });
 
   const up = d.upload_id ? getUpload(d.upload_id) : undefined;
   if (!up || !uploadAvailable(up)) return apiError(410, 'upload_expired', 'Your photo has expired from our servers. Please upload it again.');

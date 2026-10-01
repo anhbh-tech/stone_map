@@ -27,3 +27,15 @@ export function handle<A extends unknown[]>(fn: (...a: A) => Promise<Response>) 
     }
   };
 }
+
+/** Lỗi pearl_compare → { error, fallback: 'designer_upload' }: UI hiện câu này + nút "Upload original photo for designers". */
+export function engineError(e: { code: string; message: string }): Response {
+  const map: Record<string, [number, string, string]> = {
+    unavailable: [503, 'engine_unavailable', 'Our pearl studio is offline right now. Upload your original photo and our designers will make it by hand, or try again in a few minutes.'],
+    timeout: [504, 'engine_timeout', 'The pearl studio took too long to answer. Please try again, or upload your original photo for our designers.'],
+    not_found: [404, 'no_template', 'This style is not available for AI previews yet. Upload your original photo and our designers will make it by hand.'],
+  };
+  const [status, code, message] = map[e.code] ?? [502, 'engine_error', 'Something went wrong in the pearl studio. Please try again, or upload your original photo for our designers.'];
+  console.warn(`[personalize] engine ${e.code}: ${e.message}`);
+  return Response.json({ error: { code, message }, fallback: 'designer_upload' }, { status, headers: { 'cache-control': 'no-store' } });
+}

@@ -1,8 +1,8 @@
-// GET / PATCH /api/personalize/designs/:id → DesignView.
+// GET / PATCH /api/personalize/designs/:id → DesignViewV2.
 import { z } from 'zod';
 import { db, tx } from '../../../../../lib/db';
 import { getSettings } from '../../../../../lib/settings';
-import { designView, editableFields, getDesign, nowIso, type PatchField } from '../../../../../lib/personalize/designs';
+import { designViewV2, editableFields, getDesign, nowIso, type PatchField } from '../../../../../lib/personalize/designs';
 import { apiError, handle, ok, readJson } from '../../../../../lib/personalize/http';
 import { activeJobFor, createJob, wakeWorker } from '../../../../../lib/personalize/jobs';
 import { DesignFields, checkProductVariant, checkStyle } from '../../../../../lib/personalize/validate';
@@ -12,7 +12,7 @@ const Body = z.object(DesignFields).strict();
 
 export const GET = handle(async (_req: Request, ctx: Ctx) => {
   const d = getDesign((await ctx.params).id);
-  return d ? ok(designView(d)) : apiError(404, 'not_found', 'Design not found.');
+  return d ? ok(designViewV2(d)) : apiError(404, 'not_found', 'Design not found.');
 });
 
 export const PATCH = handle(async (req: Request, ctx: Ctx) => {
@@ -32,7 +32,7 @@ export const PATCH = handle(async (req: Request, ctx: Ctx) => {
 
   const values: Record<string, string | number | null> = {};
   for (const f of fields) values[f] = f === 'transform' ? (b.transform ? JSON.stringify(b.transform) : null) : (b[f] as string | number | null);
-  if (!fields.length) return ok(designView(d));
+  if (!fields.length) return ok(designViewV2(d));
 
   tx(() => {
     db().prepare(`UPDATE designs SET ${fields.map((f) => `${f} = ?`).join(', ')}, updated_at = ? WHERE id = ?`)
@@ -43,5 +43,5 @@ export const PATCH = handle(async (req: Request, ctx: Ctx) => {
     }
   });
   wakeWorker();
-  return ok(designView(getDesign(d.id)!));
+  return ok(designViewV2(getDesign(d.id)!));
 });

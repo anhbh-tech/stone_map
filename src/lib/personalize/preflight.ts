@@ -1,7 +1,7 @@
 // Preflight ảnh upload (#1): chặn trước khi tốn tiền AI và trước khi AI "bịa" ra một con thú từ ảnh không có thú.
 // Ba phép kiểm: cạnh ngắn ≥ min_side_px, độ nét (variance of Laplacian) ≥ min_sharpness, có đúng 1 thú cưng (confidence ≥ min_pet_confidence).
 import type { Preflight, PreflightIssue, Settings } from '../types';
-import { geminiJson, geminiKey, imagePart } from './ai';
+import { geminiJson, geminiKey, imagePart } from './gemini';
 import { sharpness, texture, type Texture } from './images';
 
 export type PetDetection = Preflight['pet'] & { count: number; face_visible: boolean };

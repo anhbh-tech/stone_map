@@ -1,11 +1,12 @@
-// POST /api/personalize/designs → 201 DesignView. mode 'ai' cần preflight ok (422 preflight_failed).
+// POST /api/personalize/designs → 201 DesignViewV2. mode 'ai' cần preflight ok (422 preflight_failed); style bỏ trống = theme sản phẩm.
 import { z } from 'zod';
 import { db } from '../../../../lib/db';
 import { designId } from '../../../../lib/ids';
 import { getSettings } from '../../../../lib/settings';
-import { designView, getDesign, getUpload, nowIso, uploadAvailable, uploadPreflight } from '../../../../lib/personalize/designs';
+import { designViewV2, getDesign, getUpload, nowIso, uploadAvailable, uploadPreflight } from '../../../../lib/personalize/designs';
 import { apiError, handle, ok, readJson } from '../../../../lib/personalize/http';
 import { DesignFields, checkProductVariant, checkStyle } from '../../../../lib/personalize/validate';
+import { themeForProduct } from '../../../../lib/personalize/engine';
 
 const Body = z.object({
   product_id: z.number().int().positive(),
@@ -23,6 +24,7 @@ export const POST = handle(async (req: Request) => {
   const pv = checkProductVariant(b.product_id, b.variant_id ?? null);
   if (pv) return pv;
   if (b.style != null) { const e = checkStyle(b.style, s); if (e) return e; }
+  const style = b.style ?? (b.mode === 'ai' ? themeForProduct(b.product_id) : null);
 
   const up = getUpload(b.upload_id);
   if (!up) return apiError(404, 'upload_not_found', 'We could not find that photo. Please upload it again.');
@@ -37,8 +39,8 @@ export const POST = handle(async (req: Request) => {
   const now = nowIso();
   db().prepare(`INSERT INTO designs (id, product_id, variant_id, upload_id, mode, style, pet_name, notes, email, transform, status, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?)`).run(
-    id, b.product_id, b.variant_id ?? null, b.upload_id, b.mode, b.style ?? null, b.pet_name ?? null, b.notes ?? null,
+    id, b.product_id, b.variant_id ?? null, b.upload_id, b.mode, style, b.pet_name ?? null, b.notes ?? null,
     b.email ?? null, b.transform ? JSON.stringify(b.transform) : null, now, now,
   );
-  return ok(designView(getDesign(id)!), 201);
+  return ok(designViewV2(getDesign(id)!), 201);
 });

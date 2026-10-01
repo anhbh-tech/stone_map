@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { tx } from '../../../../../../lib/db';
 import { getSettings } from '../../../../../../lib/settings';
-import { designView, getDesign, nextStatus, nowIso, transition } from '../../../../../../lib/personalize/designs';
+import { designViewV2, getDesign, nextStatus, nowIso, transition } from '../../../../../../lib/personalize/designs';
 import { apiError, handle, ok, readJson } from '../../../../../../lib/personalize/http';
 import { createJob, wakeWorker } from '../../../../../../lib/personalize/jobs';
 
@@ -16,7 +16,7 @@ export const POST = handle(async (req: Request, ctx: Ctx) => {
   const r = await readJson(req, Body);
   if ('error' in r) return r.error;
   if (r.data.confirmed !== true) return apiError(400, 'confirmation_required', 'Please tick the box to confirm this is your pet.');
-  if (d.status === 'confirmed') return ok(designView(d));
+  if (d.status === 'confirmed') return ok(designViewV2(d));
   if (!nextStatus(d.mode, d.status, 'confirm') || !d.source_path) {
     return apiError(409, 'invalid_state', d.status === 'generating' ? 'Your preview is still being made.' : `This design is ${d.status} and cannot be confirmed.`);
   }
@@ -26,5 +26,5 @@ export const POST = handle(async (req: Request, ctx: Ctx) => {
     return n;
   });
   wakeWorker();
-  return ok(designView(next));
+  return ok(designViewV2(next));
 });

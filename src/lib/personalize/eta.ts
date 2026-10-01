@@ -1,11 +1,13 @@
 // ETA thật cho job AI (#2): không có "a few seconds", không đứng ở 99%.
 // typical = p75 thời gian chạy (started → finished) của 50 job thành công gần nhất cùng loại + provider;
-// chưa đủ mẫu → settings.ai.mock_ms (mock) hoặc 60 s. eta = phần còn lại của job này + các job đứng trước.
+// chưa đủ mẫu → settings.ai.mock_ms (mock), 180 s (pearl_compare) hoặc 60 s. eta = phần còn lại của job này + các job đứng trước.
 
 export const HISTORY_SIZE = 50;
 export const MIN_SAMPLES = 5;
 export const DEFAULT_REAL_MS = 60_000;
 export const DEFAULT_RENDER_MS = 3_000;
+/** Job pearl_compare (cutout + cảnh theo khách song song, sửa tối đa 1 lần) khi chưa đủ lịch sử. */
+export const DEFAULT_PC_MS = 180_000;
 
 export function quantile(values: number[], q: number): number | null {
   const v = values.filter((x) => Number.isFinite(x) && x >= 0).sort((a, b) => a - b);

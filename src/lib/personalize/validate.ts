@@ -5,6 +5,13 @@ import type { Settings } from '../types';
 import { apiError } from './http';
 import { TransformSchema } from './render';
 
+/** PetTransform (contract.ts): toạ độ pixel template; pearl_compare chuẩn hoá thêm (kẹp vào quad). */
+export const PetTransformSchema = z.object({
+  x: z.number().finite(), y: z.number().finite(),
+  scale: z.number().min(0.01).max(20),
+  rotate: z.number().min(-360).max(360),
+}).strict();
+
 const text = (max: number) => z.string().trim().max(max).transform((v) => v || null).nullable().optional();
 
 export const DesignFields = {
@@ -13,7 +20,8 @@ export const DesignFields = {
   pet_name: text(40),
   notes: text(1000),
   email: z.union([z.literal('').transform(() => null), z.email().max(254)]).nullable().optional(),
-  transform: TransformSchema.nullable().optional(),
+  // v2: PetTransform; design cũ (trước pearl_compare v2): {rotate, zoom, x, y} (render.ts).
+  transform: z.union([PetTransformSchema, TransformSchema.strict()]).nullable().optional(),
 };
 
 export function checkProductVariant(productId: number, variantId: number | null): Response | null {

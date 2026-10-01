@@ -20,7 +20,7 @@
 //   POST /api/personalize/designs/:id/designer        { pet_name?, notes?, email? } → DesignViewV2 (nhánh "Upload
 //                                                       original photo for designers": giữ ảnh gốc, chuyển sang
 //                                                       designer, status in_review; vào giỏ được ngay)
-//   GET  /api/personalize/pc/outputs/[templates/]<file> → ảnh lớp template của pearl_compare (proxy cùng origin, để
+//   GET  /api/personalize/pc/outputs/templates/<file> → ảnh lớp template của pearl_compare (proxy cùng origin, để
 //                                                       canvas không bị taint). Mọi url trong TemplateView đã trỏ về đây.
 import type { DesignView, JobView } from '../types';
 

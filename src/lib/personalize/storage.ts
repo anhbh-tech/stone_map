@@ -2,6 +2,7 @@
 //   uploads/   ảnh gốc khách gửi, đã xoay EXIF + bỏ metadata      → /media/uploads/…  (xoá khi hết hạn, #10)
 //   previews/  ảnh AI bản web (webp)                              → /media/previews/…
 //   mockups/   ảnh treo tường (webp)                              → /media/mockups/…
+//   cutouts/   pet pearl đã tách nền (PNG RGBA) từ pearl_compare   → /media/cutouts/…  (editor v2)
 //   generated/ ảnh AI gốc độ phân giải đầy đủ (nguồn để render in) — không public
 //   print/     file in PNG print_px² 300 dpi                        — không public, chỉ qua /api/admin/designs/:id/print
 // Module khác đọc file bằng storagePath(rel); không tự ghép đường dẫn.
@@ -9,7 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { STORAGE } from '../db';
 
-export const PUBLIC_DIRS = ['uploads', 'previews', 'mockups'] as const;
+export const PUBLIC_DIRS = ['uploads', 'previews', 'mockups', 'cutouts'] as const;
 export type StorageDir = (typeof PUBLIC_DIRS)[number] | 'generated' | 'print';
 
 /** Đường dẫn tuyệt đối từ đường dẫn tương đối đã lưu trong DB. */

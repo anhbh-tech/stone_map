@@ -1,6 +1,7 @@
 // Designs: đọc/ghi bảng designs + máy trạng thái. Module khác (admin, giỏ) import designView / transition từ đây.
 import { db, json } from '../db';
 import type { DesignStatus, DesignView, Preflight } from '../types';
+import type { DesignViewV2, PcDesign } from './contract';
 import { mediaUrl } from './storage';
 
 export type DesignRow = {
@@ -8,6 +9,7 @@ export type DesignRow = {
   style: string | null; pet_name: string | null; notes: string | null; status: DesignStatus; transform: string | null;
   preview_path: string | null; print_path: string | null; mockup_path: string | null; source_path: string | null;
   confirmed_at: string | null; email: string | null; created_at: string; updated_at: string;
+  pc: string | null; cutout_path: string | null;           // v2: JSON PcMeta (engine.ts) + PNG cutout
 };
 export type UploadRow = {
   id: string; path: string; mime: string; width: number; height: number; sha: string; preflight: string;
@@ -90,5 +92,37 @@ export function designView(d: DesignRow, opts: { admin?: boolean } = {}): Design
     mockup_url: mediaUrl(d.mockup_path),
     print_url: opts.admin && d.print_path ? `/api/admin/designs/${encodeURIComponent(d.id)}/print` : null,
     confirmed: d.confirmed_at != null,
+  };
+}
+
+/** Phần v2 (pearl_compare) của design: null khi chưa có kết quả. Đọc designs.pc (PcMeta của engine.ts). */
+export function pcDesign(d: DesignRow): PcDesign | null {
+  const m = json<{ theme: string; template: PcDesign['template']; cutout: { w: number; h: number; default_transform: PcDesign['transform']; bottom_cut: boolean };
+    transform: PcDesign['transform']; pass: boolean | null; why: string[]; scene: boolean; rendered_at: string } | null>(d.pc, null);
+  const cutoutUrl = mediaUrl(d.cutout_path), finalUrl = mediaUrl(d.preview_path);
+  if (!m || !cutoutUrl || !finalUrl) return null;
+  return {
+    theme: m.theme, template: m.template,
+    cutout: { url: cutoutUrl, w: m.cutout.w, h: m.cutout.h, default_transform: m.cutout.default_transform, bottom_cut: m.cutout.bottom_cut },
+    transform: m.transform, final_url: finalUrl, pass: m.pass, why: m.why, scene: m.scene, rendered_at: m.rendered_at,
+  };
+}
+
+/** DesignView + phần v2 cho route personalize (editor PDP). */
+export function designViewV2(d: DesignRow): DesignViewV2 {
+  return { ...designView(d), product_id: d.product_id, theme: d.style, pc: d.mode === 'ai' ? pcDesign(d) : null };
+}
+
+/**
+ * Property ẩn ("_") của dòng giỏ cho design v2: transform + final/cutout/rev ở pearl_compare. Giỏ chép vào cart_lines,
+ * checkout chép sang order_lines → xưởng / admin render lại đúng final khách đã OK. Design cũ / designer: {}.
+ */
+export function designLineProps(designId: string): Record<string, string> {
+  const d = getDesign(designId);
+  const m = d?.mode === 'ai' ? json<{ theme: string; rev: string; final_file: string; cutout_file: string; job: string | null } | null>(d.pc, null) : null;
+  if (!d || !m) return {};
+  return {
+    ...(d.transform ? { _transform: d.transform } : {}),
+    _pc_theme: m.theme, _pc_rev: m.rev, _pc_final: m.final_file, _pc_cutout: m.cutout_file, ...(m.job ? { _pc_job: m.job } : {}),
   };
 }

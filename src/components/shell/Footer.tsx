@@ -33,7 +33,7 @@ export function Footer({ s, shopHref }: { s: Settings; shopHref: string | null }
       ],
     },
   ];
-  const link = 'inline-flex min-h-11 items-center text-sm text-on-primary-muted hover:text-on-primary hover:underline sm:min-h-9';
+  const link = 'inline-flex min-h-11 items-center text-sm text-on-primary-muted hover:text-on-primary hover:underline';
   return (
     // pb lớn dưới 1280px: dock nổi không bao giờ đè link cuối trang (#12).
     <footer className="mt-20 bg-primary pb-24 text-on-primary xl:pb-10">

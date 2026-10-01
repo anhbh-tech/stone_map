@@ -172,3 +172,29 @@ describe('checkout', () => {
     expect(cart.ordersFromCookie('1001.<x>.1002')).toEqual(['1001', '1002']);
   });
 });
+
+describe('cart discount guidance', () => {
+  it('suggests a cheaper PDP code, hides the stale bundle hint once a code wins, and shows the free-shipping gap', () => {
+    db().exec(`DELETE FROM discounts; INSERT INTO discounts (code, kind, value, min_qty, active, show_on_pdp) VALUES
+      ('PEARL2', 'percent', 15, 2, 1, 1), ('PEARL3', 'percent', 20, 3, 1, 1)`);
+    const id = ensureCart(null);
+    addLine(id, { variant_id: 10, qty: 2, design_id: 'DSN-OK0001' }); // 2 × $39.98, bậc 10%
+
+    let v = getCart(id);
+    expect(v.discount_better).toEqual({ code: 'PEARL2', message: 'Code PEARL2 saves you $3.99 more on this cart.' });
+    expect(v.free_shipping_gap_cents).toBe(803);
+
+    cart.applyDiscountCode(id, 'PEARL2');
+    v = getCart(id);
+    expect(v.discount?.code).toBe('PEARL2');
+    expect(v.bundle.hint).toBeNull(); // không còn "Add 1 more to save 15%" khi mã đã cho 15%
+    expect(v.discount_better).toBeNull(); // PEARL3 chưa đủ điều kiện
+    expect(v.free_shipping_gap_cents).toBe(3);
+
+    updateLine(id, v.lines[0].id, 3);
+    v = getCart(id);
+    expect(v.discount_note?.code).toBe('PEARL2'); // 15% = bậc 15% → giữ bậc
+    expect(v.discount_better).toEqual({ code: 'PEARL3', message: 'Code PEARL3 saves you $6.00 more on this cart.' });
+    expect(v.free_shipping_gap_cents).toBeNull();
+  });
+});

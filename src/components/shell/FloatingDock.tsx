@@ -5,12 +5,14 @@ import { Icon } from './Icon';
 /**
  * Nút nổi DUY NHẤT của storefront (#12): gom về góc phải dưới, không popup, không chat widget.
  * - Dưới 1280px (nội dung tràn gần mép phải): ẩn hẳn khi ở đầu trang hoặc đang cuộn xuống → không che nội dung; hiện khi cuộn ngược lên.
+ * - Dưới 1280px cũng ẩn khi khách đang gõ vào ô nhập (vd. tên thú cưng ở PDP): dock không đè lên ô đang dùng.
  * - Từ 1280px (lề hai bên rộng hơn dock): nút Help luôn có, "Back to top" hiện sau khi cuộn.
  * Trang có thanh dính ở đáy (vd. PDP) đặt `--dock-offset` trên <body>/<main> để đẩy dock lên trên thanh đó.
  */
 export function FloatingDock({ supportEmail }: { supportEmail: string }) {
   const [scrolled, setScrolled] = useState(false);
   const [up, setUp] = useState(false);
+  const [typing, setTyping] = useState(false);
 
   useEffect(() => {
     let last = window.scrollY;
@@ -23,11 +25,16 @@ export function FloatingDock({ supportEmail }: { supportEmail: string }) {
         if (Math.abs(y - last) > 8) { setUp(y < last); last = y; }
       });
     };
+    const field = (t: EventTarget | null) => t instanceof Element && t.matches('input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select');
+    const onIn = (e: FocusEvent) => setTyping(field(e.target));
+    const onOut = () => setTyping(false);
     addEventListener('scroll', onScroll, { passive: true });
-    return () => { removeEventListener('scroll', onScroll); cancelAnimationFrame(raf); };
+    addEventListener('focusin', onIn);
+    addEventListener('focusout', onOut);
+    return () => { removeEventListener('scroll', onScroll); removeEventListener('focusin', onIn); removeEventListener('focusout', onOut); cancelAnimationFrame(raf); };
   }, []);
 
-  const mobileShown = scrolled && up;
+  const mobileShown = scrolled && up && !typing;
   const btn = 'size-12 items-center justify-center rounded-full border border-border bg-card text-card-foreground shadow-md transition-colors hover:bg-muted';
   return (
     <div

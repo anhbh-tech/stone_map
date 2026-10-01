@@ -220,8 +220,11 @@ test('performance: home < 40 requests, 0 third-party, tracking via /api/events (
   expect(requests.filter((u) => new URL(u).origin !== origin)).toEqual([]);
   const scripts = await page.locator('script[src]').evaluateAll((els) => els.map((e) => (e as HTMLScriptElement).src));
   expect(scripts.filter((s) => new URL(s).origin !== origin)).toEqual([]);
-  // Ảnh qua next/image: có alt, width/height.
-  const imgs = await page.locator('main img').evaluateAll((els) => els.map((e) => ({ alt: e.getAttribute('alt'), w: e.getAttribute('width'), h: e.getAttribute('height'), src: e.getAttribute('src') })));
+  // Ảnh qua next/image: có alt, và width/height — hoặc `fill` trong khung đã có tỉ lệ (thẻ sản phẩm aspect-square): cả hai đều không gây CLS.
+  const imgs = await page.locator('main img').evaluateAll((els) => els.map((e) => {
+    const fill = e.getAttribute('data-nimg') === 'fill' && (e.parentElement?.getBoundingClientRect().height ?? 0) > 0;
+    return { alt: e.getAttribute('alt'), w: fill || e.getAttribute('width'), h: fill || e.getAttribute('height'), src: e.getAttribute('src') };
+  }));
   expect(imgs.length).toBeGreaterThan(0);
   for (const i of imgs) {
     expect(i.alt).toBeTruthy();

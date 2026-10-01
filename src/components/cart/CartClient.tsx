@@ -63,7 +63,7 @@ export function CartClient({ initial, shopHref }: { initial: CartView; shopHref:
           <p role="status" data-testid="bundle-hint" className="mb-4 flex flex-wrap items-center gap-2 rounded-md bg-muted px-4 py-3 text-sm">
             <Icon name="tag" size={18} />
             <span>{[view.bundle.saving, view.bundle.hint].filter(Boolean).join(' · ')}</span>
-            {view.bundle.hint && <Link href={shopHref} className="font-semibold text-foreground underline underline-offset-2">Create another portrait</Link>}
+            {view.bundle.hint && <Link href={shopHref} className="inline-flex min-h-11 items-center font-semibold text-foreground underline underline-offset-2">Create another portrait</Link>}
           </p>
         )}
         <ul data-testid="cart-lines" aria-busy={busy} className="divide-y divide-border rounded-[var(--radius)] border border-border bg-card">
@@ -86,13 +86,15 @@ export function CartClient({ initial, shopHref }: { initial: CartView; shopHref:
       </div>
       <aside aria-label="Order summary" className="h-fit rounded-[var(--radius)] border border-border bg-card p-5 lg:sticky lg:top-6">
         <h2 className="text-2xl font-semibold">Summary</h2>
-        <DiscountCode applied={view.discount} error={view.discount_error} note={view.discount_note} onView={(v) => { setView(v); announceCartCount(v.count); }} />
+        <DiscountCode applied={view.discount} error={view.discount_error} note={view.discount_note} better={view.discount_better} onView={(v) => { setView(v); announceCartCount(v.count); }} />
         <Summary totals={view.totals} addons={view.addons.filter((a) => a.on)} shippingNote="Standard. Express is available at checkout." code={view.discount} />
         <Link href="/checkout" aria-disabled={busy}
           className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-accent px-6 font-semibold text-on-accent transition-colors hover:bg-accent-hover">
           <Icon name="lock" size={18} /> Checkout
         </Link>
-        <p className="mt-3 text-center text-xs text-muted-foreground">{view.shipping_headline}</p>
+        <p data-testid="free-shipping" className="mt-3 text-center text-xs text-muted-foreground">
+          {view.free_shipping_gap_cents ? <>Add <strong className="font-semibold text-foreground">{fmt(view.free_shipping_gap_cents)}</strong> more for free shipping.</> : view.shipping_headline}
+        </p>
       </aside>
     </div>
     </>
@@ -113,7 +115,7 @@ function Line({ line: l, busy, onQty, onRemove }: { line: CartLineView; busy: bo
       )}
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <p className="font-semibold">{l.product_title}</p>
+          <Link href={`/products/${l.product_handle}`} className="font-semibold underline-offset-4 hover:underline">{l.product_title}</Link>
           <p className="font-semibold">{fmt(l.line_cents)}</p>
         </div>
         <p className="text-sm text-muted-foreground">Size {l.size} in · {fmt(l.unit_cents)} each</p>
@@ -155,7 +157,7 @@ function Addon({ addon: a, onChange }: { addon: CartAddonView; onChange: (on: bo
           <label htmlFor={`${id}-text`} className="text-sm font-medium">Message{a.text_free ? ' (free)' : ''}</label>
           <textarea id={`${id}-text`} maxLength={300} rows={2} value={text} onChange={(e) => setText(e.target.value)}
             onBlur={() => { if (text !== (a.text ?? '')) onChange(true, text); }}
-            className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2" />
+            className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2" />
           <p className="text-xs text-muted-foreground">{300 - text.length} characters left · saved when you leave the field</p>
         </div>
       )}

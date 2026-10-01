@@ -154,7 +154,7 @@ test('codes never stack with the multi-portrait discount: the larger one applies
   await box.getByRole('button', { name: 'Apply' }).click();
   await expect(page.getByTestId('code-discount')).toContainText('Discount E2EBIG30');
   await expect(totals).not.toContainText('Multi-portrait discount');
-  await expect(page.getByTestId('bundle-hint')).not.toContainText('multi-portrait discount applied');
+  await expect(page.getByTestId('bundle-hint').filter({ hasText: 'multi-portrait discount applied' })).toHaveCount(0); // mã thắng: gợi ý bậc ẩn hẳn
   const [{ price }] = sql<{ price: number }>('SELECT price_cents price FROM variants WHERE id = ?', variant);
   const cents = Number((await page.getByTestId('total').innerText()).replace(/[^\d]/g, ''));
   const shipping = await totals.innerText();

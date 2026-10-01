@@ -9,7 +9,7 @@ import { fmt } from './money';
 import { newId } from './ids';
 import { mediaUrl } from './personalize/storage'; // quy tắc /media của crew B: chỉ uploads/previews/mockups công khai
 import { visibleProps, type DesignStatus, type LineProperties, type Settings } from './types';
-import { discountSummary, discountUses, evaluateDiscount, findDiscount, rejectionMessage } from './discounts';
+import { discountSummary, discountUses, evaluateDiscount, findDiscount, pdpCodes, rejectionMessage } from './discounts';
 
 export const CART_COOKIE = 'cart_id';
 export const ORDERS_COOKIE = 'pa_orders';
@@ -50,7 +50,11 @@ export type CartView = {
   discount_error: { code: string; message: string } | null;
   /** Mã hợp lệ nhưng không lợi hơn giảm giá theo số lượng: giữ giảm theo số lượng, báo khách (không chặn checkout). */
   discount_note: { code: string; message: string } | null;
+  /** Mã hiện trên PDP đủ điều kiện và rẻ hơn tổng hiện tại (kể cả khi đang áp mã khác): gợi ý đổi, không tự áp. */
+  discount_better: { code: string; message: string } | null;
   shipping_headline: string;
+  /** Còn thiếu bao nhiêu (tiền hàng sau giảm theo số lượng) để được free ship standard; null khi đã free / không có ngưỡng. */
+  free_shipping_gap_cents: number | null;
 };
 
 /** "Add 1 more to save 15%" — gợi ý bậc giảm kế tiếp từ bundleFor(). */
@@ -119,6 +123,7 @@ export function getCart(id: string | null | undefined, method: ShippingMethod = 
   const code = stored && lines.length ? applyCode(stored, base, totals(priced, on, [], s, method), qty) : { t: { ...base, code_discount_cents: 0 }, discount: null, error: null, note: null };
   const t = code.t;
   const bundle = bundleHint(qty, tiers);
+  const better = lines.length ? betterCode(stored, t.total_cents, base, totals(priced, on, [], s, method), qty) : null;
   return {
     id: cid,
     count: qty,
@@ -134,12 +139,15 @@ export function getCart(id: string | null | undefined, method: ShippingMethod = 
       id: a.id, handle: a.handle, title: a.title, description: a.description, kind: a.kind, price_cents: a.price_cents,
       text_input: !!a.text_input, text_free: !!a.text_free, on: !!a.selected, text: a.text,
     })),
-    bundle: t.discount_cents ? bundle : { ...bundle, saving: null }, // mã thắng → không nói "đã áp giảm theo số lượng"
+    // Mã thắng → không nói "đã áp giảm theo số lượng", cũng không gợi ý bậc số lượng (mã đã thay nó).
+    bundle: code.discount ? { ...bundle, saving: null, hint: null } : t.discount_cents ? bundle : { ...bundle, saving: null },
     totals: t,
     discount: code.discount,
     discount_error: code.error,
     discount_note: code.note,
+    discount_better: better,
     shipping_headline: shippingHeadline(s),
+    free_shipping_gap_cents: freeShippingGap(t, !!code.discount, method, s),
   };
 }
 
@@ -147,6 +155,25 @@ type Msg = { code: string; message: string };
 type CodeResult = { t: CartTotals; discount: AppliedCode | null; error: Msg | null; note: Msg | null };
 
 export const NOT_BETTER = 'Your bundle discount is already better, so we kept it. Codes don’t combine with the multi-portrait discount.';
+
+/** Cùng ngưỡng với pricing.totals(): tiền hàng = subtotal trừ giảm theo số lượng (khi có mã thì không có giảm đó). */
+function freeShippingGap(t: CartTotals, coded: boolean, method: ShippingMethod, s: Settings) {
+  const over = s.shipping.free_over_cents;
+  if (method !== 'standard' || over == null || t.shipping_cents === 0) return null;
+  const gap = over - (t.subtotal_cents - (coded ? 0 : t.discount_cents));
+  return gap > 0 ? gap : null;
+}
+
+/** Mã PDP rẻ nhất cho giỏ này, nếu nó rẻ hơn `current` (tổng đang tính, có hoặc không có mã). */
+function betterCode(stored: string | null, current: number, bundled: Totals, plain: Totals, qty: number): Msg | null {
+  let best: { code: string; total: number } | null = null;
+  for (const { code } of pdpCodes()) {
+    if (code === stored) continue;
+    const r = applyCode(code, bundled, plain, qty);
+    if (r.discount && r.t.total_cents < (best?.total ?? current)) best = { code, total: r.t.total_cents };
+  }
+  return best && { code: best.code, message: `Code ${best.code} saves you ${fmt(current - best.total)} more on this cart.` };
+}
 
 /**
  * Tính lại mã trên Totals của server. Không cộng dồn (quyết định của captain): so "chỉ giảm theo số lượng" (`bundled`)

@@ -16,7 +16,7 @@ export function BulkDiscounts() {
         <p className="mt-0.5 text-sm text-muted-foreground">Enter the code in your cart or at checkout.</p>
       </div>
       <table className="w-full text-sm">
-        <thead className="bg-accent-hover text-on-accent">
+        <thead className="bg-muted text-foreground">
           <tr>
             <th scope="col" className={`${cell} font-semibold`}>Spend</th>
             <th scope="col" className={`${cell} font-semibold`}>Get</th>

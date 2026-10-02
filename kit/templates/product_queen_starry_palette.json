@@ -9,87 +9,62 @@
  "reservedForPet": 2,
  "productTarget": 13,
  "productHard": 15,
- "method": "merge",
+ "method": "greedy",
  "lock": [
   "L16"
  ],
+ "crystal": "Z1",
+ "crystalTried": [
+  {
+   "code": "Z1",
+   "total": 158121
+  },
+  {
+   "code": "D1",
+   "total": 158558
+  },
+  {
+   "code": "W1",
+   "total": 158891
+  },
+  {
+   "code": "Q101",
+   "total": 159112
+  },
+  {
+   "code": "Q081",
+   "total": 159127
+  },
+  {
+   "code": "Q102",
+   "total": 159144
+  },
+  {
+   "code": "Q138",
+   "total": 159200
+  }
+ ],
  "codes": [
-  "M029",
-  "S082",
-  "X039",
-  "L4",
-  "5",
-  "Z16",
-  "L94",
-  "L16",
+  "Z1",
   "L47",
-  "L50",
-  "L37"
+  "M063",
+  "L16",
+  "X039",
+  "S082",
+  "5",
+  "L37",
+  "L4",
+  "L94",
+  "L50"
  ],
  "entries": [
   {
-   "code": "M029",
-   "kind": "stone",
-   "shape": "marquise",
-   "physMm": "4x8",
-   "hex": "#DCDFE0",
-   "name": ""
-  },
-  {
-   "code": "S082",
-   "kind": "stone",
-   "shape": "teardrop",
-   "physMm": "8x13",
-   "hex": "#E7E9EE",
-   "name": ""
-  },
-  {
-   "code": "X039",
-   "kind": "stone",
-   "shape": "heart",
-   "physMm": "12x12",
-   "hex": "#8B1F23",
-   "name": "deep red"
-  },
-  {
-   "code": "L4",
-   "kind": "stone",
-   "shape": "round",
-   "physMm": 2.8,
-   "hex": "#C51E2A",
-   "name": "red"
-  },
-  {
-   "code": "5",
-   "kind": "pearl",
-   "shape": "round",
-   "physMm": 5,
-   "hex": "#EDE9E2",
-   "name": "pearl white"
-  },
-  {
-   "code": "Z16",
+   "code": "Z1",
    "kind": "stone",
    "shape": "round",
    "physMm": 4,
-   "hex": "#C8952F",
-   "name": "gold amber"
-  },
-  {
-   "code": "L94",
-   "kind": "stone",
-   "shape": "round",
-   "physMm": 2.8,
-   "hex": "#EFEDEA",
-   "name": "opaque white"
-  },
-  {
-   "code": "L16",
-   "kind": "stone",
-   "shape": "round",
-   "physMm": 2.8,
-   "hex": "#C8952F",
-   "name": "gold amber"
+   "hex": "#F2F2F2",
+   "name": "clear / crystal"
   },
   {
    "code": "L47",
@@ -100,12 +75,44 @@
    "name": "royal blue"
   },
   {
-   "code": "L50",
+   "code": "M063",
+   "kind": "stone",
+   "shape": "marquise",
+   "physMm": "6x12",
+   "hex": "#DCDCDE",
+   "name": ""
+  },
+  {
+   "code": "L16",
    "kind": "stone",
    "shape": "round",
    "physMm": 2.8,
-   "hex": "#2E2C9E",
-   "name": "deep blue"
+   "hex": "#C8952F",
+   "name": "gold amber"
+  },
+  {
+   "code": "X039",
+   "kind": "stone",
+   "shape": "heart",
+   "physMm": "12x12",
+   "hex": "#8B1F23",
+   "name": "deep red"
+  },
+  {
+   "code": "S082",
+   "kind": "stone",
+   "shape": "teardrop",
+   "physMm": "8x13",
+   "hex": "#E7E9EE",
+   "name": ""
+  },
+  {
+   "code": "5",
+   "kind": "pearl",
+   "shape": "round",
+   "physMm": 5,
+   "hex": "#EDE9E2",
+   "name": "pearl white"
   },
   {
    "code": "L37",
@@ -114,9 +121,33 @@
    "physMm": 2.8,
    "hex": "#8EB9E8",
    "name": "light blue"
+  },
+  {
+   "code": "L4",
+   "kind": "stone",
+   "shape": "round",
+   "physMm": 2.8,
+   "hex": "#C51E2A",
+   "name": "red"
+  },
+  {
+   "code": "L94",
+   "kind": "stone",
+   "shape": "round",
+   "physMm": 2.8,
+   "hex": "#EFEDEA",
+   "name": "opaque white"
+  },
+  {
+   "code": "L50",
+   "kind": "stone",
+   "shape": "round",
+   "physMm": 2.8,
+   "hex": "#2E2C9E",
+   "name": "deep blue"
   }
  ],
- "rule": "min Σ chi phí theo số viên: cùng lớp (vật liệu, cỡ, hình) = ΔE00 tới màu mục tiêu; tròn thu nhỏ cùng tính-ngọc = ΔE + 20 (chỗ đó lấp lưới 2.8); đá trắng tròn ≥ 4 mm → ngọc trai trắng cỡ ≤ = ΔE + 12; hình thu nhỏ cùng hình = ΔE + 100·TB|ln tỉ lệ cạnh|; viên có hình đã duyệt luôn giữ hình (bắt buộc 1 mã mỗi hình)",
+ "rule": "min Σ chi phí theo số viên: cùng lớp (vật liệu, cỡ, hình) = ΔE00 tới màu mục tiêu; tròn thu nhỏ cùng tính-ngọc = ΔE + 20 + 2/mm thu (chỗ đó lấp lưới 2.8); đá trắng tròn ≥ 4 mm → ngọc trai trắng cỡ ≤ = ΔE + 12 (cấm khi có mã pha lê --crystal); hình thu nhỏ cùng hình = ΔE + 100·TB|ln tỉ lệ cạnh|; viên có hình đã duyệt luôn giữ hình (bắt buộc 1 mã mỗi hình)",
  "before": {
   "union": 17,
   "layers": {
@@ -168,7 +199,7 @@
      "L4": 1212
     },
     "meanDE": 11.83,
-    "meanCost": 12.66
+    "meanCost": 12.74
    },
    "starry": {
     "codes": [
@@ -197,40 +228,41 @@
  "after": {
   "queen": {
    "stones": 3520,
-   "keptClass": 3316,
+   "keptClass": 3231,
    "reclass": {
-    "base marquise 9x18 → M029 4x8": 4,
-    "base marquise 6x12 → M029 4x8": 12,
+    "base marquise 9x18 → M063 6x12": 4,
+    "base marquise 4x8 → Z1 4": 4,
+    "base marquise 4x8 → 5 5": 1,
     "facet 8 → L4 2.8": 6,
     "pearl 7 → 5 5": 4,
     "pearl 6 → 5 5": 12,
-    "facet 10 → 5 5": 2,
-    "facet 8 → 5 5": 18,
+    "gold 4 → L16 2.8": 113,
+    "gold 4 → L94 2.8": 25,
+    "facet 10 → Z1 4": 2,
+    "facet 8 → Z1 4": 18,
     "pearl 8 → 5 5": 2,
-    "base 4 → L94 2.8": 47,
-    "base 6 → 5 5": 22,
-    "base 5 → 5 5": 8,
+    "base 6 → Z1 4": 22,
+    "base 5 → Z1 4": 8,
     "pearl 14 → 5 5": 1,
-    "gold 6 → Z16 4": 12,
-    "gold 5 → Z16 4": 46,
+    "gold 6 → L16 2.8": 12,
+    "gold 5 → L16 2.8": 45,
+    "gold 5 → Z1 4": 1,
     "base 4 → L4 2.8": 5,
-    "base 4 → L37 2.8": 2,
-    "base 4 → L16 2.8": 1
+    "gold 4 → L4 2.8": 4
    },
    "uncovered": 0,
    "byCode": {
-    "5": 152,
-    "M029": 21,
+    "5": 103,
+    "M063": 16,
     "S082": 2,
     "X039": 3,
-    "L4": 1218,
-    "Z16": 200,
-    "L94": 469,
-    "L16": 1453,
-    "L37": 2
+    "Z1": 105,
+    "L4": 1222,
+    "L16": 1622,
+    "L94": 447
    },
-   "meanDE": 11.83,
-   "meanCost": 13.01
+   "meanDE": 11.84,
+   "meanCost": 13.83
   },
   "starry": {
    "stones": 11759,
@@ -263,10 +295,10 @@
     "L50",
     "L37"
    ],
-   "total": 155250,
+   "total": 155655,
    "queen": {
     "meanDE": 11.83,
-    "meanCost": 13.01,
+    "meanCost": 13.13,
     "reclass": 204
    },
    "starry": {
@@ -276,6 +308,32 @@
    }
   },
   "greedy": {
+   "codes": [
+    "Z1",
+    "L47",
+    "M063",
+    "L16",
+    "X039",
+    "S082",
+    "5",
+    "L37",
+    "L4",
+    "L94",
+    "L50"
+   ],
+   "total": 158121,
+   "queen": {
+    "meanDE": 11.84,
+    "meanCost": 13.83,
+    "reclass": 289
+   },
+   "starry": {
+    "meanDE": 9.31,
+    "meanCost": 9.31,
+    "reclass": 0
+   }
+  },
+  "greedyNoCrystal": {
    "codes": [
     "L47",
     "M063",
@@ -289,10 +347,10 @@
     "L50",
     "L74"
    ],
-   "total": 151314,
+   "total": 152199,
    "queen": {
     "meanDE": 11.54,
-    "meanCost": 13.41,
+    "meanCost": 13.66,
     "reclass": 339
    },
    "starry": {
@@ -648,7 +706,7 @@
    }
   }
  },
- "createdAt": "2026-10-02T08:13:21.651Z",
+ "createdAt": "2026-10-02T08:39:46.054Z",
  "apiCalls": 0,
  "rebuild": "node tools/product_palette.mjs"
 }

@@ -101,7 +101,7 @@ Thứ tự: P0 trước. Sau đó P1 và P2 chạy song song (KIT-16 và KIT-17 
 
 ## 4. Cần captain chốt
 
-1. **Code mới:** đã chốt tạm `lib/stonemap/` trong pearl_compare, tách ra repo riêng ở P5 khi ranh giới service đã rõ.
+1. **Code mới:** đã tách ra repo riêng `stone_map` (GitLab refiny/stone_map), chỉ gồm phần map đá.
 2. **CRM nào, và delivery link lưu ở đâu** (S3/R2 hay server riêng).
 3. **Mức của mockup 3D** (tạm làm ảnh tĩnh có bóng):
    - ảnh tĩnh có bóng đổ là đủ, hay

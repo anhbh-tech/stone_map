@@ -25,13 +25,15 @@ export function scoreSvg(file) {
   const d = readKitSvg(fs.readFileSync(file, 'utf8')), S = d.canvas.widthPx / 3543;
   return { file: path.relative(ROOT, file), ...scoreStones(d.stones.map((s) => ({ x: s.x / S, y: s.y / S, code: s.code }))) };
 }
-// stones: [{ x, y (px trên 3543), code }]
-export function scoreStones(list) {
-  const stones = list.map((s) => { const e = entryOf(s.code, cat); return { x: s.x, y: s.y, code: s.code, physMm: e.physMm, mat4: mat4Of(s.code), shape: e.shape || 'round' }; });
+// stones: [{ x, y (px trên 3543), code }] hoặc chưa có mã [{ x, y, mat4, physMm, shape }] (KIT-20 chấm mức hạt)
+// hình: GT oval / square → round (catalog không có), so với hình mã (hoặc hình hạt)
+const shapeN = (sh) => ({ oval: 'round', square: 'round' }[sh] || sh || 'round');
+export function scoreStones(list, { minGtMm = 0 } = {}) { // minGtMm: chỉ hạt GT vẽ ≥ cỡ này (measuredMm), vd 2 = bỏ hạt li ti ~1 mm
+  const stones = list.map((s) => { const e = s.code ? entryOf(s.code, cat) : null; return { x: s.x, y: s.y, code: s.code, physMm: s.physMm ?? e.physMm, mat4: s.mat4 ?? mat4Of(s.code), shape: shapeN(s.shape ?? e?.shape) }; });
   const out = { tiles: {} };
-  const tot = { gt: 0, map: 0, matched: 0, mat: 0, size: 0, big: 0, bigMatched: 0, bigMat: 0, bigSize: 0 };
+  const tot = { gt: 0, map: 0, matched: 0, mat: 0, size: 0, shape: 0, big: 0, bigMatched: 0, bigMat: 0, bigSize: 0, gold: 0, goldMatched: 0, goldOk: 0 };
   for (const id of TILES) {
-    const gt = JSON.parse(fs.readFileSync(path.join(GT, `${id}.json`), 'utf8')), t = gt.tile, G = gt.stones;
+    const gt = JSON.parse(fs.readFileSync(path.join(GT, `${id}.json`), 'utf8')), t = gt.tile, G = gt.stones.filter((g) => (g.measuredMm ?? g.physMm) >= minGtMm);
     const D = stones.filter((s) => s.x >= t.x && s.y >= t.y && s.x < t.x + t.w && s.y < t.y + t.h), pairs = [];
     D.forEach((p, i) => G.forEach((g, j) => { const dd = Math.hypot(p.x - g.x, p.y - g.y); if (dd < 0.5 * Math.max(1.5, g.measuredMm || g.physMm) * PPM) pairs.push([dd, i, j]); }));
     pairs.sort((a, b) => a[0] - b[0]);
@@ -42,14 +44,20 @@ export function scoreStones(list) {
     const big = G.filter((g) => g.physMm >= 4), bm = mt.filter(([, g]) => g.physMm >= 4);
     const r = { gt: G.length, checked: !!gt.checked, map: D.length, matched: mt.length, recall: pc(mt.length, G.length), precision: pc(mt.length, D.length),
       materialOk: pc(mt.filter(([p, g]) => p.mat4 === g.mat4).length, mt.length), sizeOk: pc(mt.filter(([p, g]) => p.physMm === g.physMm).length, mt.length),
+      shapeOk: pc(mt.filter(([p, g]) => p.shape === shapeN(g.shape)).length, mt.length),
       gt4mm: { n: big.length, recall: pc(bm.length, big.length), materialOk: pc(bm.filter(([p, g]) => p.mat4 === g.mat4).length, bm.length), sizeOk: pc(bm.filter(([p, g]) => p.physMm === g.physMm).length, bm.length) },
       wrong: Object.fromEntries(Object.entries(conf).sort((a, b) => b[1] - a[1]).slice(0, 8)) };
     out.tiles[id] = r;
-    tot.gt += G.length; tot.map += D.length; tot.matched += mt.length; tot.mat += mt.filter(([p, g]) => p.mat4 === g.mat4).length; tot.size += mt.filter(([p, g]) => p.physMm === g.physMm).length;
+    tot.gt += G.length; tot.map += D.length; tot.matched += mt.length; tot.mat += mt.filter(([p, g]) => p.mat4 === g.mat4).length; tot.size += mt.filter(([p, g]) => p.physMm === g.physMm).length; tot.shape += mt.filter(([p, g]) => p.shape === shapeN(g.shape)).length;
+    // hạt vàng GT (chuỗi / viền vàng): bao nhiêu được tìm thấy và gắn đúng vàng
+    const gG = G.filter((g) => g.mat4 === 'gold'), gm = mt.filter(([, g]) => g.mat4 === 'gold');
+    r.gold = { n: gG.length, found: gm.length, labelledGold: gm.filter(([p]) => p.mat4 === 'gold').length };
+    tot.gold += gG.length; tot.goldMatched += gm.length; tot.goldOk += r.gold.labelledGold;
     tot.big += big.length; tot.bigMatched += bm.length; tot.bigMat += bm.filter(([p, g]) => p.mat4 === g.mat4).length; tot.bigSize += bm.filter(([p, g]) => p.physMm === g.physMm).length;
   }
-  out.total = { gt: tot.gt, map: tot.map, recall: pc(tot.matched, tot.gt), precision: pc(tot.matched, tot.map), materialOk: pc(tot.mat, tot.matched), sizeOk: pc(tot.size, tot.matched),
-    gt4mm: { n: tot.big, recall: pc(tot.bigMatched, tot.big), materialOk: pc(tot.bigMat, tot.bigMatched), sizeOk: pc(tot.bigSize, tot.bigMatched) } };
+  out.total = { gt: tot.gt, map: tot.map, recall: pc(tot.matched, tot.gt), precision: pc(tot.matched, tot.map), materialOk: pc(tot.mat, tot.matched), sizeOk: pc(tot.size, tot.matched), shapeOk: pc(tot.shape, tot.matched),
+    gt4mm: { n: tot.big, recall: pc(tot.bigMatched, tot.big), materialOk: pc(tot.bigMat, tot.bigMatched), sizeOk: pc(tot.bigSize, tot.bigMatched) },
+    gold: { n: tot.gold, found: tot.goldMatched, labelledGold: tot.goldOk } };
   return out;
 }
 if (import.meta.url === `file://${process.argv[1]}`) {

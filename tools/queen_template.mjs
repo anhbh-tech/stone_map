@@ -170,7 +170,8 @@ if (codePool) report.palette = { file: path.relative(ROOT, palFile), codes: code
 for (const s of big.stones) { report.big.byShape[s.shape] = (report.big.byShape[s.shape] || 0) + 1; report.big.byCode[s.code] = (report.big.byCode[s.code] || 0) + 1; }
 const meta = { schema: 'pearl-kit-template/1', name: NAME, source: path.basename(SRC), canvasMm: MM, widthPx: W, heightPx: H, pxPerMm: +ppm.toFixed(4),
   mask: { file: path.basename(F.mask), legend: { background: '#000000', costume: '#FFFFFF', petFace: '#FF0000' }, petFaceBoxMm: faceBoxMm },
-  big: path.basename(F.big), costume: {}, rebuild: 'node tools/queen_template.mjs' };
+  big: path.basename(F.big), ...(codePool && { palette: path.relative(TPL, palFile), bigRemap: Object.fromEntries(remap.filter((m) => m.to !== m.from).map((m) => [m.id, m.to])) }),
+  costume: {}, rebuild: 'node tools/queen_template.mjs' };
 const pmZoom = [];
 for (const v of variants) {
   const r = mapCostume(img, { canvasMm: MM, cat, fgMask, bigFixed, border: v, ...(codePool && { codePool }), ...opt }), dir = path.join(OUT, v);

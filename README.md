@@ -22,7 +22,7 @@ Thước đo chính là **bản máy làm phải đúng nhất có thể so vớ
 | Giai đoạn | Nội dung | Trạng thái |
 |---|---|---|
 | P0 | `design.json` 3 layer, catalog có version, QC dạng plugin, SVG đọc và ghi 2 chiều | ✅ Ghi rồi đọc lại Snowman/Dachshund thật **không lệch viên nào** |
-| P1 | Template background Starry (đính kín) và trang phục Queen (map 1 lần) | 🟡 Starry: 11.759 viên, phủ 80,5%. Queen: đang làm KIT-20 (mỗi hạt vẽ thành 1 viên, dùng SAM2) |
+| P1 | Template background Starry (đính kín) và trang phục Queen (map 1 lần) | 🟡 Starry: 11.759 viên, phủ 80,5%. Queen: KIT-20 xong bản đầu (mỗi hạt vẽ thành 1 viên, SAM2), chờ chốt tim 19 mm / viền vàng ~1 mm / ngọc < 5 mm |
 | P2 | Layer pet mỗi order, không gọi API | 🟡 Điểm bench 46,5 → 66,1; pet chỉ thêm ≤ 2 mã mới |
 | P3 | Ghép 3 layer, đếm theo layer, BOM + legend, mockup | 🟡 Có pipeline; chờ template Queen bản KIT-20 |
 | P4–P6 | Màn QC designer, delivery link + CRM, mở rộng | ⏸ Chưa làm |
@@ -138,6 +138,7 @@ layer pet (mỗi order, $0 API) ────┘
 | Layer pet trên ô mặt Queen | `node tools/pet_kit19.mjs` |
 | Chấm DETECT / PET với sản phẩm thật | `node tools/bench_kit_real.mjs [--modes pet]` |
 | Chấm template với đáp án tay Queen (KIT-15) | `node tools/score_template_gt.mjs` · `node tools/queen_gt.mjs build` |
+| Trang phục Queen, mỗi hạt vẽ = 1 viên (KIT-20: SAM2 + chuỗi vàng, xem `docs/KIT-20.md`) | `python tools/kit20_segment.py` → `python tools/kit20_chain.py` → `node tools/kit20.mjs --seg … --chain …` |
 | Ảnh soát ký hiệu (ảnh gốc + viền mảnh + ký hiệu, không thay bằng viên giả) | `node tools/kit_review_overlay.mjs <map.svg> <ảnh nguồn> <out.svg>` |
 | VLM (trả phí, có trần USD trong `outputs/kit-vlm/calls.jsonl`) | `node --env-file=.env tools/vlm_tiers.mjs big\|mid\|count\|label <ảnh> --run` |
 
@@ -168,7 +169,7 @@ Biến môi trường:
 | Pet (KIT-17) | điểm (F1 + mã + cỡ)/3: 46,5 → 66,1; đúng mã 55/83% |
 | Background Starry | 11.759 viên 2.8 mm, phủ 80,5% (trần lục giác ~82%), 5 mã |
 | Bảng mã chung nền + Queen | 17 → 11–12 mã (gộp greedy, có thêm mã pha lê) |
-| Trang phục Queen, tách từng hạt (KIT-20, đo trên 3 ô đáp án) | hạt ≥ 2 mm: recall 62,5%, đúng vật liệu 74,5% |
+| Trang phục Queen, mỗi hạt = 1 viên (KIT-20, toàn ảnh) | 3.465 hạt → 1.949 viên, phủ 43%, 13 mã chung; trên 3 ô đáp án (hạt ≥ 2 mm): recall 39,8%, precision 56,5%, vật liệu 65,7%, cỡ 51,4%, hình 88,6% |
 
 Lịch sử thí nghiệm và bảng trước/sau: `docs/KIT-DATA.md` §7–8, `docs/STONEMAP.md`, `docs/KIT-RESEARCH.md`.
 

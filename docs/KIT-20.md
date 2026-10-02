@@ -178,3 +178,74 @@ Viên GT vẽ ≥ 2 mm (3 ô) recall / vật liệu / cỡ:
 Hạt GT ≥ 2 mm: 60.2 / 77.4 / 35.8 (KIT-21 53.4 / 72.3 / 38.3). Vàng GT: 18 / 166 có viên (KIT-21 12), 17 nhãn vàng. Bảng mã
 union 13 (Queen 12), sản phẩm 15, check ok, phủ 44.2 %. Nudge 0.5 (trần captain) tăng recall nhưng cỡ 50.0 < 51.4 (KIT-20) →
 mặc định 0.2. `--alt-nudge` (nudge cả mã đổi vật liệu) chủ yếu thêm ngọc→trắng nên hạ vật liệu.
+
+## KIT-23 — gán nhãn MRF / Potts trên đồ thị viên (captain msg 018)
+
+`node tools/kit20.mjs --seg outputs/kit/kit20/seg_sam_all.json --chain outputs/kit/kit20/chain_all.json --out outputs/kit/kit23
+--before outputs/kit/kit23/before/neigh_summary.json` (trước = `--kit22`, cùng lệnh → `outputs/kit/kit23/before`; 212 s, $0 API).
+Thay các bước vá nhãn riêng bằng 1 bài toán: node = viên, nhãn = mã trong bảng (mã ⇒ chất liệu / hình / cỡ catalog),
+E = Σ U + Σ w·[l_i ≠ l_j], giải bằng alpha-expansion (`lib/kit/potts.js`, Dinic max-flow; test brute-force 40 đồ thị 6 nút
+trong `tools/test_kit.mjs`: tối ưu 299/300 ở thử nghiệm dev, tệ nhất 1.06×; ICM tệ hơn ở 147/300). Giữ KIT-22: vị trí vẽ,
+nudge ≤ 0.2 mm.
+
+- Unary: `stoneCost / 20` (ΔE tới catalog + hình) + α·(0.5 + conf) khi đổi chất liệu (α 3; conf ≥ 0.8 cho viên trong chuỗi /
+  motif) + `--mrf-size`·|ln(cỡ đo / cỡ mã)| + chặn cỡ (cap): viên to hơn chỗ trống tới láng giềng mạnh cùng chất liệu
+  (2·(D − khe + nudge) − cỡ láng giềng) bị phạt 1 + κ·mm (κ 2), chỉ khi có mã cùng chất liệu nhỏ hơn. Viên hình được nhận mã
+  tròn (+60 / 20). Ngọc luôn tròn (không còn "giọt" ngọc rơi sang Z16 / M038).
+- Pairwise (contrast-sensitive Potts): láng giềng D ≤ 0.75·(d_i + d_j), w = β·g_size·g_mat·exp(−ΔE76² / 2·12²), g_size = 1 khi
+  tỉ lệ cỡ ≤ 1.2, 0 khi ≥ 1.25 (ngọc to / nhỏ tách được), g_mat 1 / 0.5 / 0.1; cạnh chuỗi KIT-21 γ 2; cạnh motif (vòng 4–8
+  hạt giống nhau quanh 1 tâm khác màu / cỡ, góc đều ±35 %) mọi cặp 1.5.
+- Neo: viên có cạnh mạnh cùng nhãn chỉ được đặt với đúng mã đó (va chạm → bỏ, không đổi sang mã khác): 1369 viên bỏ thay vì
+  lẫn mã. `--mrf-fallback` = cho đổi như KIT-22.
+- Lọc vùng ngọc (fb1): điểm viền vàng C* < 47, rộng < 1 mm, cách mép ngọc ≤ 1 mm là bóng giữa các ngọc → bỏ (46); hạt
+  trắng / ngọc < 3 mm có ≥ 3 ngọc to gấp ≥ 1.6× sát cạnh là ánh sáng trong khe → bỏ (42). `--keep-shade` tắt cả 2.
+
+Nguyên nhân 4 lỗi captain: (1) fb1 E = ngọc va chạm rơi về L94 (fallback alt), A = điểm viền vàng nằm trên bóng ngọc;
+(2) bảng chỉ có 1 mã ngọc (histogram cỡ ngọc 5: 772, 6: 56, 7: 3, 8: 6, 10: 1); (3) cột vàng fb3 bước ~3.4 mm < 4.15 mm nên
+va chạm hạ Z16 → L23 xen kẽ; (4) 5 cánh hoa fb4 (trắng, bán kính 6.3 mm quanh tâm đỏ) bị chuỗi thu cỡ đổi 2 cánh sang ngọc, mã
+hình và mã tròn không bao giờ cùng nhóm.
+
+Bảng mã (≤ 13 Queen + Starry, sản phẩm ≤ 15 vẫn cứng): thêm thử mọi cỡ ngọc ≥ 5 viên chưa có mã (6, 8) rồi gộp xuống theo
+cost map_generator Σ wt·(ΔE00²_mới − ΔE00²_cũ + 625 nếu nhỏ hơn) trên viên Queen + Starry:
+
+| bước | bỏ | viên | về | cost | 3 rẻ tiếp |
+|---|---|---|---|---|---|
+| 1 | 8 | 7 | 6 ×7 | 38 980 | M032 125 541, 6 187 891, L50 392 580 |
+| 2 | M032 | 3 | Z16 ×2, không mã ×1 | 125 541 | 6 226 871, L50 392 580, L94 555 545 |
+
+Trước (KIT-23 không thêm ngọc): D1 Z16 L47 X039 S057 5 L23 M032 L37 L4 L50 M063 L94. Sau: D1 Z16 L47 X039 S057 **5 6** L23 L37
+L4 L50 M063 L94 (Queen dùng 11; ΔE trung bình Starry 8.85 không đổi, Queen 14.83). Ngọc 8 mm cần bỏ L50 (2439 viên nền
+Starry → ΔE Starry 8.85 → 10.3, cost 392 580 = 10× ngọc 8) → mặc định ngọc 8 → 6; `--pearl-keep` giữ cả 6 và 8 (gộp L50) nếu
+captain muốn. KIT-22 dùng D1 L94 L47 X039 S057 5 L23 M038 Z16 L37 L4 L50 M063.
+
+Consistency = % cặp láng giềng mạnh (cùng chuỗi / motif / spatial w ≥ 0.5) cả 2 viên đều đặt mà khác mã:
+
+| | tất cả | chuỗi | spatial | motif | fb1 | fb2 | fb3 | fb4 | captain |
+|---|---|---|---|---|---|---|---|---|---|
+| KIT-22 | 11.5 % (112/972) | 12.5 | 7.2 | 65.6 | 58.8 % (10/17) | 4.8 % (1/21) | 66.7 % (6/9) | 29.6 % (8/27) | 0 % (0/13) |
+| **KIT-23** | **1.0 % (9/940)** | 0.9 | 1.1 | 0 | 0 % (0/10) | 0 % (0/21) | 0 % (0/13) | 0 % (0/26) | 0 % (0/13) |
+
+Crop `outputs/kit/kit23/review_fb{1..4}.png` cùng khung ảnh captain (khớp mẫu trên review KIT-22, điểm 0.89 / 0.97 / 0.98 /
+0.96): fb1 vùng ngọc toàn 5, A chỉ trên viền vàng; fb2 ngọc to 6, ngọc nhỏ 5; fb3 cột vàng toàn A; fb4 5 cánh cùng 1 mã (D1,
+cả 2 hoa). Hàng captain `5 5 - 5 5 5 5` (giữ KIT-22).
+
+Viên GT vẽ ≥ 2 mm (3 ô) recall / vật liệu / cỡ:
+
+| | recall | vật liệu | cỡ | viên / viền |
+|---|---|---|---|---|
+| KIT-22 (`--kit22`) | 43.2 | 65.8 | 52.6 | 2131 / 812 |
+| KIT-23 `--keep-shade` | 43.2 | 68.4 | 50.0 | 2086 |
+| **KIT-23 (mặc định)** | **42.0** | **73.0** | **45.9** | 2065 / 772 |
+| `--mrf-size` 0.5 / 1.5, γ 3 | 43.2 | 68.4 | 50.0 | (dev, không lọc) |
+| `--mrf-size` 2 | 42.0 | 70.3 | 48.6 | |
+| `--no-cap` | — | — | 51.4 | hàng captain vỡ |
+| `--mrf-fallback` | — | — | — | consistency 3.8 %, fb1 33.3 % |
+
+Tụt so với KIT-22 (không giấu): recall −1.2, cỡ −6.7. Từng viên: pearls:26 (GT trắng 2.8) và pearls:15 (GT ngọc 2.8) trước được
+khớp bằng điểm viền vàng L23 sai chất liệu (C* 34–42) — bộ lọc bóng ngọc bỏ chúng (đúng yêu cầu (1), mất 2 khớp cỡ đúng);
+pearls:17 (ngọc 2.8) mới khớp thành 5; chuỗi vàng 3 hạt 19 (pearls:7 GT vàng 4, pearls:5 GT vàng 6; bước 4.40 / 3.92 mm,
+cap từ láng giềng vàng gần → cả chuỗi L23 thay Z16 / L23 lẫn) mất cỡ đúng 1 viên. Vật liệu +7.2: pearls:1 Z16 → D1, ngọc
+không còn ra Z16. Hạt GT: 60.2 / 75.5 / 35.8.
+
+Cần captain quyết: (a) ngọc 8 mm có mã riêng (gộp L50, ΔE Starry 10.3) hay về 6; (b) chuỗi cùng nhãn hạ cỡ đồng loạt
+(chuỗi 19) hay cho lẫn cỡ; (c) 1369 viên neo bỏ để lỗ thay vì lẫn mã — đúng ý "1 nhãn" nhưng phủ 44.2 % (KIT-22 44.2 %).

@@ -12,6 +12,7 @@ import { place } from '../lib/kit/place.js';
 import * as vlm from '../lib/kit/vlm.js';
 import { assignSymbols, loadCatalog, checkDesign, LETTERS } from '../lib/kit/catalog.js';
 import { gapMm, stonePoly, sdPoly } from '../lib/kit/shapes.js';
+import { pottsExpand, pottsICM, pottsEnergy } from '../lib/kit/potts.js';
 
 let fail = 0;
 const ok = (cond, msg) => { if (!cond) { fail++; console.log('FAIL', msg); } };
@@ -155,7 +156,7 @@ for (const layer of ['starry', 'king', 'queen']) {
 }
 // file mẫu thật (chỉ đọc, có thì test)
 {
-  const dir = `${process.cwd()}/requirements/FIle Map đá`;
+  const dir = `${process.env.HOME}/pearl_compare/requirements/FIle Map đá`;
   const files = fs.existsSync(dir) ? fs.readdirSync(dir).filter((f) => f.endsWith('_reference_symbols_only.svg')) : [];
   const got = files.map((f) => readKitSvg(fs.readFileSync(`${dir}/${f}`, 'utf8')).stones.length).sort((a, b) => a - b);
   ok(!files.length || JSON.stringify(got) === '[3066,3230,6691]', `svgio: file mẫu thật ${got}`);
@@ -350,7 +351,7 @@ ok(refOf(2.8) === 2.2 && refOf(4) === 3.2 && refOf(5) === 4.2 && refOf(6) === 5.
 }
 // fixture thật + DB (chỉ đọc; có thì test)
 {
-  const f = `${process.cwd()}/requirements/Trang phục King.png`;
+  const f = `${process.env.HOME}/pearl_compare/requirements/Trang phục King.png`;
   if (fs.existsSync(f)) {
     const img = decodePng(fs.readFileSync(f)), m = backgroundMask(img);
     const det = detectBeads(img, { stoneMm: 2.2, gapMm: 0.4 }, m.mask).stones, onBg = det.filter((s) => m.bg[Math.floor(s.y) * img.w + Math.floor(s.x)]).length;
@@ -362,7 +363,7 @@ ok(refOf(2.8) === 2.2 && refOf(4) === 3.2 && refOf(5) === 4.2 && refOf(6) === 5.
     ok(sap.length === 1 && sap[0].big && op.length === 1 && op[0].big && op[0].flags.includes('oval'),
       `Trang phục King: sapphire ${sap.length} viên, opal ${op.length} viên (${[...sap, ...op].map((s) => `${s.kind} ${s.physMm} ${s.axesMm} ${s.flags}`).join(' | ')})`);
   }
-  const dbf = new URL('../kit/db/kit.sqlite', import.meta.url), REQ = `${process.cwd()}/requirements/`;
+  const dbf = new URL('../kit/db/kit.sqlite', import.meta.url), REQ = `${process.env.HOME}/pearl_compare/requirements/`;
   if (fs.existsSync(dbf)) {
     const { DatabaseSync } = await import('node:sqlite'), db = new DatabaseSync(dbf.pathname);
     const p = db.prepare("SELECT * FROM products WHERE id = 'snowman'").get();
@@ -632,6 +633,25 @@ ok(vlm.mat4('pearl', 'gold') === 'gold' && vlm.mat4('pearl', 'white') === 'pearl
   let bad = 0;
   dn.stones.forEach((a, i) => { if (Math.hypot(a.x - big.x, a.y - big.y) / ppm < 3 + 1.4 + 0.15 - 1e-3) bad++; dn.stones.slice(i + 1).forEach((b) => { if (Math.hypot(a.x - b.x, a.y - b.y) / ppm < 2.95 - 0.002) bad++; }); });
   ok(dn.added > 0 && bad === 0, `densify: +${dn.added} viên quanh viên 6 mm, ${bad} cặp chồng`);
+}
+// KIT-23 Potts alpha-expansion: so với vét cạn 3^6 trên đồ thị ngẫu nhiên (nghiệm ≤ 2× tối ưu, thường đúng tối ưu); chuỗi 5 nút
+// cạnh mạnh → 1 nhãn dù 1 nút lệch unary
+{
+  let seed = 11, worst = 1, opt0 = 0;
+  const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
+  for (let t = 0; t < 40; t++) {
+    const n = 6, L = 3, unary = Float64Array.from({ length: n * L }, () => rnd() * 4), edges = [];
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) if (rnd() < 0.5) edges.push([i, j, rnd() * 3]);
+    const o = { n, L, unary, edges }, lab = new Int32Array(n);
+    let opt = Infinity;
+    for (let k = 0; k < L ** n; k++) { let v = k; for (let i = 0; i < n; i++) { lab[i] = v % L; v = Math.floor(v / L); } opt = Math.min(opt, pottsEnergy(o, lab)); }
+    const r = pottsExpand(o);
+    worst = Math.max(worst, r.energy / opt); if (r.energy - opt < 1e-9) opt0++;
+    ok(r.energy <= pottsICM(o).energy + 1e-9 || r.energy <= 2 * opt, `potts: expansion ${r.energy} vs ICM`);
+  }
+  ok(worst <= 2 && opt0 >= 36, `potts: tối ưu ${opt0}/40, xấu nhất ${worst.toFixed(3)}× (≤ 2×)`);
+  const chain = { n: 5, L: 2, unary: Float64Array.from([0, 1, 0, 1, 1.5, 0, 0, 1, 0, 1]), edges: [[0, 1, 2], [1, 2, 2], [2, 3, 2], [3, 4, 2]] };
+  ok([...pottsExpand(chain).labels].every((l) => l === 0), 'potts: chuỗi 5 hạt cạnh mạnh → cùng 1 nhãn');
 }
 console.log(fail ? `test_kit: ${fail} FAIL` : 'test_kit: OK');
 process.exit(fail ? 1 : 0);

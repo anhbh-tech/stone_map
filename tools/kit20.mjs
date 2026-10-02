@@ -17,6 +17,7 @@ import { gapMm } from '../lib/kit/shapes.js';
 import { decodePng } from '../lib/png.js';
 import { jointPalette, stoneCost } from '../lib/kit/palette.js';
 import { scoreStones, mat4Of } from './score_template_gt.mjs';
+import { pottsExpand } from '../lib/kit/potts.js';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2), flag = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
@@ -24,6 +25,11 @@ const SEG = path.resolve(ROOT, flag('--seg', 'outputs/kit/kit20/seg_sam_all.json
 const UP4 = path.join(ROOT, 'outputs', 'kit', 'kit20', 'up4.png'); // Real-ESRGAN ×4 của ảnh nguồn (tools/kit20_segment.py cùng dùng)
 // hàng hạt captain chỉ ra (msg 015): tâm px 3543 của 7 hạt vẽ cùng cỡ dọc đường cong, khung crop
 const CAPTAIN = { box: [2093, 1504, 306, 508], row: [[2343, 1693], [2332, 1773], [2310, 1818], [2277, 1862], [2232, 1904], [2178, 1939], [2118, 1970]] };
+// KIT-23 (msg 018): vùng captain góp ý trên KIT-22 (khớp mẫu trên review.svg KIT-22, px 3543): fb1 mảng ngọc, fb2 viền vàng / ngọc to,
+// fb3 cột hạt vàng xếp chồng, fb4 bông hoa 5 cánh. --kit22 = tắt mọi thay đổi KIT-23 (bảng trước / sau)
+const FB = { fb1: [910, 2176, 371, 377], fb2: [1841, 545, 517, 459], fb3: [2710, 1594, 434, 455], fb4: [646, 3062, 409, 360] };
+const kit22 = args.includes('--kit22');
+const keepShade = kit22 || args.includes('--keep-shade'); // KIT-23 tắt 2 bộ lọc fb1 (pearlShade, gapGlint)
 const MM = 300, W = 3543, PPM = W / MM, GAP = 0.15, maxCodes = +flag('--max-codes', 13), minCodes = +flag('--min-codes', 9);
 const cat = loadCatalog(), t0 = Date.now();
 fs.mkdirSync(OUT, { recursive: true });
@@ -75,7 +81,8 @@ const sizeK = +flag('--size-k', 1), pearlMode = flag('--pearl-small', 'pearl'); 
 function classify(b, force = null) {
   const m4 = force || mat4(b), t = [b.L, b.a, b.b];
   // hạt dài < 5.5 mm: hình không tin được (hạt tròn bị che / mask lệch) → tròn
-  let shape = b.shape === 'oval' || b.wMm < (b.shape === 'heart' ? 6 : +flag('--shape-min', 5.5)) ? 'round' : b.shape;
+  // KIT-23: catalog không có ngọc hình → hạt ngọc luôn tròn (ngọc 'giọt' = ngọc tròn bị che; trước đây rơi sang Z16 vàng / M038 cam)
+  let shape = b.shape === 'oval' || (m4 === 'pearl' && !kit22) || b.wMm < (b.shape === 'heart' ? 6 : +flag('--shape-min', 5.5)) ? 'round' : b.shape;
   if (shape !== 'round') {
     const w = b.hMm * sizeK, h = b.wMm * sizeK; // python: wMm = trục dài, hMm = trục ngắn
     const m = m4 === 'pearl' ? 'white' : m4, dims = SHD[shape][m]?.length ? SHD[shape][m] : SHD[shape][null];
@@ -192,6 +199,47 @@ if (!args.includes('--no-neigh')) {
   }
   beads.push(...add);
 }
+// ── 2c0. KIT-23 motif xoay (bông hoa, captain fb4): 4–8 hạt quanh 1 hạt tâm, chạm tâm (khoảng 0.7–1.3 × tổng bán kính), cùng bán kính
+// ±15 %, cách góc đều (mỗi khe lệch ≤ 35 % khe trung bình), giống nhau (cỡ ≤ 1.4×, ΔE76 ≤ 25 so với hạt mồi), tâm khác vòng (ΔE76 > 20
+// hoặc cỡ lệch > 1.25×: mảng ngọc xếp lục giác không phải hoa). Hạt trong motif không vào chuỗi KIT-21 (cánh hoa không phải hàng hạt)
+const dE76 = (p, q) => Math.hypot(p.L - q.L, p.a - q.a, p.b - q.b);
+const motifs = [];
+{
+  const cell = 14 * PPM, G = new Map(), kk = (x, y) => `${Math.floor(x / cell)},${Math.floor(y / cell)}`;
+  const M = beads.filter((b) => b.dMm >= 2.5 && b.src !== 'chain');
+  M.forEach((b) => { const q = kk(b.x, b.y); (G.get(q) || G.set(q, []).get(q)).push(b); });
+  const used = new Set(), found = [];
+  for (const c of M) {
+    const gx = Math.floor(c.x / cell), gy = Math.floor(c.y / cell), R = [];
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const t of G.get(`${gx + dx},${gy + dy}`) || []) {
+      if (t === c) continue;
+      const D = Math.hypot(t.x - c.x, t.y - c.y) / PPM, rs = (c.dMm + t.dMm) / 2;
+      if (D >= 0.7 * rs && D <= 1.3 * rs && t.dMm >= 0.6 * c.dMm) R.push({ t, D, ang: Math.atan2(t.y - c.y, t.x - c.x) });
+    }
+    let best = null;
+    for (const s0 of R) {
+      const S = R.filter((r) => Math.max(r.t.dMm, s0.t.dMm) / Math.min(r.t.dMm, s0.t.dMm) <= 1.4 && dE76(r.t, s0.t) <= 25 && Math.abs(r.D - s0.D) <= 0.15 * s0.D);
+      if (S.length < 4 || S.length > 8 || (best && S.length <= best.length)) continue;
+      const A = S.map((r) => r.ang).sort((x, y) => x - y), gaps = A.map((a, k) => (k + 1 < A.length ? A[k + 1] - a : A[0] + 2 * Math.PI - a)), mg = (2 * Math.PI) / S.length;
+      if (gaps.some((g) => Math.abs(g - mg) > 0.35 * mg)) continue;
+      const ring = S.map((r) => r.t), md = ring.map((t) => t.dMm).sort((x, y) => x - y)[ring.length >> 1];
+      const mc = { L: ring.reduce((a, t) => a + t.L, 0) / ring.length, a: ring.reduce((a, t) => a + t.a, 0) / ring.length, b: ring.reduce((a, t) => a + t.b, 0) / ring.length };
+      if (dE76(c, mc) <= 20 && Math.max(c.dMm, md) / Math.min(c.dMm, md) <= 1.25) continue;
+      best = ring;
+    }
+    if (best) found.push({ c, ring: best });
+  }
+  // vòng to (nhiều cánh, cánh to) trước; mỗi hạt thuộc ≤ 1 vòng
+  found.sort((p, q) => q.ring.length - p.ring.length || q.ring.reduce((a, t) => a + t.dMm, 0) - p.ring.reduce((a, t) => a + t.dMm, 0));
+  for (const f of found) {
+    if (f.ring.some((t) => used.has(t)) || used.has(f.c)) continue;
+    f.ring.forEach((t) => used.add(t)); used.add(f.c);
+    const m = { k: motifs.length, centre: f.c, ring: f.ring };
+    if (!kit22) for (const t of f.ring) t.motif = m;
+    motifs.push(m);
+  }
+}
+
 // ── 2c. KIT-21 chuỗi hạt (captain msg 015): hạt liên tiếp cùng cỡ (±15 %), bước đều, hướng mượt = 1 chuỗi; hàng song song kề bên
 // (cùng cỡ, cùng bước) = hàng xếp lớp → 1 nhóm. CỠ quyết định chuỗi (cùng cỡ dọc chuỗi = cùng loại), mỗi nhóm 1 nhãn vật liệu + 1 cỡ:
 // phiếu = Σ độ tin màu + wPrior × tần suất vật liệu theo khoảng cỡ (chỉ phá hoà); chuyển màu dọc chuỗi = ánh sáng (luật gradient).
@@ -202,7 +250,7 @@ if (chains.enabled) {
   taperTol = +flag('--taper', 1.45), chainSize = flag('--chain-size', 'd'), wPrior = +flag('--chain-wprior', 0.1), maxStepDE = +flag('--chain-step-de', 20), sizeTol = 1.15, pitchTol = 1.65; // bước lệch ≤ 65 % qua 1 hạt (hạt sau bị che → bước vẽ đổi)
   const sz = (b) => (b.hMm / b.wMm >= 0.6 ? b.wMm : b.dMm); // hạt cầu bị che một phần: trục dài ≈ đường kính thật
   for (const b of beads) b.conf ??= matConf(b);
-  const C = beads.filter((b) => b.cls.shape === 'round' && sz(b) >= 2.2 && b.src !== 'chain');
+  const C = beads.filter((b) => b.cls.shape === 'round' && sz(b) >= 2.2 && b.src !== 'chain' && !b.motif);
   // tiên nghiệm vật liệu theo khoảng cỡ: hạt tròn độ tin ≥ 0.8, làm trơn +1
   const BINS = [2.2, 3, 4, 5, 6.5, 9, 99], binOf = (d) => BINS.findIndex((v, k) => d >= v && d < BINS[k + 1]), MATS = ['pearl', 'gold', 'white', 'color'];
   const cnt = BINS.slice(0, -1).map(() => Object.fromEntries(MATS.map((m) => [m, 1])));
@@ -408,18 +456,171 @@ const ms = (c) => c.material + c.shape, minMS = Math.min(...curve.map(ms));
 let pickC = curve.find((c) => ms(c) === minMS);
 for (const c of curve) if (c.union > pickC.union && c.product <= 13 && ms(c) <= ms(pickC) && c.size <= pickC.size - 2) pickC = c;
 const pickN = flag('--codes') ? +flag('--codes') : pickC.union;
-const runs = [bestPalette(pickN)];
-const pal = runs[0], codes = pal.codes, palE = codes.map((c) => entryOf(c, cat)), palL = palE.map((e) => lab(hex2(e.fill)));
+const pal0 = bestPalette(pickN);
+// KIT-23 (captain fb2): ngọc to (~8 mm) và nhỏ cùng ra '5' vì bảng chỉ có 1 mã ngọc → thêm mã ngọc mỗi cỡ catalog có ≥ --pearl-min hạt
+// ngọc (cỡ đã snap), rồi gộp xuống ≤ maxCodes bằng chi phí map_generator (SPEC §2 bước 8, như mergePalette): bỏ mã a rẻ nhất, viên của a
+// sang mã rẻ nhất còn lại; chi phí = Σ trọng số · (ΔE00² mới − ΔE00² cũ + 25² nếu nhỏ đi). Mã ngọc mới cũng dự gộp (= lợi của nó thấp
+// hơn chi phí gộp mã khác thì bị gộp lại); giữ cứng: pha lê + mã ngọc đã có (--pearl-keep: giữ cả mã ngọc mới, đúng chữ captain)
+const pearlHist = {};
+for (const b of beads) if (b.cls.m4 === 'pearl' && b.cls.shape === 'round') pearlHist[b.cls.physMm] = (pearlHist[b.cls.physMm] || 0) + 1;
+const pearlMin = +flag('--pearl-min', 5);
+const pearlAdd = kit22 || args.includes('--no-pearl-codes') ? [] : Object.entries(pearlHist).filter(([mm, n]) => n >= pearlMin && cat.codes[String(+mm)]?.kind === 'pearl' && !pal0.codes.includes(String(+mm))).map(([mm]) => String(+mm));
+function mergeDown(start, keep, n) {
+  const E = (c) => entryOf(c, cat), Lb = new Map(start.map((c) => [c, lab(hex2(E(c).fill))])), grp = new Map();
+  for (const r of [...recQ, ...recS]) {
+    const k = [r.layer, r.mat, r.physMm, r.shape || '', r.w || '', r.h || '', r.one ? 1 : 0, r.gwl, ...r.t.map((v) => Math.round(v))].join('|'), g = grp.get(k);
+    if (g) { g.n += r.wt ?? 1; g.c++; } else grp.set(k, { r, n: r.wt ?? 1, c: 1 });
+  }
+  const G = [...grp.values()];
+  const cost = G.map((g) => Object.fromEntries(start.map((c) => { const [v, , d] = stoneCost(g.r, E(c), Lb.get(c), NOCROSS); return [c, v < 1e4 ? { v, d: d ?? 0 } : null]; })));
+  const bestIn = (gi, S) => { let a = null; for (const c of S) { const x = cost[gi][c]; if (x && (!a || x.v < a.x.v)) a = { c, x }; } return a; };
+  let set = start.slice();
+  const history = [];
+  while (set.length > n) {
+    let best = null, best0 = null;
+    for (const a of set) {
+      if (keep.includes(a)) continue;
+      const S2 = set.filter((c) => c !== a), to = {};
+      let mc = 0, cnt = 0, q = 0;
+      G.forEach((g, gi) => {
+        const cur = bestIn(gi, set);
+        if (!cur || cur.c !== a) return;
+        const nx = bestIn(gi, S2), lay = g.r.layer;
+        cnt += g.c; if (lay === 'queen') q += g.c;
+        if (!nx) { mc += g.n * 1e4; to['-'] = (to['-'] || 0) + g.c; return; }
+        mc += g.n * (nx.x.d ** 2 - cur.x.d ** 2 + ((E(nx.c).physMm || 0) < (E(a).physMm || 0) - 1e-6 ? 625 : 0));
+        to[nx.c] = (to[nx.c] || 0) + g.c;
+      });
+      (best0 ||= []).push({ a, cost: Math.round(mc) });
+      if (!best || mc < best.mc) best = { a, mc, cnt, q, to };
+    }
+    set = set.filter((c) => c !== best.a);
+    history.push({ removed: best.a, records: best.cnt, queen: best.q, into: best.to, cost: Math.round(best.mc), next: best0.sort((x, y) => x.cost - y.cost).slice(1, 4) });
+  }
+  return { codes: set, history };
+}
+const pearlKeep = args.includes('--pearl-keep') ? pearlAdd : [];
+const merged = pearlAdd.length ? mergeDown([...pal0.codes, ...pearlAdd], [pal0.crystal, ...pal0.codes.filter((c) => cat.codes[c]?.kind === 'pearl'), ...pearlKeep], maxCodes) : { codes: pal0.codes, history: [] };
+const pal = merged.codes.join() !== pal0.codes.join() ? { ...jointPalette([...recQ, ...recS], cat, { maxCodes: merged.codes.length, cands: merged.codes, fixed: merged.codes, ...NOCROSS }), crystal: pal0.crystal } : pal0;
+const codes = pal.codes, palE = codes.map((c) => entryOf(c, cat)), palL = palE.map((e) => lab(hex2(e.fill)));
+const paletteMerge = { pearlHist, pearlMin, before: pal0.codes, added: pearlAdd, history: merged.history, after: codes, errorsBefore: errorsOf(pal0.codes), errorsAfter: errorsOf(codes) };
 
 // mã từng viên: rẻ nhất trong bảng theo stoneCost; không lớp nào → bỏ
 const ranked = (r) => palE.map((e, j) => [stoneCost(r, e, palL[j], NOCROSS)[0], e]).filter(([c]) => c < 1e4).sort((a, b) => a[0] - b[0]).map(([, e]) => e);
+// ── 2e. KIT-23 MRF / Potts (captain msg 018, thay vá từng bước): nút = hạt, nhãn = mã trong bảng (mã ⇒ chất liệu + hình + cỡ catalog)
+// U = stoneCost(hạt coi là chất liệu của mã, mã) / 20 (ΔE + thu cỡ + hình → tròn) + đổi chất liệu α·(0.5 + độ tin)
+//     + cỡ λ·|ln(cỡ mã / cỡ hạt)| + chật: mã to hơn khoảng trống tới láng giềng mạnh j (2·(khoảng tâm − khe + nudge) − cỡ nhãn đầu của j) và to hơn cỡ nhỏ nhất cùng
+//       chất liệu trong bảng:
+//       1 + κ·(cỡ − max(khoảng trống, cỡ nhỏ nhất))
+// cạnh Potts theo tương phản: láng giềng không gian (khoảng tâm ≤ 0.75·(d1 + d2), ~Delaunay) w = β·g_cỡ·g_chất·exp(−ΔE76² / 2σ²),
+//   g_cỡ = 1 khi cỡ ≤ 1.2×, 0 khi ≥ 1.25× (ngọc to / nhỏ tách); g_chất = 1 cùng chất liệu, 0.5 ngọc / trắng, 0.1 khác; cạnh cấu trúc γ:
+//   hạt liền nhau trong chuỗi / cột KIT-21 (½ khi cạnh thu cỡ dần); cánh cùng motif xoay: mọi cặp w_motif (1.5; 5 cánh → 6 / cánh,
+//   hơn phạt hình → tròn 3 + thu cỡ của cánh giọt). Alpha-expansion.
+// Cạnh "mạnh" (cấu trúc hoặc w ≥ β/2) = cặp cùng cấu trúc của chỉ số consistency
+const MRF = { alpha: +flag('--mrf-alpha', 3), beta: +flag('--mrf-beta', 1), gamma: +flag('--mrf-gamma', 2), motif: +flag('--mrf-motif', 1.5), sigma: +flag('--mrf-sigma', 12), scale: 20, kappa: 2, size: +flag('--mrf-size', 1), fam: +flag('--mrf-fam', 1), cap: !args.includes('--no-cap') };
+const mrfOn = !kit22 && !args.includes('--no-mrf'), nudge0 = +flag('--nudge', 0.2);
+const famM = (m) => (m === 'pearl' || m === 'white' ? 'w' : m);
+const graph = new Map(), BI = new Map(beads.map((b, k) => [b, k]));
+const edge = (i, j, kind, w) => {
+  if (i === j || !(w > 0)) return;
+  const a = Math.min(i, j), c = Math.max(i, j), key = `${a},${c}`, g = graph.get(key) || graph.set(key, { i: a, j: c, ws: 0, wc: 0, kinds: new Set() }).get(key);
+  if (kind === 'spatial') g.ws = Math.max(g.ws, w); else g.wc = Math.max(g.wc, w);
+  g.kinds.add(kind);
+};
+{
+  const cell = 12 * PPM, G = new Map(), kk = (x, y) => `${Math.floor(x / cell)},${Math.floor(y / cell)}`;
+  beads.forEach((b, k) => { const q = kk(b.x, b.y); (G.get(q) || G.set(q, []).get(q)).push(k); });
+  beads.forEach((b, k) => {
+    const gx = Math.floor(b.x / cell), gy = Math.floor(b.y / cell);
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const j of G.get(`${gx + dx},${gy + dy}`) || []) {
+      if (j <= k) continue;
+      const t = beads[j], D = Math.hypot(t.x - b.x, t.y - b.y) / PPM;
+      if (D > 0.75 * (b.dMm + t.dMm)) continue;
+      const sr = Math.max(b.dMm, t.dMm) / Math.min(b.dMm, t.dMm), gs = sr <= 1.2 ? 1 : sr >= 1.25 ? 0 : (1.25 - sr) / 0.05;
+      const gm = b.cls.m4 === t.cls.m4 ? 1 : famM(b.cls.m4) === famM(t.cls.m4) ? 0.5 : 0.1;
+      edge(k, j, 'spatial', MRF.beta * gs * gm * Math.exp(-(dE76(b, t) ** 2) / (2 * MRF.sigma ** 2)));
+    }
+  });
+  for (const ch of new Set(beads.map((b) => b.chain).filter(Boolean))) for (let q = 1; q < ch.path.length; q++) {
+    const a = ch.path[q - 1], c = ch.path[q];
+    if (BI.has(a) && BI.has(c)) edge(BI.get(a), BI.get(c), 'chain', MRF.gamma * (Math.max(a.dMm, c.dMm) / Math.min(a.dMm, c.dMm) > 1.15 ? 0.5 : 1));
+  }
+  for (const m of motifs) for (let p = 0; p < m.ring.length; p++) for (let q = p + 1; q < m.ring.length; q++) if (BI.has(m.ring[p]) && BI.has(m.ring[q])) edge(BI.get(m.ring[p]), BI.get(m.ring[q]), 'motif', MRF.motif);
+}
+const strong = (g) => g.wc > 0 || g.ws >= 0.5 * MRF.beta;
+const nB = beads.length, Lc = palE.length, U = new Float64Array(nB * Lc).fill(Infinity), clsM = [], clsR = [];
+const recFrom = (c) => ({ layer: 'queen', mat: catMat(c), physMm: c.physMm, ...(c.shape !== 'round' && { shape: c.shape, w: c.w, h: c.h }), t: c.t, one: false, gwl: 1, from: 'bead' });
+const capD = new Float64Array(nB).fill(Infinity), R0 = (e) => Math.max(e.physMm, e.physW || 0, e.physH || 0);
+const unaryAll = (withCap) => beads.forEach((b, k) => {
+  const own = b.cls.m4, conf = b.group || b.motif ? Math.max(b.conf ?? 0.5, 0.8) : b.conf ?? matConf(b), cm = {}, cr = {};
+  palE.forEach((e, j) => {
+    const mE = mat4Of(e.code);
+    let c = (cm[mE] ??= mE === own ? b.cls : classify(b, mE)), v = stoneCost(recFrom(c), e, palL[j], NOCROSS)[0];
+    // hạt hình (giọt / marquise) nhận mã tròn được, phạt như stoneCost hình → tròn (60 / 20 = 3): cánh hoa giọt + cánh tròn → 1 nhãn
+    if (c.shape !== 'round' && !e.shape) {
+      const r = (cr[mE] ??= classify({ ...b, shape: 'round' }, mE)), v2 = stoneCost(recFrom(r), e, palL[j], NOCROSS)[0] + NOCROSS.shapeToRound;
+      if (!(v < 1e4) || v2 < v) { c = r; v = v2; }
+    }
+    if (!(v < 1e4)) return;
+    // + cỡ: λ·|ln(cỡ mã / cỡ catalog của hạt)| (stoneCost thu cỡ gần phẳng: 8 → 2.8 chỉ đắt hơn 8 → 6 một chút)
+    let u = v / MRF.scale + (mE === own ? 0 : MRF.alpha * (famM(mE) === famM(own) ? MRF.fam : 1) * (0.5 + conf)) + (e.shape || c.shape !== 'round' ? 0 : MRF.size * Math.abs(Math.log(e.physMm / c.physMm)));
+    if (withCap && !e.shape && e.physMm > capD[k] + 1e-6) {
+      const lo = Math.min(...palE.filter((e2) => !e2.shape && mat4Of(e2.code) === mE && (e2.kind === 'pearl') === (e.kind === 'pearl')).map((e2) => e2.physMm));
+      if (e.physMm > lo + 1e-6) u += 1 + MRF.kappa * (e.physMm - Math.max(capD[k], lo)); // cỡ nhỏ nhất cùng chất liệu không bị phạt (ngọc 5)
+    }
+    U[k * Lc + j] = u;
+  });
+  clsM[k] = cm; clsR[k] = cr;
+});
+const argmin = (k) => { let b = 0; for (let l = 1; l < Lc; l++) if (U[k * Lc + l] < U[k * Lc + b]) b = l; return b; };
+unaryAll(false);
+if (MRF.cap) {
+  // khoảng trống: viên k cỡ x không chạm j (đang ở nhãn đầu, cỡ s_j) khi x ≤ 2·(D − khe + nudge) − s_j
+  const a0 = Int32Array.from({ length: nB }, (_, k) => argmin(k)), s0 = Float64Array.from({ length: nB }, (_, k) => (Number.isFinite(U[k * Lc + a0[k]]) ? R0(palE[a0[k]]) : 0));
+  // chỉ láng giềng mạnh có nhãn đầu cùng chất liệu (mảng / cột cùng loại xếp khít), không phải hạt khác loại kề bên
+  for (const g of graph.values()) if (strong(g) && mat4Of(codes[a0[g.i]]) === mat4Of(codes[a0[g.j]]) && !palE[a0[g.i]].shape && !palE[a0[g.j]].shape) {
+    const D = Math.hypot(beads[g.i].x - beads[g.j].x, beads[g.i].y - beads[g.j].y) / PPM, f = 2 * (D - GAP + nudge0); // viên đặt sau đẩy ≤ nudge
+    capD[g.i] = Math.min(capD[g.i], f - s0[g.j]); capD[g.j] = Math.min(capD[g.j], f - s0[g.i]);
+  }
+  U.fill(Infinity); unaryAll(true);
+}
+const mrf = { enabled: mrfOn, params: MRF, nodes: nB, edges: graph.size, strongEdges: [...graph.values()].filter(strong).length, motifs: motifs.length, motifBeads: motifs.reduce((a, m) => a + m.ring.length, 0) };
+let labels = null;
+if (mrfOn) {
+  const init = Int32Array.from({ length: nB }, (_, k) => argmin(k));
+  const r = pottsExpand({ n: nB, L: Lc, unary: U, edges: [...graph.values()].map((g) => [g.i, g.j, Math.max(g.ws, g.wc)]), init });
+  labels = r.labels;
+  mrf.energy = { init: +r.history[0].toFixed(1), final: +r.energy.toFixed(1) }; mrf.cycles = r.cycles;
+  const by = {};
+  let ch = 0;
+  for (let k = 0; k < nB; k++) if (labels[k] !== init[k]) { ch++; const key = `${codes[init[k]]}→${codes[labels[k]]}`; by[key] = (by[key] || 0) + 1; }
+  mrf.changed = ch; mrf.changedBy = Object.fromEntries(Object.entries(by).sort((x, y) => y[1] - x[1]).slice(0, 16));
+}
+if (flag('--debug-bead')) {
+  const [dx, dy] = flag('--debug-bead').split(',').map(Number), k = beads.reduce((a, b, i) => (Math.hypot(b.x - dx, b.y - dy) < Math.hypot(beads[a].x - dx, beads[a].y - dy) ? i : a), 0);
+  console.error('bead', k, beads[k].cls, 'cap', capD[k], 'U', codes.map((c, j) => `${c}:${U[k * Lc + j].toFixed(2)}`).join(' '), 'label', labels && codes[labels[k]], 'edges', [...graph.values()].filter((g) => g.i === k || g.j === k).map((g) => `${g.i === k ? g.j : g.i}:${g.ws.toFixed(2)}/${g.wc.toFixed(2)}`).join(' '));
+}
+// hạt "neo": có láng giềng mạnh cùng nhãn → va chạm thì chỉ đẩy ≤ nudge rồi bỏ, không đổi mã (giữ nhất quán); --mrf-fallback = như KIT-22
+const anchor = new Uint8Array(nB);
+if (labels && !args.includes('--mrf-fallback')) for (const g of graph.values()) if (strong(g) && labels[g.i] === labels[g.j]) anchor[g.i] = anchor[g.j] = 1;
+mrf.relabeledMaterial = 0; mrf.relabeledBy = {};
 const stones = [], noCode = [];
 beads.forEach((b, i) => {
-  const opts = ranked(recQ[i]);
+  let opts = ranked(recQ[i]);
+  if (labels && Number.isFinite(U[i * Lc + labels[i]])) {
+    const e = palE[labels[i]], mE = mat4Of(e.code);
+    const toRound = !e.shape && clsM[i][mE].shape !== 'round';
+    if (mE !== b.cls.m4 || toRound) {
+      if (mE !== b.cls.m4) { const k = `${b.cls.m4}→${mE}`; mrf.relabeledBy[k] = (mrf.relabeledBy[k] || 0) + 1; mrf.relabeledMaterial++; b.mrfFrom = b.cls.m4; }
+      if (toRound) mrf.toRound = (mrf.toRound || 0) + 1;
+      b.cls = toRound ? clsR[i][mE] : clsM[i][mE]; recQ[i] = recFrom(b.cls); opts = ranked(recQ[i]);
+    }
+    opts = [e, ...opts.filter((x) => x !== e)];
+  }
   if (!opts.length) { noCode.push({ x: b.x, y: b.y, cls: b.cls }); return; }
   // ngọc trai không vừa → đá trắng (sai vật liệu, vẫn có viên)
   const alt = b.cls.alt ? ranked({ ...recQ[i], mat: 'base', physMm: b.cls.alt.physMm }) : [];
-  stones.push({ b, opts, alt, e: opts[0], rec: recQ[i] });
+  stones.push({ b, opts, alt, e: opts[0], rec: recQ[i], k: i, anchor: !!anchor[i] });
 });
 // ── 3. va chạm vật lý: to trước, rõ trước; chồng → thử mã sau (thường nhỏ hơn) cùng tâm, không thì bỏ
 const geo = (s, e) => (e.shape ? { x: s.b.x, y: s.b.y, shape: e.shape, w: e.physW, h: e.physH, rot: s.b.rotDeg } : { x: s.b.x, y: s.b.y, w: e.physMm, h: e.physMm });
@@ -466,10 +667,10 @@ function placeBead(s) {
   // captain KIT-22: hạ tối đa shrinkSteps bậc cỡ catalog (các cỡ có trong bảng mã cùng vật liệu, theo thứ tự giảm)
   const steps = [...new Set(smaller.map(R))].sort((a, b) => b - a).slice(0, shrinkSteps);
   smaller = smaller.filter((e) => steps.includes(R(e)));
-  const tryE = s.b.group ? [s.e, ...smaller.filter((e) => e.kind === s.e.kind && mat4Of(e.code) === mat4Of(s.e.code)).slice(0, 1)] : [s.e, ...smaller, ...s.alt.filter((e) => sameMat(s, e))];
+  const tryE = s.anchor ? [s.e] : s.b.group ? [s.e, ...smaller.filter((e) => e.kind === s.e.kind && mat4Of(e.code) === mat4Of(s.e.code)).slice(0, 1)] : [s.e, ...smaller, ...s.alt.filter((e) => sameMat(s, e))];
   const got = placeOne(s, tryE);
   if (args.includes('--debug') && CAPTAIN.row.some(([x, y]) => Math.hypot(x - s.b.x, y - s.b.y) < 12)) console.error('placeC', Math.round(s.b.x), Math.round(s.b.y), s.b.cls.m4, 'try', tryE.map((x) => x.code).join(','), '→', got?.e.code, got?.r ?? 0, 'group', !!s.b.group);
-  if (!got) { lost.collision++; return; }
+  if (!got) { lost.collision++; if (s.anchor) lost.anchorDropped = (lost.anchorDropped || 0) + 1; return; }
   if (got.e !== s.e) lost.shrunk++;
   commit(s, got);
 }
@@ -489,8 +690,15 @@ if (chainF) {
   const bc = 8 * PPM, BG = new Map();
   for (const b of beads) if (b.cls.m4 !== 'gold') { const q = `${Math.floor(b.x / bc)},${Math.floor(b.y / bc)}`; (BG.get(q) || BG.set(q, []).get(q)).push(b); }
   const inBead = (x, y) => { const gx = Math.floor(x / bc), gy = Math.floor(y / bc); for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const b of BG.get(`${gx + dx},${gy + dy}`) || []) if (Math.hypot(b.x - x, b.y - y) / PPM < 0.5 * b.dMm) return true; return false; };
+  // KIT-23 (captain fb1): bóng ấm giữa các hạt ngọc lọt ngưỡng vàng (C* 43–46, viền thật C* ≥ 52) → điểm C* < 50 cách mép 1 hạt ngọc
+  // ≤ 1 mm là bóng ngọc, không phải viền
+  const PG = new Map();
+  for (const b of beads) if (b.cls.m4 === 'pearl') { const q = `${Math.floor(b.x / bc)},${Math.floor(b.y / bc)}`; (PG.get(q) || PG.set(q, []).get(q)).push(b); }
+  const pearlShade = (c) => { if (keepShade || Math.hypot(c.a, c.b) >= 47 || c.widthMm >= 1) return false; const gx = Math.floor(c.x / bc), gy = Math.floor(c.y / bc); for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const b of PG.get(`${gx + dx},${gy + dy}`) || []) if (Math.hypot(b.x - c.x, b.y - c.y) / PPM < 0.5 * b.dMm + 1) return true; return false; };
+  chain.pearlShade = 0;
   for (const c of C) {
     if (inBead(c.x, c.y)) { chain.insideBead++; continue; }
+    if (pearlShade(c)) { chain.pearlShade++; continue; }
     const rec = { layer: 'queen', mat: 'gold', physMm: 2.8, t: [c.L, c.a, c.b], one: false, gwl: 1 };
     const s = { b: { x: c.x, y: c.y, dMm: 2.8, score: 0, rotDeg: 0, cls: { m4: 'gold', physMm: 2.8, shape: 'round' }, src: 'chain' }, rec, opts: ranked(rec), alt: [] };
     const got = placeOne(s, s.opts.filter((x) => x.physMm === 2.8 && mat4Of(x.code) === 'gold').slice(0, 1));
@@ -507,11 +715,46 @@ if (chainF) {
 const BB = new Map(), bbc = 12 * PPM;
 for (const s of stones) if (bigFirst(s)) { const q = `${Math.floor(s.b.x / bbc)},${Math.floor(s.b.y / bbc)}`; (BB.get(q) || BB.set(q, []).get(q)).push(s.b); }
 const insideBig = (b) => { const gx = Math.floor(b.x / bbc), gy = Math.floor(b.y / bbc); for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const t of BB.get(`${gx + dx},${gy + dy}`) || []) if (t.dMm >= 1.6 * b.dMm && Math.hypot(t.x - b.x, t.y - b.y) / PPM < 0.5 * t.dMm) return true; return false; };
-lost.insideBig = 0;
-if (!borderLast) for (const s of stones) if (!bigFirst(s)) { if (!args.includes('--keep-inside') && insideBig(s.b)) { lost.insideBig++; continue; } placeBead(s); }
+// KIT-23 (captain fb1): hạt trắng nhỏ (< 3 mm) giữa ≥ 3 hạt ngọc to hơn ≥ 1.6× (chạm nhau) = ánh sáng khe giữa ngọc → không viên
+const PB = new Map();
+for (const b of beads) if (b.cls.m4 === 'pearl') { const q = `${Math.floor(b.x / bbc)},${Math.floor(b.y / bbc)}`; (PB.get(q) || PB.set(q, []).get(q)).push(b); }
+const gapGlint = (b) => { if (keepShade || b.dMm >= 3 || (b.cls.m4 !== 'white' && b.cls.m4 !== 'pearl')) return false; let n = 0; const gx = Math.floor(b.x / bbc), gy = Math.floor(b.y / bbc); for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const t of PB.get(`${gx + dx},${gy + dy}`) || []) if (t !== b && t.dMm >= 1.6 * b.dMm && Math.hypot(t.x - b.x, t.y - b.y) / PPM < 0.75 * (t.dMm + b.dMm)) n++; return n >= 3; };
+lost.insideBig = 0; lost.gapGlint = 0;
+if (!borderLast) for (const s of stones) if (!bigFirst(s)) { if (!args.includes('--keep-inside') && insideBig(s.b)) { lost.insideBig++; continue; } if (gapGlint(s.b)) { lost.gapGlint++; continue; } placeBead(s); }
 
+// ── 3c. KIT-23 consistency: % cặp láng giềng mạnh (cùng cấu trúc: chuỗi / cột, motif, láng giềng cùng chất liệu + cỡ ≤ 1.2× + ΔE nhỏ)
+// mà cả 2 đều có viên nhưng khác mã; missing = cặp chỉ 1 hạt có viên
+const codeAt = new Map();
+for (const s of placed) if (s.k != null) codeAt.set(s.k, s.e.code);
+const inBox = (box) => (b) => !box || (b.x >= box[0] && b.y >= box[1] && b.x < box[0] + box[2] && b.y < box[1] + box[3]);
+function consistency(box) {
+  const inB = inBox(box), r = { pairs: 0, differ: 0, missing: 0, byKind: {} };
+  for (const g of graph.values()) {
+    if (!strong(g) || !inB(beads[g.i]) || !inB(beads[g.j])) continue;
+    const ca = codeAt.get(g.i), cb = codeAt.get(g.j);
+    if (!ca !== !cb) r.missing++;
+    if (!ca || !cb) continue;
+    const kind = g.kinds.has('motif') ? 'motif' : g.kinds.has('chain') ? 'chain' : 'spatial', o = (r.byKind[kind] ||= { pairs: 0, differ: 0 });
+    o.pairs++; r.pairs++;
+    if (ca !== cb) { o.differ++; r.differ++; }
+  }
+  r.pct = +((100 * r.differ) / Math.max(1, r.pairs)).toFixed(1);
+  for (const o of Object.values(r.byKind)) o.pct = +((100 * o.differ) / Math.max(1, o.pairs)).toFixed(1);
+  if (box) { r.codes = {}; for (const t of placed) if (inB(t.b)) r.codes[t.e.code] = (r.codes[t.e.code] || 0) + 1; }
+  return r;
+}
+const consist = { all: consistency(null), regions: Object.fromEntries([...Object.entries(FB), ['captain', CAPTAIN.box]].map(([k, box]) => [k, consistency(box)])) };
+const motifRep = motifs.map((m) => ({ centre: [Math.round(m.centre.x), Math.round(m.centre.y)], centreCode: codeAt.get(BI.get(m.centre)) ?? null, ring: m.ring.map((t) => codeAt.get(BI.get(t)) ?? '-').join(' '), ringMm: m.ring.map((t) => +t.dMm.toFixed(1)) }));
+
+if (args.includes('--dump')) {
+  const r1 = (v) => (typeof v === 'number' ? +v.toFixed(2) : v);
+  fs.writeFileSync(path.join(OUT, 'dump.json'), JSON.stringify({
+    beads: beads.map((b) => ({ i: b.i, x: r1(b.x), y: r1(b.y), dMm: r1(b.dMm), wMm: r1(b.wMm), hMm: r1(b.hMm), shape: b.shape, rot: r1(b.rotDeg), L: r1(b.L), a: r1(b.a), b: r1(b.b), chroma: r1(b.chroma), edge: r1(b.edge), conf: r1(b.conf), src: b.src, m4: b.cls.m4, phys: b.cls.physMm, cshape: b.cls.shape, chain: b.chain?.k, inGroup: !!b.group })),
+    placed: placed.map((s) => ({ i: s.b.i, x: r1(s.b.x), y: r1(s.b.y), code: s.e.code, src: s.b.src, want: s.opts[0]?.code })),
+  }));
+}
 // ── 4. SVG + chấm + phủ
-const src = decodePng(fs.readFileSync(UP4)), img = upscale(src, W, W);
+const src =decodePng(fs.readFileSync(UP4)), img = upscale(src, W, W);
 const doc0 = buildDoc(img, placed.map((s) => ({ x: s.b.x, y: s.b.y, code: s.e.code, rot: s.e.shape ? s.b.rotDeg : 0 })), cat, PPM, MM, { mode: 'kit-20 bead-instance', seg: path.basename(SEG), method: seg.method, gapMm: GAP });
 const doc = normalizeDoc({ ...doc0, source: { name: 'Trang phục Queen.png (Real-ESRGAN ×4, hạt → viên)', widthPx: W, heightPx: W }, createdAt: new Date().toISOString() });
 const check = checkDesign(doc, cat);
@@ -532,13 +775,14 @@ for (const s of placed) byCode[s.e.code] = (byCode[s.e.code] || 0) + 1;
 const evQ = pal.layers.queen, evS = pal.layers.starry;
 const report = {
   schema: 'pearl-kit20-report/1', source: 'requirements/Trang phục Queen.png', segmentation: { file: path.relative(ROOT, SEG), method: seg.method, region: seg.region, tiles: seg.tiles, seconds: seg.seconds, params: seg.params },
-  instances: { masks: all.length, beadLike: cand.length, droppedParts: drop.size, beads: beads.length, noCode: noCode.length, collisionDropped: lost.collision, shrunkForGap: lost.shrunk, nudged: lost2.nudged, nudgeMaxMm: nudgeMm, insideBigSkipped: lost.insideBig, stones: placed.length },
+  instances: { masks: all.length, beadLike: cand.length, droppedParts: drop.size, beads: beads.length, noCode: noCode.length, collisionDropped: lost.collision, shrunkForGap: lost.shrunk, nudged: lost2.nudged, nudgeMaxMm: nudgeMm, insideBigSkipped: lost.insideBig, gapGlintSkipped: lost.gapGlint, stones: placed.length },
   materialRule: MAT, sizeK, coverage: { costumeMm2: Math.round(costMm2), stoneMm2: Math.round(covered), pct: +((100 * covered) / costMm2).toFixed(1), note: seg.region === 'gt' ? 'chỉ 3 ô GT được tách → % phủ toàn trang phục không có nghĩa' : undefined },
   codeCurve: curve.map(({ codes, ...c }) => ({ ...c, added: codes.filter((x) => !(curve.find((d) => d.union === c.union - 1)?.codes || []).includes(x)) })),
   palette: { codes, crystal: pal.crystal, union: codes.length, maxCodes, queenCodesUsed: Object.keys(byCode).length, byCode, starryMeanDE: evS?.meanDE, queenMeanDE: evQ?.meanDE, },
   check: check.ok ? 'ok' : check.errors.slice(0, 10),
   chain: chainF ? { file: chainF, ...chain } : undefined,
   chains: { ...chains },
+  kit23: { mrf, paletteMerge, consistency: consist, motifs: motifRep, anchorDropped: lost.anchorDropped || 0, fb: FB },
   // vùng ảnh captain gửi (msg 015, outputs/kit/kit20/captain_chain_5EEEE.png, tìm bằng khớp mẫu trên review.svg): hàng hạt to trước
   // (lẽ ra toàn '5') + mã mọi viên ≥ 4 mm trong khung
   captainRegion: (() => {
@@ -575,8 +819,9 @@ if (!args.includes('--no-review')) {
   execFileSync(process.execPath, [path.join(ROOT, 'tools', 'kit_review_overlay.mjs'), path.join(OUT, 'queen.svg'), bg, rv], { stdio: 'ignore' });
   const svg = fs.readFileSync(rv, 'utf8');
   report.review = { svg: rv, crops: {} };
-  for (const id of ['heart', 'pearls', 'cape', 'captain']) {
-    const [bx, by, bw, bh] = CAPTAIN.box, t = id === 'captain' ? { x: bx, y: by, w: bw, h: bh } : JSON.parse(fs.readFileSync(path.join(ROOT, 'outputs', 'kit', 'queen_gt', `${id}.json`), 'utf8')).tile, m = id === 'captain' ? 0 : 4 * PPM;
+  for (const id of ['heart', 'pearls', 'cape', 'captain', ...Object.keys(FB)]) {
+    const fixed = id === 'captain' ? CAPTAIN.box : FB[id]; // khung ảnh captain gửi (không lề)
+    const t = fixed ? { x: fixed[0], y: fixed[1], w: fixed[2], h: fixed[3] } : JSON.parse(fs.readFileSync(path.join(ROOT, 'outputs', 'kit', 'queen_gt', `${id}.json`), 'utf8')).tile, m = fixed ? 0 : 4 * PPM;
     const vb = `${(t.x - m).toFixed(0)} ${(t.y - m).toFixed(0)} ${(t.w + 2 * m).toFixed(0)} ${(t.h + 2 * m).toFixed(0)}`, pw = 1200, ph = Math.round((1200 * (t.h + 2 * m)) / (t.w + 2 * m));
     const cs = svg.replace(/viewBox="[^"]*"/, `viewBox="${vb}"`).replace(/ width="[^"]*" height="[^"]*"/, ` width="${pw}" height="${ph}"`);
     const f = path.join(OUT, `review_${id}.svg`), png = path.join(OUT, `review_${id}.png`);
@@ -590,6 +835,9 @@ const pick = (t) => ({ recall: t.recall, precision: t.precision, materialOk: t.m
 const nSum = { beadsGt2mm: pick(detScore2.total), stonesGt2mm: pick(mapScore2.total), beadsAll: pick(detScore.total), goldBeads: detScore.total.gold, goldStones: mapScore.total.gold, goldBeadsGt2mm: detScore2.total.gold, goldStonesGt2mm: mapScore2.total.gold, beads: beads.length, stones: placed.length };
 const offF = flag('--neigh-off'), chOffF = flag('--chains-off');
 nSum.captainRow = report.captainRegion.rowCodes; nSum.coveragePct = report.coverage.pct;
+nSum.consistencyPct = consist.all.pct; nSum.consistency = Object.fromEntries(Object.entries(consist.regions).map(([k, v]) => [k, { pct: v.pct, pairs: v.pairs, missing: v.missing }])); nSum.palette = codes; nSum.byCode = byCode; nSum.motifs = motifRep;
+const beforeF = flag('--before');
+if (beforeF && fs.existsSync(beforeF)) report.kit23.beforeAfter = { before: JSON.parse(fs.readFileSync(beforeF, 'utf8')), after: nSum };
 fs.writeFileSync(path.join(OUT, 'neigh_summary.json'), JSON.stringify(nSum) + '\n');
 if (chOffF && fs.existsSync(chOffF)) report.chains.beforeAfter = { before: JSON.parse(fs.readFileSync(chOffF, 'utf8')), after: nSum };
 if (offF && fs.existsSync(offF)) report.neighbour.beforeAfter = { before: JSON.parse(fs.readFileSync(offF, 'utf8')), after: nSum };
@@ -597,6 +845,7 @@ fs.writeFileSync(path.join(OUT, 'report.json'), JSON.stringify(report, null, 1) 
 const T = (s) => `recall ${s.recall} prec ${s.precision} mat ${s.materialOk} size ${s.sizeOk} shape ${s.shapeOk} | ≥4mm rec ${s.gt4mm.recall} mat ${s.gt4mm.materialOk} size ${s.gt4mm.sizeOk}`;
 console.log(`${seg.method}/${seg.region}: ${all.length} mask → ${cand.length} giống hạt → ${beads.length} hạt → ${placed.length} viên (va chạm bỏ ${lost.collision}, thu cỡ ${lost.shrunk}, không mã ${noCode.length}); ${codes.length} mã chung [${codes.join(' ')}] pha lê ${pal.crystal}, Queen dùng ${Object.keys(byCode).length}; chuỗi vàng ${chain.placed}/${chain.points}; phủ ${report.coverage.pct}%; check ${check.ok ? 'ok' : 'LỖI'}`);
 for (const c of report.codeCurve) console.log(`  mã ${c.union} (+pet ${c.product}) +[${c.added.join(' ')}]: sai vật liệu ${c.material}, hình ${c.shape}, cỡ ${c.size}, không mã ${c.noCode}, ΔE ${c.dE}, Starry ΔE ${c.starryDE}`);
+console.log(`  KIT-23: MRF ${mrf.enabled ? `đổi ${mrf.changed} nhãn, chất liệu ${mrf.relabeledMaterial}` : 'tắt'}; motif ${motifs.length}; bảng thử +[${pearlAdd.join(' ')}] gộp −[${merged.history.map((h) => h.removed).join(' ')}]; neo bỏ ${lost.anchorDropped || 0}; consistency ${consist.all.pct}% (${consist.all.differ}/${consist.all.pairs}, thiếu 1 bên ${consist.all.missing}); ` + Object.entries(consist.regions).map(([k, v]) => `${k} ${v.pct}%`).join(' ') + `; hàng captain ${report.captainRegion.rowCodes}`);
 console.log(`  hạt:  ${T(detScore.total)}`);
 console.log(`  viên: ${T(mapScore.total)}`);
 for (const [k, v] of Object.entries(mapScore.tiles)) console.log(`   ${k}: gt ${v.gt} map ${v.map} · ${T(v)}`);

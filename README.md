@@ -1,36 +1,73 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pearl Store
 
-## Getting Started
+Cửa hàng tự host, kiểu Shopify, bán tranh ngọc trai personalized theo ảnh pet (tên tạm "Pearl Atelier").
 
-First, run the development server:
+Luồng mua của khách:
+1. Chọn theme.
+2. Tải ảnh pet lên.
+3. Xem preview AI: con pet của chính khách được dựng lại bằng ngọc trai, kèm ảnh khung treo trong phòng.
+4. Chọn cỡ và add-on.
+5. Thanh toán.
+
+Ca khó thì admin duyệt hoặc chuyển cho designer.
+
+Chi tiết sản phẩm: [`PRODUCT.md`](PRODUCT.md). Kiến trúc: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Thiết kế UI: [`DESIGN.md`](DESIGN.md).
+
+## Công nghệ
+
+- Next.js 16 (App Router), React 19, Tailwind v4.
+- Database `node:sqlite`, không dùng ORM. Schema ở `db/schema.sql` và `db/migrations/`.
+- Tiền lưu bằng số nguyên cent.
+- Worker sinh preview chạy bất đồng bộ (`src/worker/`).
+- Test: Vitest cho unit, Playwright cho e2e.
+
+## Chạy local
+
+Cần Node ≥ 22.5. Thiếu `node:sqlite` thì app không chạy được.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local      # tùy chọn; mặc định chạy offline hoàn toàn
+npm run seed                    # tạo dữ liệu mẫu: sản phẩm, theme, collection
+npm run dev                     # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+| Mặc định offline | Ghi chú |
+|---|---|
+| Provider AI | mock. Muốn gen thật thì vào `/admin/settings` đổi provider, rồi điền `GEMINI_API_KEY` / `OPENAI_API_KEY` trong `.env.local` |
+| Email | ghi vào outbox, không gửi thật |
+| Thanh toán | giả lập, không thu thông tin thẻ |
+| Worker | chạy chung process khi `WORKER_INLINE=1`. Production đặt `WORKER_INLINE=0` và chạy `npm run worker` |
+| Admin | `/admin`, đăng nhập `admin` / `admin123`. **Đổi mật khẩu trước khi deploy** |
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Lệnh
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Lệnh | Việc |
+|---|---|
+| `npm run dev` / `build` / `start` | Chạy dev, build, chạy production |
+| `npm run seed` | Seed catalogue mẫu (`scripts/seed*.ts`) |
+| `npm run load:rollout` | Nạp ảnh preview đã gen từ pipeline `pearl_compare` |
+| `npm run worker` | Worker sinh preview, chạy tách riêng |
+| `npm test` · `npm run test:e2e` · `npm run typecheck` · `npm run lint` | Kiểm tra |
 
-## Learn More
+## Cấu trúc
 
-To learn more about Next.js, take a look at the following resources:
+| Đường dẫn | Nội dung |
+|---|---|
+| `src/app/(store)/` | Storefront: trang chủ, collection, search, trang sản phẩm, giỏ, checkout, tài khoản, tra cứu đơn |
+| `src/app/admin/` | Admin: dashboard, đơn hàng, hàng chờ thiết kế, sản phẩm/variant/add-on, review, email, cài đặt, số liệu |
+| `src/app/api/` | API: cart, checkout, personalize, search, account, admin, events |
+| `src/lib/` | Logic dùng chung: DB, giá, personalizer, provider AI |
+| `src/worker/` | Hàng đợi sinh preview |
+| `db/` | Schema và migration SQLite |
+| `scripts/` | Seed dữ liệu |
+| `public/demo/` | Ảnh demo |
+| `tests/` | Test e2e Playwright |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Dữ liệu chạy (`/storage`), `.env*` và `test-results/` không nằm trong git.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Ghi chú
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Review mẫu được gắn nhãn là mẫu và bị loại ở production. **Không bịa review hay rating.**
+- Ảnh preview lấy từ pipeline `pearl_compare`: pearl art → ảnh khung trong phòng → ảnh final ghép.
+- Bản đồ đá cho xưởng được làm ở nhánh `features/initial_approach` của repo này (Stone Map).

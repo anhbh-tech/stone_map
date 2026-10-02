@@ -108,3 +108,32 @@ dọc viền tim; còn sai: 2 cánh marquise bên phải thành giọt S057 (kh�
 - Viền hạt vàng li ti ~1 mm: chỉ đặt được viên 2.8 nơi còn chỗ.
 - Ngọc vẽ < 5 mm: catalog không có ngọc < 5 mm.
 - GT KIT-15 chưa được captain soát.
+
+## KIT-21 — chuỗi hạt (captain msg 015)
+
+`node tools/kit20.mjs --seg outputs/kit/kit20/seg_sam_all.json --chain outputs/kit/kit20/chain_all.json --out outputs/kit/kit21
+--chains-off outputs/kit/kit21/nochains/neigh_summary.json` (trước = cùng lệnh `--no-chains --out outputs/kit/kit21/nochains`).
+
+- (a) Tim: X039 12×12 đặt ở tâm mask tim vẽ, đặt trước mọi viên (hạt vẽ to nhất) nên không viên nào đẩy / chồng được.
+- (b) Viền vàng: `kit20_chain.py --step 2.95` (2.8 + 0.15), viên vàng 2.8 dọc đường tâm, chỉ nơi khe ≥ 0.15: đặt 125 / 2179 điểm
+  (còn lại chồng hạt to đã đặt — viền ~1 mm sát hạt).
+- (c) Chuỗi (bước 2c trong `kit20.mjs`): cạnh = 2 hạt tròn cùng cỡ ±15 % (cỡ = trục dài, hạt cầu bị che), khoảng 0.6–1.5 × cỡ,
+  cùng nhãn hoặc ΔE76 ≤ 20 (màu chuyển dần); xếp cạnh theo độ thẳng của đoạn nối tiếp + độ đều, bậc ≤ 2, góc đổi ≤ 45°, bước
+  lệch ≤ 65 %. Hàng song song kề (cùng cỡ, cùng bước, ≥ 50 % hạt trong 1.6 bước) gộp nhóm. Phiếu nhóm = Σ độ tin màu + 0.1 ×
+  tần suất vật liệu theo khoảng cỡ (phá hoà); luật gradient: nhãn dọc chuỗi đúng 2 đoạn liền, đoạn trắng / ngọc có C* thấp hơn →
+  ánh sáng → cả chuỗi theo đoạn C* thấp. Cả nhóm 1 cỡ (trung vị). Chuỗi viên ≥ 4 mm có bước vẽ < cỡ + 0.15 (hạt vẽ chồng kiểu
+  3D) → đặt lại dọc đường chuỗi, bước = cỡ + 0.15 (`--no-resample` tắt, `--resample-min`).
+- (d) Bảng mã: union 13 / sản phẩm 15 (trần), như KIT-20.
+
+Cả ảnh: 278 chuỗi, 187 nhóm, 1444 hạt trong chuỗi; đổi nhãn 36 (trắng→ngọc 15, vàng→ngọc 16, màu→ngọc 3, màu→vàng 1,
+ngọc→vàng 1), đổi cỡ 94, luật gradient 2 chuỗi; đặt lại 93 chuỗi (624 hạt → 458 viên); 1929 viên, phủ 42.8 %, check ok.
+
+| | không chuỗi | chuỗi | chuỗi, `--no-resample` |
+|---|---|---|---|
+| hàng captain (7 hạt) | L23 Z16 Z16 Z16 Z16 Z16 5 | 5 5 5 5 5 5 5 | 5 Z16 Z16 5 5 5 5 |
+| viên GT ≥ 2 mm recall / vật liệu / cỡ | 39.8 / 65.7 / 51.4 | 36.4 / 62.5 / 46.9 | 39.8 / 65.7 / 48.6 |
+| hạt GT ≥ 2 mm recall / vật liệu / cỡ | 60.2 / 77.4 / 39.6 | 53.4 / 72.3 / 38.3 | 60.2 / 75.5 / 35.8 |
+
+Đặt lại dọc chuỗi giảm điểm GT vì GT (nháp VLM) giữ mỗi hạt vẽ chồng 1 viên ở đúng tâm vẽ; viên đặt lại lệch tâm vẽ tới ~2.3 mm.
+Không đặt lại thì viên ngọc 5 ở bước vẽ 4.2–4.7 mm va chạm → 2 viên thu thành Z16. Hàng captain tiếp lên trên bằng 3 hạt nhỏ
+hơn (vẽ ~3.3 mm, xa hơn) vẫn là B (L23 2.8): lệch cỡ > 15 % nên không vào chuỗi.

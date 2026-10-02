@@ -22,6 +22,9 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2), flag = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
 const SEG = path.resolve(ROOT, flag('--seg', 'outputs/kit/kit20/seg_sam_all.json')), OUT = path.resolve(ROOT, flag('--out', 'outputs/kit/kit20'));
 const UP4 = path.join(ROOT, 'outputs', 'kit', 'kit20', 'up4.png'); // Real-ESRGAN ×4 của ảnh nguồn (tools/kit20_segment.py cùng dùng)
+// hàng hạt captain chỉ ra (msg 015): tâm px 3543 của 7 hạt vẽ cùng cỡ dọc đường cong, khung crop
+const chainCollide = flag('--chain-collide', 'shrink');
+const CAPTAIN = { box: [2093, 1504, 306, 508], row: [[2343, 1693], [2332, 1773], [2310, 1818], [2277, 1862], [2232, 1904], [2178, 1939], [2118, 1970]] };
 const MM = 300, W = 3543, PPM = W / MM, GAP = 0.15, maxCodes = +flag('--max-codes', 13), minCodes = +flag('--min-codes', 9);
 const cat = loadCatalog(), t0 = Date.now();
 fs.mkdirSync(OUT, { recursive: true });
@@ -190,6 +193,162 @@ if (!args.includes('--no-neigh')) {
   }
   beads.push(...add);
 }
+// ── 2c. KIT-21 chuỗi hạt (captain msg 015): hạt liên tiếp cùng cỡ (±15 %), bước đều, hướng mượt = 1 chuỗi; hàng song song kề bên
+// (cùng cỡ, cùng bước) = hàng xếp lớp → 1 nhóm. CỠ quyết định chuỗi (cùng cỡ dọc chuỗi = cùng loại), mỗi nhóm 1 nhãn vật liệu + 1 cỡ:
+// phiếu = Σ độ tin màu + wPrior × tần suất vật liệu theo khoảng cỡ (chỉ phá hoà); chuyển màu dọc chuỗi = ánh sáng (luật gradient).
+// Chuỗi vẽ chồng (bước vẽ < cỡ viên + khe) → đặt lại viên dọc đường chuỗi, bước = cỡ viên + 0.15 mm (không va chạm)
+const chains = { enabled: !args.includes('--no-chains'), chains: 0, groups: 0, beadsInChains: 0, relabeled: 0, resized: 0, resampledChains: 0, removed: 0, added: 0, relabeledBy: {}, prior: {} };
+if (chains.enabled) {
+  const resampleMin = args.includes('--no-resample') ? Infinity : +flag('--resample-min', 4), chainSize = flag('--chain-size', 'd'), wPrior = +flag('--chain-wprior', 0.1), maxStepDE = +flag('--chain-step-de', 20), sizeTol = 1.15, pitchTol = 1.65; // bước lệch ≤ 65 % qua 1 hạt (hạt sau bị che → bước vẽ đổi)
+  const sz = (b) => (b.hMm / b.wMm >= 0.6 ? b.wMm : b.dMm); // hạt cầu bị che một phần: trục dài ≈ đường kính thật
+  for (const b of beads) b.conf ??= matConf(b);
+  const C = beads.filter((b) => b.cls.shape === 'round' && sz(b) >= 2.2 && b.src !== 'chain');
+  // tiên nghiệm vật liệu theo khoảng cỡ: hạt tròn độ tin ≥ 0.8, làm trơn +1
+  const BINS = [2.2, 3, 4, 5, 6.5, 9, 99], binOf = (d) => BINS.findIndex((v, k) => d >= v && d < BINS[k + 1]), MATS = ['pearl', 'gold', 'white', 'color'];
+  const cnt = BINS.slice(0, -1).map(() => Object.fromEntries(MATS.map((m) => [m, 1])));
+  for (const b of C) if (b.conf >= 0.8 && binOf(sz(b)) >= 0) cnt[binOf(sz(b))][b.cls.m4]++;
+  const prior = cnt.map((c) => { const t = MATS.reduce((a, m) => a + c[m], 0); return Object.fromEntries(MATS.map((m) => [m, c[m] / t])); });
+  chains.prior = Object.fromEntries(prior.map((p, k) => [`${BINS[k]}-${BINS[k + 1]}`, Object.fromEntries(MATS.map((m) => [m, +p[m].toFixed(2)]))]));
+  // cạnh ứng viên: cùng cỡ, khoảng tâm 0.6–1.5 × cỡ; nhận tham lam theo độ đều (|D − cỡ| / cỡ), bậc ≤ 2, không vòng,
+  // qua 1 hạt hướng đổi ≤ 45° và bước lệch ≤ pitchTol
+  const cell = 12 * PPM, G = new Map(), kk = (x, y) => `${Math.floor(x / cell)},${Math.floor(y / cell)}`;
+  C.forEach((b, i) => { b.ci = i; const q = kk(b.x, b.y); (G.get(q) || G.set(q, []).get(q)).push(b); });
+  const E = [];
+  for (const b of C) {
+    const gx = Math.floor(b.x / cell), gy = Math.floor(b.y / cell);
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const t of G.get(`${gx + dx},${gy + dy}`) || []) {
+      if (t.ci <= b.ci) continue;
+      const d1 = sz(b), d2 = sz(t), dm = (d1 + d2) / 2, D = Math.hypot(t.x - b.x, t.y - b.y) / PPM;
+      if (Math.max(d1, d2) / Math.min(d1, d2) > sizeTol || D < 0.6 * dm || D > 1.5 * dm) continue;
+      // cùng nhãn, hoặc màu chuyển dần (ΔE76 ≤ maxStepDE giữa 2 hạt kề: ánh sáng), không nối hạt vàng với đá đỏ cạnh nó
+      if (b.cls.m4 !== t.cls.m4 && Math.hypot(b.L - t.L, b.a - t.a, b.b - t.b) > maxStepDE) continue;
+      E.push({ a: b, b: t, D, q: Math.abs(D - dm) / dm });
+    }
+  }
+  // hạt vẽ chồng kiểu 3D làm bước lệch cỡ → xếp cạnh theo độ thẳng của đoạn nối tiếp ở hai đầu (−cos góc a-b-c tốt nhất) trước,
+  // rồi độ đều: điểm = q + (2 − tiếp(a→b) − tiếp(b→a)) / 2
+  const nbE = C.map(() => []);
+  for (const e of E) { nbE[e.a.ci].push([e.b, e.D]); nbE[e.b.ci].push([e.a, e.D]); }
+  const cont = (a, b, D) => nbE[b.ci].reduce((best, [c, D2]) => {
+    if (c === a || Math.max(D, D2) / Math.min(D, D2) > pitchTol) return best;
+    const v1 = [a.x - b.x, a.y - b.y], v2 = [c.x - b.x, c.y - b.y];
+    return Math.max(best, -(v1[0] * v2[0] + v1[1] * v2[1]) / Math.hypot(...v1) / Math.hypot(...v2));
+  }, 0);
+  for (const e of E) e.q += (2 - cont(e.a, e.b, e.D) - cont(e.b, e.a, e.D)) / 2;
+  E.sort((p, q) => p.q - q.q);
+  const uf = C.map((_, i) => i), find = (i) => (uf[i] === i ? i : (uf[i] = find(uf[i])));
+  const adj = C.map(() => []);
+  const smooth = (n, o, D) => adj[n.ci].every(({ t, D: D0 }) => {
+    const v1 = [t.x - n.x, t.y - n.y], v2 = [o.x - n.x, o.y - n.y];
+    const cos = (v1[0] * v2[0] + v1[1] * v2[1]) / Math.hypot(...v1) / Math.hypot(...v2);
+    return cos <= -Math.cos(Math.PI / 4) && Math.max(D, D0) / Math.min(D, D0) <= pitchTol;
+  });
+  for (const e of E) {
+    const { a: p, b: q, D } = e;
+    if (adj[p.ci].length >= 2 || adj[q.ci].length >= 2 || find(p.ci) === find(q.ci)) continue;
+    if (!smooth(p, q, D) || !smooth(q, p, D)) continue;
+    adj[p.ci].push({ t: q, D }); adj[q.ci].push({ t: p, D }); uf[find(p.ci)] = find(q.ci);
+  }
+  // chuỗi = thành phần ≥ 3 hạt, xếp theo đường đi từ một đầu mút
+  const comp = new Map();
+  for (const b of C) if (adj[b.ci].length) { const r = find(b.ci); (comp.get(r) || comp.set(r, []).get(r)).push(b); }
+  const CH = [];
+  for (const L of comp.values()) {
+    if (L.length < 3) continue;
+    let cur = L.find((b) => adj[b.ci].length === 1) || L[0], prev = null;
+    const path = [];
+    while (cur) { path.push(cur); const nx = adj[cur.ci].find(({ t }) => t !== prev); prev = cur; cur = nx?.t; }
+    const pitch = path.slice(1).map((b, k) => Math.hypot(b.x - path[k].x, b.y - path[k].y) / PPM).sort((x, y) => x - y);
+    const ds = path.map(sz).sort((x, y) => x - y);
+    const ch = { path, pitch: pitch[pitch.length >> 1], d: ds[ds.length >> 1], k: CH.length };
+    for (const b of path) b.chain = ch;
+    CH.push(ch);
+  }
+  chains.chains = CH.length; chains.beadsInChains = CH.reduce((a, c) => a + c.path.length, 0);
+  const vote = (L) => {
+    const v = Object.fromEntries(MATS.map((m) => [m, 0]));
+    for (const b of L) { const pr = prior[binOf(sz(b))] || prior[0]; for (const m of MATS) v[m] += wPrior * pr[m]; v[b.cls.m4] += b.conf; }
+    const R = Object.entries(v).sort((x, y) => y[1] - x[1]);
+    return { m: R[0][0], margin: (R[0][1] - R[1][1]) / L.length, v };
+  };
+  // chuyển màu dọc chuỗi: nhãn tạo đúng 2 đoạn liền (mỗi đoạn ≥ 2 hạt), một đoạn trắng / ngọc và một đoạn vàng / màu, độ bão hoà
+  // tăng dần → ánh sáng / phản chiếu (làm màu ấm lên, không làm nhạt đi) → cả chuỗi theo đoạn C* thấp
+  const famOf = (m) => (m === 'pearl' || m === 'white' ? 'w' : 'k');
+  chains.gradient = 0;
+  for (const c of CH) {
+    c.vote = vote(c.path);
+    const runs = [];
+    for (const b of c.path) { const f = famOf(b.cls.m4); if (runs.length && runs[runs.length - 1].f === f) runs[runs.length - 1].L.push(b); else runs.push({ f, L: [b] }); }
+    if (runs.length !== 2 || runs.some((r) => r.L.length < 2)) continue;
+    const w = runs.find((r) => r.f === 'w'), k = runs.find((r) => r.f === 'k');
+    const mc = (L) => L.reduce((a, b) => a + b.chroma, 0) / L.length;
+    if (!w || !k || mc(w.L) >= mc(k.L)) continue;
+    const cw = {};
+    for (const b of w.L) cw[b.cls.m4] = (cw[b.cls.m4] || 0) + b.conf;
+    c.grad = Object.entries(cw).sort((x, y) => y[1] - x[1])[0][0];
+    c.vote = { ...c.vote, m: c.grad, margin: 1 };
+    chains.gradient++;
+  }
+  // hàng song song kề: cùng cỡ ±15 %, cùng bước ±30 %, ≥ 50 % hạt chuỗi ngắn có hạt chuỗi kia trong 1.6 bước;
+  // gộp khi cùng nhãn hoặc một bên không chắc (lề phiếu < 0.35 / hạt)
+  const gu = CH.map((_, i) => i), gf = (i) => (gu[i] === i ? i : (gu[i] = gf(gu[i])));
+  for (const A of CH) {
+    const near = new Map();
+    for (const b of A.path) {
+      const gx = Math.floor(b.x / cell), gy = Math.floor(b.y / cell);
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const t of G.get(`${gx + dx},${gy + dy}`) || []) {
+        const B = t.chain;
+        if (!B || B === A || B.k < A.k) continue;
+        if (Math.hypot(t.x - b.x, t.y - b.y) / PPM > 1.6 * Math.max(A.pitch, B.pitch)) continue;
+        (near.get(B) || near.set(B, new Set()).get(B)).add(b);
+      }
+    }
+    for (const [B, S] of near) {
+      if (Math.max(A.d, B.d) / Math.min(A.d, B.d) > sizeTol || Math.max(A.pitch, B.pitch) / Math.min(A.pitch, B.pitch) > 1.3) continue;
+      if (S.size < Math.max(2, 0.5 * Math.min(A.path.length, B.path.length))) continue;
+      if (A.vote.m !== B.vote.m && Math.min(A.vote.margin, B.vote.margin) >= 0.35) continue;
+      gu[gf(A.k)] = gf(B.k);
+    }
+  }
+  const groups = new Map();
+  for (const c of CH) { const r = gf(c.k); (groups.get(r) || groups.set(r, []).get(r)).push(c); }
+  chains.groups = groups.size;
+  for (const g of groups.values()) {
+    const gl = g.filter((c) => c.grad).map((c) => c.grad), L = g.flatMap((c) => c.path), V = gl.length ? { m: gl.sort((x, y) => gl.filter((v) => v === y).length - gl.filter((v) => v === x).length)[0] } : vote(L), ds = L.map(chainSize === 'w' ? sz : (b) => b.dMm).sort((x, y) => x - y), dMed = ds[ds.length >> 1];
+    for (const b of L) {
+      const before = `${b.cls.m4}/${b.cls.physMm}`;
+      b.cls = classify({ ...b, dMm: dMed, wMm: dMed, hMm: dMed, shape: 'round' }, V.m);
+      const after = `${b.cls.m4}/${b.cls.physMm}`;
+      if (before.split('/')[0] !== V.m) { chains.relabeled++; const k = `${before.split('/')[0]}→${V.m}`; chains.relabeledBy[k] = (chains.relabeledBy[k] || 0) + 1; }
+      else if (before !== after) chains.resized++;
+      b.group = g;
+    }
+  }
+  if (args.includes('--debug')) for (const [x, y] of CAPTAIN.row) {
+    const b = C.reduce((a, t) => (Math.hypot(t.x - x, t.y - y) < Math.hypot(a.x - x, a.y - y) ? t : a), C[0]);
+    console.error('captain', x, y, b.chain ? `chain ${b.chain.k} n${b.chain.path.length} pitch ${b.chain.pitch.toFixed(2)} d ${b.chain.d.toFixed(2)} vote ${b.chain.vote.m}/${b.chain.vote.margin.toFixed(2)} group ${gf(b.chain.k)} [${b.chain.path.map((p) => `${Math.round(p.x)},${Math.round(p.y)}`).join(' ')}]` : 'no chain', 'adj', adj[b.ci].length, b.cls.m4, sz(b).toFixed(2), b.conf.toFixed(2));
+  }
+  // đặt lại dọc chuỗi khi bước vẽ < cỡ viên + khe (hạt vẽ chồng kiểu 3D): nội suy theo độ dài cung, đặc trưng của hạt gốc gần nhất
+  const add = [], drop = new Set();
+  for (const c of CH) {
+    const phys = c.path[0].cls.physMm, step = phys + GAP;
+    if (c.pitch >= step - 0.05 || phys < resampleMin) continue;
+    const P = c.path, seg = P.slice(1).map((b, k) => Math.hypot(b.x - P[k].x, b.y - P[k].y)), len = seg.reduce((a, v) => a + v, 0) / PPM;
+    const n = Math.max(1, Math.floor(len / step + 1e-6)) + 1, off = (len - (n - 1) * step) / 2;
+    for (const b of P) drop.add(b);
+    for (let k = 0; k < n; k++) {
+      let s2 = (off + k * step) * PPM, j = 0;
+      while (j < seg.length - 1 && s2 > seg[j]) { s2 -= seg[j]; j++; }
+      const f = seg.length ? Math.min(1, s2 / seg[j]) : 0, A = P[j], B = P[Math.min(j + 1, P.length - 1)];
+      const x = A.x + f * (B.x - A.x), y = A.y + f * (B.y - A.y), src = f < 0.5 ? A : B;
+      add.push({ ...src, x, y, src: 'chain-resample', i: 2e6 + add.length, chain: c });
+    }
+    chains.resampledChains++;
+  }
+  chains.removed = drop.size; chains.added = add.length;
+  for (let k = beads.length - 1; k >= 0; k--) if (drop.has(beads[k])) beads.splice(k, 1);
+  beads.push(...add);
+}
 const recQ = beads.map((b) => ({ layer: 'queen', mat: catMat(b.cls), physMm: b.cls.physMm, ...(b.cls.shape !== 'round' && { shape: b.cls.shape, w: b.cls.w, h: b.cls.h }), t: b.cls.t, one: false, gwl: 1, from: 'bead', wt: Math.max(1, (b.dMm / 2.8) ** 2) }));
 
 if (args.includes('--analyze')) {
@@ -276,7 +435,8 @@ const fits = (s, e) => {
   return true;
 };
 for (const s of stones) {
-  const tryE = [s.e, ...s.opts.slice(1).filter((e) => R(e) < R(s.e) - 1e-6 && (e.kind === 'pearl') === (s.e.kind === 'pearl')), ...s.alt];
+  // hạt trong nhóm chuỗi (KIT-21): cả chuỗi 1 mã → va chạm thì bỏ hạt, không thu thành mã khác (--chain-collide drop)
+  const tryE = s.b.group && chainCollide === 'drop' ? [s.e] : [s.e, ...s.opts.slice(1).filter((e) => R(e) < R(s.e) - 1e-6 && (e.kind === 'pearl') === (s.e.kind === 'pearl')), ...s.alt];
   const e = tryE.find((x) => fits(s, x));
   if (!e) { lost.collision++; if (args.includes('--debug')) { const w = placed.reduce((a, t) => (Math.hypot(t.b.x - s.b.x, t.b.y - s.b.y) < Math.hypot(a.b.x - s.b.x, a.b.y - s.b.y) ? t : a), placed[0]); console.error('va chạm', JSON.stringify({ d: +(Math.hypot(w.b.x - s.b.x, w.b.y - s.b.y) / PPM).toFixed(2), lose: [s.e.code, +s.b.dMm.toFixed(1), s.b.cls.m4, s.rec.mat, s.rec.physMm, s.opts.map((e) => e.code).join()], win: [w.e.code, +w.b.dMm.toFixed(1), w.b.cls.m4] })); } continue; }
   if (e !== s.e) lost.shrunk++;
@@ -335,6 +495,16 @@ const report = {
   palette: { codes, crystal: pal.crystal, union: codes.length, maxCodes, queenCodesUsed: Object.keys(byCode).length, byCode, starryMeanDE: evS?.meanDE, queenMeanDE: evQ?.meanDE, },
   check: check.ok ? 'ok' : check.errors.slice(0, 10),
   chain: chainF ? { file: chainF, ...chain } : undefined,
+  chains: { ...chains },
+  // vùng ảnh captain gửi (msg 015, outputs/kit/kit20/captain_chain_5EEEE.png, tìm bằng khớp mẫu trên review.svg): hàng hạt to trước
+  // (lẽ ra toàn '5') + mã mọi viên ≥ 4 mm trong khung
+  captainRegion: (() => {
+    const box = CAPTAIN.box, inB = (s) => s.b.x >= box[0] && s.b.y >= box[1] && s.b.x < box[0] + box[2] && s.b.y < box[1] + box[3];
+    const row = CAPTAIN.row.map(([x, y]) => { const s = placed.reduce((a, t) => (Math.hypot(t.b.x - x, t.b.y - y) < Math.hypot(a.b.x - x, a.b.y - y) ? t : a), placed[0]); const d = Math.hypot(s.b.x - x, s.b.y - y) / PPM; return { x, y, code: d <= 3 ? s.e.code : null, dMm: +d.toFixed(2) }; });
+    const big = {};
+    for (const s of placed) if (inB(s) && Math.max(s.e.physMm || 0, s.e.physW || 0) >= 4) big[s.e.code] = (big[s.e.code] || 0) + 1;
+    return { box, row, rowCodes: row.map((r) => r.code ?? '-').join(' '), bigStonesInBox: big };
+  })(),
   neighbour: { enabled: !args.includes('--no-neigh'), relabeled: neigh.relabeled.length, added: neigh.added.length, relabeledBy: neigh.relabeled.reduce((a, r) => ((a[`${r.from}→${r.to}`] = (a[`${r.from}→${r.to}`] || 0) + 1), a), {}), addedBy: neigh.added.reduce((a, r) => ((a[r.m4] = (a[r.m4] || 0) + 1), a), {}),
     beforeAfter: undefined },
   score: { beads: { total: detScore.total, tiles: tiles(detScore) }, stones: { total: mapScore.total, tiles: tiles(mapScore) },
@@ -348,21 +518,23 @@ if (!args.includes('--no-review')) {
   execFileSync(process.execPath, [path.join(ROOT, 'tools', 'kit_review_overlay.mjs'), path.join(OUT, 'queen.svg'), bg, rv], { stdio: 'ignore' });
   const svg = fs.readFileSync(rv, 'utf8');
   report.review = { svg: rv, crops: {} };
-  for (const id of ['heart', 'pearls', 'cape']) {
-    const t = JSON.parse(fs.readFileSync(path.join(ROOT, 'outputs', 'kit', 'queen_gt', `${id}.json`), 'utf8')).tile, m = 4 * PPM;
-    const vb = `${(t.x - m).toFixed(0)} ${(t.y - m).toFixed(0)} ${(t.w + 2 * m).toFixed(0)} ${(t.h + 2 * m).toFixed(0)}`;
-    const cs = svg.replace(/viewBox="[^"]*"/, `viewBox="${vb}"`).replace(/ width="[^"]*" height="[^"]*"/, ' width="1200" height="1200"');
+  for (const id of ['heart', 'pearls', 'cape', 'captain']) {
+    const [bx, by, bw, bh] = CAPTAIN.box, t = id === 'captain' ? { x: bx, y: by, w: bw, h: bh } : JSON.parse(fs.readFileSync(path.join(ROOT, 'outputs', 'kit', 'queen_gt', `${id}.json`), 'utf8')).tile, m = id === 'captain' ? 0 : 4 * PPM;
+    const vb = `${(t.x - m).toFixed(0)} ${(t.y - m).toFixed(0)} ${(t.w + 2 * m).toFixed(0)} ${(t.h + 2 * m).toFixed(0)}`, pw = 1200, ph = Math.round((1200 * (t.h + 2 * m)) / (t.w + 2 * m));
+    const cs = svg.replace(/viewBox="[^"]*"/, `viewBox="${vb}"`).replace(/ width="[^"]*" height="[^"]*"/, ` width="${pw}" height="${ph}"`);
     const f = path.join(OUT, `review_${id}.svg`), png = path.join(OUT, `review_${id}.png`);
     fs.writeFileSync(f, cs);
-    try { execFileSync('rsvg-convert', ['-w', '1200', '-h', '1200', '-o', png, f]); report.review.crops[id] = png; fs.rmSync(f); } catch (e) { report.review.crops[id] = `rsvg-convert lỗi: ${String(e.message).slice(0, 80)}`; }
+    try { execFileSync('rsvg-convert', ['-w', String(pw), '-h', String(ph), '-o', png, f]); report.review.crops[id] = png; fs.rmSync(f); } catch (e) { report.review.crops[id] = `rsvg-convert lỗi: ${String(e.message).slice(0, 80)}`; }
   }
 }
 report.seconds = +((Date.now() - t0) / 1000).toFixed(1);
 // tóm tắt cho so sánh trước / sau bước láng giềng (msg 014): chạy --no-neigh --out <dir> rồi --neigh-off <dir>/neigh_summary.json
 const pick = (t) => ({ recall: t.recall, precision: t.precision, materialOk: t.materialOk, sizeOk: t.sizeOk });
 const nSum = { beadsGt2mm: pick(detScore2.total), stonesGt2mm: pick(mapScore2.total), beadsAll: pick(detScore.total), goldBeads: detScore.total.gold, goldStones: mapScore.total.gold, goldBeadsGt2mm: detScore2.total.gold, goldStonesGt2mm: mapScore2.total.gold, beads: beads.length, stones: placed.length };
+const offF = flag('--neigh-off'), chOffF = flag('--chains-off');
+nSum.captainRow = report.captainRegion.rowCodes; nSum.coveragePct = report.coverage.pct;
 fs.writeFileSync(path.join(OUT, 'neigh_summary.json'), JSON.stringify(nSum) + '\n');
-const offF = flag('--neigh-off');
+if (chOffF && fs.existsSync(chOffF)) report.chains.beforeAfter = { before: JSON.parse(fs.readFileSync(chOffF, 'utf8')), after: nSum };
 if (offF && fs.existsSync(offF)) report.neighbour.beforeAfter = { before: JSON.parse(fs.readFileSync(offF, 'utf8')), after: nSum };
 fs.writeFileSync(path.join(OUT, 'report.json'), JSON.stringify(report, null, 1) + '\n');
 const T = (s) => `recall ${s.recall} prec ${s.precision} mat ${s.materialOk} size ${s.sizeOk} shape ${s.shapeOk} | ≥4mm rec ${s.gt4mm.recall} mat ${s.gt4mm.materialOk} size ${s.gt4mm.sizeOk}`;

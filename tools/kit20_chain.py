@@ -2,7 +2,7 @@
 
 Hạt vàng vẽ ~1 mm (139 / 166 hạt vàng GT < 2 mm) không thể mỗi hạt 1 viên (viên nhỏ nhất 2.8 mm): lấy vùng vàng
 (hue 55-100°, C* ≥ 30, L* ≥ 40, như MAT trong tools/kit20.mjs) trong trang phục, bỏ đốm < 0.8 mm bề ngang, lấy đường
-giữa (skeleton) rồi đặt điểm cách nhau --step mm (mặc định 3.0 = viên 2.8 + khe 0.2, như border 'chain' KIT-16) dọc
+giữa (skeleton) rồi đặt điểm cách nhau --step mm (mặc định 2.95 = viên 2.8 + khe 0.15, captain KIT-21) dọc
 đường giữa. Ra { schema: 'pearl-kit20-chain/1', points: [{ x, y (px 3543), L, a, b, widthMm }] } — tools/kit20.mjs --chain
 đặt viên vàng 2.8 ở đó sau mọi hạt khác (va chạm thì bỏ).
 
@@ -24,7 +24,7 @@ def main():
     ap.add_argument('--region', default='gt')
     ap.add_argument('--gt', default='outputs/kit/queen_gt')
     ap.add_argument('--out', required=True)
-    ap.add_argument('--step', type=float, default=3.0)
+    ap.add_argument("--step", type=float, default=2.95)  # viên 2.8 + khe 0.15 (captain KIT-21)
     ap.add_argument('--min-width', type=float, default=0.8)
     ap.add_argument('--max-width', type=float, default=4.0)
     a = ap.parse_args()

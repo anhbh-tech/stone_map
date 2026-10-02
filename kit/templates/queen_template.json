@@ -1,0 +1,37 @@
+{
+ "schema": "pearl-kit-template/1",
+ "name": "queen",
+ "source": "Trang phục Queen.png",
+ "canvasMm": 300,
+ "widthPx": 3543,
+ "heightPx": 3543,
+ "pxPerMm": 11.81,
+ "mask": {
+  "file": "queen_mask.png",
+  "legend": {
+   "background": "#000000",
+   "costume": "#FFFFFF",
+   "petFace": "#FF0000"
+  },
+  "petFaceBoxMm": [
+   103.4,
+   79.8,
+   205.8,
+   169
+  ]
+ },
+ "big": "queen_big.json",
+ "costume": {
+  "chain": {
+   "svg": "queen_costume_chain.svg",
+   "stones": 3915,
+   "codes": 8
+  },
+  "print": {
+   "svg": "queen_costume_print.svg",
+   "stones": 3828,
+   "codes": 8
+  }
+ },
+ "rebuild": "node tools/queen_template.mjs"
+}

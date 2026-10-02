@@ -1,0 +1,7 @@
+{
+  "name": "stone_map",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22.5" },
+  "scripts": { "test": "node tools/test_kit.mjs && node tools/test_kit_place.mjs && node tools/test_stonemap.mjs" }
+}

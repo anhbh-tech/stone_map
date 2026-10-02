@@ -1,0 +1,2172 @@
+[
+ {
+  "code": "L1",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "L4",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "L6",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "L8",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "L10",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "L17",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "L23",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "L26",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "L37",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "L39",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "L47",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "L50",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "L74",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "L77",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "L94",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "L93",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "L103",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "L25",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "L156",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "L16",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Z1",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Z4",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Z6",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Z8",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Z10",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Z17",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Z23",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Z26",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Z37",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Z39",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Z47",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Z50",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Z74",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Z77",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Z94",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Z93",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Z103",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Z25",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Z156",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Z16",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "D1",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "D4",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "D6",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "D8",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "D10",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "D17",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "D23",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "D26",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "D37",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "D39",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "D47",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "D50",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "D74",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "D77",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "D94",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "D93",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "D103",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "D25",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "D156",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "D16",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "W1",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "W4",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "W6",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "W8",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "W10",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "W17",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "W23",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "W26",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "W37",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "W39",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "W47",
+  "in_catalog_csv": 0,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "W50",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "W74",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "W77",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "W94",
+  "in_catalog_csv": 0,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "W93",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "W103",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "W25",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "W156",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "W16",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X001",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X002",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X003",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X004",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X005",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X006",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X007",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X008",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X009",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X010",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X011",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X012",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X013",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X014",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X015",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X016",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X017",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X018",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X019",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X020",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X021",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X022",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X023",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X024",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X025",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X026",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X027",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X028",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X029",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X030",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X031",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X032",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X033",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X034",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X035",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X036",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X037",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X038",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X039",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X062",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X063",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X064",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X065",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X066",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X067",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X069",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X070",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X071",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X072",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X073",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X074",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "X075",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H001",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H002",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H003",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H004",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H005",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H006",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H007",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H008",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H009",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H010",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H011",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H012",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H013",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H014",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H015",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H016",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H017",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H018",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H019",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H020",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H021",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H022",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H023",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H024",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H025",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H026",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H027",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H028",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H057",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H058",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H059",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H060",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H061",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H062",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H063",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H064",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "H065",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S001",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S002",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S003",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S004",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S005",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S006",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S007",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S008",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S009",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S010",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S011",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S012",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S013",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S014",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S015",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S016",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S017",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S018",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S019",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S020",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S021",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S023",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S024",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S025",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S026",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S027",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S028",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S029",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S030",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S031",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S032",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S033",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S034",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S035",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S036",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S037",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S038",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S039",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S040",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S041",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S042",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S043",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S044",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S045",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S046",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S047",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S048",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S049",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S050",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S051",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S052",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S053",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S054",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S055",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S056",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S057",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S058",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S059",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S060",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S061",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S062",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S063",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S064",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S065",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S066",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S067",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S068",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S069",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S070",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S071",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S072",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S073",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S074",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S075",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S076",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S077",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S078",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S079",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S080",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S081",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S082",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S083",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S084",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S104",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S105",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S106",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S107",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S108",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S109",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S110",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S111",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S112",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S113",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S114",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S156",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S157",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S158",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S159",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S160",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "S161",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M001",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M002",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M003",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M004",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M005",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M006",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M007",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M008",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M009",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M010",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M011",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M012",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M013",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M014",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M015",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M016",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M017",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M018",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M019",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M020",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M021",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M022",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M023",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M024",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M025",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M026",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M027",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M028",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M029",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M030",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M031",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M032",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M033",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M034",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M035",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M036",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M037",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M038",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M039",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M040",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M041",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M042",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M043",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M044",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M045",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M046",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M047",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M048",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M049",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M050",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M051",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M052",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M053",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M054",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M055",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M056",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M057",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M058",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M059",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M060",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M061",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M062",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M063",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M064",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M065",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M066",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M067",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M068",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M069",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M070",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M071",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M072",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M073",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M074",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M075",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M076",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M077",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M078",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M079",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M080",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M081",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M082",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M083",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "M084",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q081",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q082",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q083",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q084",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q085",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q086",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q087",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q088",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q089",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q090",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q091",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q092",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q093",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q094",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q095",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q096",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q097",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q098",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q099",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q100",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q101",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q102",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q103",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q104",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q105",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q106",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q107",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q108",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q109",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q110",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q111",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q112",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q113",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q114",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q115",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q116",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q117",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q118",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q119",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q120",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q121",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q122",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q123",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q124",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q138",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q139",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q140",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q141",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q142",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q143",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q144",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q145",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q146",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q147",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q148",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q149",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q150",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q151",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q152",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q153",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q154",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q155",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q156",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q157",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q158",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q159",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q160",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q161",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q162",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q163",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q164",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q165",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "Q166",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "5",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "6",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "7",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "8",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "10",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "11",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "12",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ },
+ {
+  "code": "14",
+  "in_catalog_csv": 1,
+  "manifest_version": "2026-09-07-new-catalog-only"
+ }
+]

@@ -1,0 +1,14 @@
+RHINESTONE-APPLIED SIDE
+
+ Mỗi thiết kế kiểm soát trong phạm vi 13 mã đá. (tối đa không quá 15 mã đá).  
+
+ Ký hiệu đá cần to, rõ ràng, dùng chữ in hoa. 
+
+ Mỗi ký hiệu đá phải tương ứng với mã đá thực tế trong bảng mã đá.
+ Ví dụ: A, B, C 
+
+ Ký hiệu ngọc trai cần to, rõ ràng, dùng số tương ứng với kích thước viên ngọc trai.
+ Ví dụ:
+ 3 = 3mm
+ 8 = 8mm
+ 5 = 5mm

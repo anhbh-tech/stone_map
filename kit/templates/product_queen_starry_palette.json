@@ -1,0 +1,654 @@
+{
+ "schema": "pearl-kit-product-palette/1",
+ "product": "queen+starry",
+ "layers": [
+  "starry (background)",
+  "queen (costume)"
+ ],
+ "maxCodes": 11,
+ "reservedForPet": 2,
+ "productTarget": 13,
+ "productHard": 15,
+ "method": "merge",
+ "lock": [
+  "L16"
+ ],
+ "codes": [
+  "M029",
+  "S082",
+  "X039",
+  "L4",
+  "5",
+  "Z16",
+  "L94",
+  "L16",
+  "L47",
+  "L50",
+  "L37"
+ ],
+ "entries": [
+  {
+   "code": "M029",
+   "kind": "stone",
+   "shape": "marquise",
+   "physMm": "4x8",
+   "hex": "#DCDFE0",
+   "name": ""
+  },
+  {
+   "code": "S082",
+   "kind": "stone",
+   "shape": "teardrop",
+   "physMm": "8x13",
+   "hex": "#E7E9EE",
+   "name": ""
+  },
+  {
+   "code": "X039",
+   "kind": "stone",
+   "shape": "heart",
+   "physMm": "12x12",
+   "hex": "#8B1F23",
+   "name": "deep red"
+  },
+  {
+   "code": "L4",
+   "kind": "stone",
+   "shape": "round",
+   "physMm": 2.8,
+   "hex": "#C51E2A",
+   "name": "red"
+  },
+  {
+   "code": "5",
+   "kind": "pearl",
+   "shape": "round",
+   "physMm": 5,
+   "hex": "#EDE9E2",
+   "name": "pearl white"
+  },
+  {
+   "code": "Z16",
+   "kind": "stone",
+   "shape": "round",
+   "physMm": 4,
+   "hex": "#C8952F",
+   "name": "gold amber"
+  },
+  {
+   "code": "L94",
+   "kind": "stone",
+   "shape": "round",
+   "physMm": 2.8,
+   "hex": "#EFEDEA",
+   "name": "opaque white"
+  },
+  {
+   "code": "L16",
+   "kind": "stone",
+   "shape": "round",
+   "physMm": 2.8,
+   "hex": "#C8952F",
+   "name": "gold amber"
+  },
+  {
+   "code": "L47",
+   "kind": "stone",
+   "shape": "round",
+   "physMm": 2.8,
+   "hex": "#1C55B8",
+   "name": "royal blue"
+  },
+  {
+   "code": "L50",
+   "kind": "stone",
+   "shape": "round",
+   "physMm": 2.8,
+   "hex": "#2E2C9E",
+   "name": "deep blue"
+  },
+  {
+   "code": "L37",
+   "kind": "stone",
+   "shape": "round",
+   "physMm": 2.8,
+   "hex": "#8EB9E8",
+   "name": "light blue"
+  }
+ ],
+ "rule": "min Σ chi phí theo số viên: cùng lớp (vật liệu, cỡ, hình) = ΔE00 tới màu mục tiêu; tròn thu nhỏ cùng tính-ngọc = ΔE + 20 (chỗ đó lấp lưới 2.8); đá trắng tròn ≥ 4 mm → ngọc trai trắng cỡ ≤ = ΔE + 12; hình thu nhỏ cùng hình = ΔE + 100·TB|ln tỉ lệ cạnh|; viên có hình đã duyệt luôn giữ hình (bắt buộc 1 mã mỗi hình)",
+ "before": {
+  "union": 17,
+  "layers": {
+   "queen": {
+    "codes": [
+     "M081",
+     "S082",
+     "M063",
+     "X039",
+     "M029",
+     "Q111",
+     "7",
+     "6",
+     "5",
+     "Z16",
+     "L94",
+     "L16",
+     "L4"
+    ],
+    "stones": 3520,
+    "keptClass": 3354,
+    "reclass": {
+     "facet 10 → 7 7": 2,
+     "facet 8 → 7 7": 18,
+     "pearl 8 → 7 7": 2,
+     "base 4 → L94 2.8": 47,
+     "base 6 → 6 6": 22,
+     "base 5 → 5 5": 8,
+     "pearl 14 → 7 7": 1,
+     "gold 6 → Z16 4": 12,
+     "gold 5 → Z16 4": 46,
+     "base 4 → L4 2.8": 5,
+     "base 4 → L16 2.8": 3
+    },
+    "uncovered": 0,
+    "byCode": {
+     "5": 91,
+     "6": 34,
+     "7": 27,
+     "M081": 4,
+     "S082": 2,
+     "M063": 12,
+     "X039": 3,
+     "M029": 5,
+     "Q111": 6,
+     "Z16": 200,
+     "L94": 469,
+     "L16": 1455,
+     "L4": 1212
+    },
+    "meanDE": 11.83,
+    "meanCost": 12.66
+   },
+   "starry": {
+    "codes": [
+     "L47",
+     "L50",
+     "L94",
+     "L37",
+     "L23"
+    ],
+    "stones": 11759,
+    "keptClass": 11759,
+    "reclass": {},
+    "uncovered": 0,
+    "byCode": {
+     "L47": 4435,
+     "L50": 2438,
+     "L37": 3076,
+     "L94": 1114,
+     "L23": 696
+    },
+    "meanDE": 8.85,
+    "meanCost": 8.85
+   }
+  }
+ },
+ "after": {
+  "queen": {
+   "stones": 3520,
+   "keptClass": 3316,
+   "reclass": {
+    "base marquise 9x18 → M029 4x8": 4,
+    "base marquise 6x12 → M029 4x8": 12,
+    "facet 8 → L4 2.8": 6,
+    "pearl 7 → 5 5": 4,
+    "pearl 6 → 5 5": 12,
+    "facet 10 → 5 5": 2,
+    "facet 8 → 5 5": 18,
+    "pearl 8 → 5 5": 2,
+    "base 4 → L94 2.8": 47,
+    "base 6 → 5 5": 22,
+    "base 5 → 5 5": 8,
+    "pearl 14 → 5 5": 1,
+    "gold 6 → Z16 4": 12,
+    "gold 5 → Z16 4": 46,
+    "base 4 → L4 2.8": 5,
+    "base 4 → L37 2.8": 2,
+    "base 4 → L16 2.8": 1
+   },
+   "uncovered": 0,
+   "byCode": {
+    "5": 152,
+    "M029": 21,
+    "S082": 2,
+    "X039": 3,
+    "L4": 1218,
+    "Z16": 200,
+    "L94": 469,
+    "L16": 1453,
+    "L37": 2
+   },
+   "meanDE": 11.83,
+   "meanCost": 13.01
+  },
+  "starry": {
+   "stones": 11759,
+   "keptClass": 11759,
+   "reclass": {},
+   "uncovered": 0,
+   "byCode": {
+    "L47": 4435,
+    "L50": 2438,
+    "L37": 3076,
+    "L94": 1472,
+    "L16": 338
+   },
+   "meanDE": 9.31,
+   "meanCost": 9.31
+  }
+ },
+ "compare": {
+  "merge": {
+   "codes": [
+    "M029",
+    "S082",
+    "X039",
+    "L4",
+    "5",
+    "Z16",
+    "L94",
+    "L16",
+    "L47",
+    "L50",
+    "L37"
+   ],
+   "total": 155250,
+   "queen": {
+    "meanDE": 11.83,
+    "meanCost": 13.01,
+    "reclass": 204
+   },
+   "starry": {
+    "meanDE": 9.31,
+    "meanCost": 9.31,
+    "reclass": 0
+   }
+  },
+  "greedy": {
+   "codes": [
+    "L47",
+    "M063",
+    "L23",
+    "X039",
+    "S082",
+    "5",
+    "L37",
+    "L4",
+    "L94",
+    "L50",
+    "L74"
+   ],
+   "total": 151314,
+   "queen": {
+    "meanDE": 11.54,
+    "meanCost": 13.41,
+    "reclass": 339
+   },
+   "starry": {
+    "meanDE": 8.85,
+    "meanCost": 8.85,
+    "reclass": 0
+   }
+  }
+ },
+ "merge": {
+  "initialCodes": 54,
+  "merges": [
+   {
+    "from": "Z156",
+    "to": "Z17",
+    "stones": 2,
+    "avgDE": 21.42,
+    "cost": -237
+   },
+   {
+    "from": "Q144",
+    "to": "Z16",
+    "stones": 1,
+    "avgDE": 7.31,
+    "cost": 42
+   },
+   {
+    "from": "D74",
+    "to": "D16",
+    "stones": 1,
+    "avgDE": 8.83,
+    "cost": 73
+   },
+   {
+    "from": "L10",
+    "to": "L4",
+    "stones": 2,
+    "avgDE": 13.19,
+    "cost": 107
+   },
+   {
+    "from": "D17",
+    "to": "D16",
+    "stones": 1,
+    "avgDE": 11.09,
+    "cost": 114
+   },
+   {
+    "from": "M057",
+    "to": "M063",
+    "stones": 3,
+    "avgDE": 4.92,
+    "cost": 194
+   },
+   {
+    "from": "Q095",
+    "to": "D16",
+    "stones": 3,
+    "avgDE": 11.1,
+    "cost": 201
+   },
+   {
+    "from": "W23",
+    "to": "Q166",
+    "stones": 4,
+    "avgDE": 10.49,
+    "cost": 216
+   },
+   {
+    "from": "W74",
+    "to": "W16",
+    "stones": 1,
+    "avgDE": 10.13,
+    "cost": 235
+   },
+   {
+    "from": "Z6",
+    "to": "Z74",
+    "stones": 1,
+    "avgDE": 18.72,
+    "cost": 242
+   },
+   {
+    "from": "Q145",
+    "to": "Z4",
+    "stones": 2,
+    "avgDE": 14.55,
+    "cost": 296
+   },
+   {
+    "from": "Q114",
+    "to": "Q111",
+    "stones": 3,
+    "avgDE": 7.23,
+    "cost": 344
+   },
+   {
+    "from": "Z77",
+    "to": "Z4",
+    "stones": 1,
+    "avgDE": 22.64,
+    "cost": 759
+   },
+   {
+    "from": "L6",
+    "to": "L74",
+    "stones": 5,
+    "avgDE": 20.39,
+    "cost": 811
+   },
+   {
+    "from": "L25",
+    "to": "L17",
+    "stones": 9,
+    "avgDE": 21.67,
+    "cost": 1104
+   },
+   {
+    "from": "Z23",
+    "to": "Z16",
+    "stones": 7,
+    "avgDE": 15.02,
+    "cost": 1607
+   },
+   {
+    "from": "W17",
+    "to": "W16",
+    "stones": 8,
+    "avgDE": 14.4,
+    "cost": 1963
+   },
+   {
+    "from": "L1",
+    "to": "L94",
+    "stones": 370,
+    "avgDE": 9.79,
+    "cost": 3011
+   },
+   {
+    "from": "Q166",
+    "to": "W16",
+    "stones": 16,
+    "avgDE": 12.8,
+    "cost": 3532
+   },
+   {
+    "from": "Z4",
+    "to": "Z74",
+    "stones": 7,
+    "avgDE": 20.5,
+    "cost": 3771
+   },
+   {
+    "from": "8",
+    "to": "7",
+    "stones": 2,
+    "avgDE": 9.11,
+    "cost": 10204
+   },
+   {
+    "from": "L93",
+    "to": "L50",
+    "stones": 132,
+    "avgDE": 17.11,
+    "cost": 13190
+   },
+   {
+    "from": "Z17",
+    "to": "Z16",
+    "stones": 49,
+    "avgDE": 17.76,
+    "cost": 13849
+   },
+   {
+    "from": "W1",
+    "to": "Z94",
+    "stones": 8,
+    "avgDE": 5.98,
+    "cost": 15502
+   },
+   {
+    "from": "14",
+    "to": "7",
+    "stones": 1,
+    "avgDE": 12.74,
+    "cost": 15625
+   },
+   {
+    "from": "Q117",
+    "to": "Z94",
+    "stones": 2,
+    "avgDE": 4.41,
+    "cost": 16029
+   },
+   {
+    "from": "Z74",
+    "to": "Z16",
+    "stones": 26,
+    "avgDE": 20.86,
+    "cost": 18635
+   },
+   {
+    "from": "L77",
+    "to": "L4",
+    "stones": 105,
+    "avgDE": 19.79,
+    "cost": 23673
+   },
+   {
+    "from": "L39",
+    "to": "L37",
+    "stones": 252,
+    "avgDE": 15.63,
+    "cost": 24644
+   },
+   {
+    "from": "7",
+    "to": "6",
+    "stones": 7,
+    "avgDE": 9.22,
+    "cost": 27344
+   },
+   {
+    "from": "Q111",
+    "to": "L4",
+    "stones": 6,
+    "avgDE": 6.08,
+    "cost": 29891
+   },
+   {
+    "from": "L156",
+    "to": "L47",
+    "stones": 267,
+    "avgDE": 17.36,
+    "cost": 30557
+   },
+   {
+    "from": "D16",
+    "to": "Z16",
+    "stones": 12,
+    "avgDE": 8.69,
+    "cost": 34439
+   },
+   {
+    "from": "6",
+    "to": "5",
+    "stones": 19,
+    "avgDE": 8.94,
+    "cost": 54528
+   },
+   {
+    "from": "D94",
+    "to": "Z94",
+    "stones": 22,
+    "avgDE": 5.75,
+    "cost": 63138
+   },
+   {
+    "from": "L17",
+    "to": "L94",
+    "stones": 489,
+    "avgDE": 18.87,
+    "cost": 76226
+   },
+   {
+    "from": "Q109",
+    "to": "Z94",
+    "stones": 18,
+    "avgDE": 6.25,
+    "cost": 90891
+   },
+   {
+    "from": "W16",
+    "to": "Z16",
+    "stones": 46,
+    "avgDE": 11.18,
+    "cost": 91677
+   },
+   {
+    "from": "M081",
+    "to": "M063",
+    "stones": 4,
+    "avgDE": 6.28,
+    "cost": 102915
+   },
+   {
+    "from": "Z94",
+    "to": "L94",
+    "stones": 97,
+    "avgDE": 8.03,
+    "cost": 123724
+   },
+   {
+    "from": "L74",
+    "to": "L16",
+    "stones": 415,
+    "avgDE": 19.58,
+    "cost": 134014
+   },
+   {
+    "from": "M063",
+    "to": "M029",
+    "stones": 16,
+    "avgDE": 5.26,
+    "cost": 185358
+   },
+   {
+    "from": "L23",
+    "to": "L16",
+    "stones": 758,
+    "avgDE": 20.16,
+    "cost": 222037
+   }
+  ],
+  "merge_warnings": [
+   "Z156->Z17 ΔE=21.4 (2 viên)",
+   "Z77->Z4 ΔE=22.6 (1 viên)",
+   "L6->L74 ΔE=20.4 (5 viên)",
+   "L25->L17 ΔE=21.7 (9 viên)",
+   "Z4->Z74 ΔE=20.5 (7 viên)",
+   "Z74->Z16 ΔE=20.9 (26 viên)",
+   "L23->L16 ΔE=20.2 (758 viên)"
+  ],
+  "layers": {
+   "queen": {
+    "stones": 3520,
+    "byCode": {
+     "5": 102,
+     "M029": 21,
+     "S082": 2,
+     "X039": 3,
+     "L4": 1208,
+     "Z16": 208,
+     "L94": 875,
+     "L16": 1101
+    },
+    "unassigned": 0,
+    "meanDE": 11.98,
+    "rmsDE": 13.37
+   },
+   "starry": {
+    "stones": 11759,
+    "byCode": {
+     "L47": 4551,
+     "L50": 2438,
+     "L37": 2986,
+     "L94": 1137,
+     "L16": 647
+    },
+    "unassigned": 0,
+    "meanDE": 9.46,
+    "rmsDE": 10.91
+   }
+  }
+ },
+ "createdAt": "2026-10-02T08:13:21.651Z",
+ "apiCalls": 0,
+ "rebuild": "node tools/product_palette.mjs"
+}

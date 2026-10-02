@@ -1,0 +1,1426 @@
+{
+ "schema": "pearl-kit-template-big/1",
+ "source": "Trang phục Queen.png",
+ "canvasMm": 300,
+ "note": "tâm mm từ góc trên-trái; keep_mm = hình vẽ trên ảnh (w × h theo trục viên, đo viền vàng quanh đó; phần vẽ thừa quanh viên được lấp 2.8); border/ring: true|false ép, bỏ trống = tự đo",
+ "from": {
+  "vlm": [
+   "outputs/kit-vlm/objects/queen-stones.json",
+   "outputs/kit-vlm/tiers/queen-big@low.json",
+   "outputs/kit-vlm/tiers/queen-mid@low-0.json",
+   "outputs/kit-vlm/tiers/queen-mid@low-1.json",
+   "outputs/kit-vlm/tiers/queen-mid@low-2.json",
+   "outputs/kit-vlm/tiers/queen-mid@low-3.json",
+   "outputs/kit-vlm/tiers/queen-mid@low-4.json",
+   "outputs/kit-vlm/tiers/queen-mid@low-5.json",
+   "outputs/kit-vlm/tiers/queen-mid@low-6.json",
+   "outputs/kit-vlm/tiers/queen-mid@low-7.json",
+   "outputs/kit-vlm/tiers/queen-mid@low-8.json"
+  ],
+  "detect": "KIT-12a bigObjects",
+  "apiCalls": 0
+ },
+ "stones": [
+  {
+   "id": 1,
+   "x_mm": 154.4,
+   "y_mm": 7.6,
+   "code": "M063",
+   "shape": "marquise",
+   "rot_deg": 0,
+   "phys_mm": 12,
+   "w_mm": 6,
+   "h_mm": 12,
+   "keep_mm": [
+    7.4,
+    11.1
+   ],
+   "name": "",
+   "hex": "#DCDCDE",
+   "mat": "base",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "faceted/#e0e8ed"
+  },
+  {
+   "id": 2,
+   "x_mm": 144.6,
+   "y_mm": 17.8,
+   "code": "M063",
+   "shape": "marquise",
+   "rot_deg": 90,
+   "phys_mm": 12,
+   "w_mm": 6,
+   "h_mm": 12,
+   "keep_mm": [
+    7.9,
+    9.6
+   ],
+   "name": "",
+   "hex": "#DCDCDE",
+   "mat": "base",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "faceted/#e0e8ed"
+  },
+  {
+   "id": 3,
+   "x_mm": 162.8,
+   "y_mm": 17.8,
+   "code": "M063",
+   "shape": "marquise",
+   "rot_deg": 90,
+   "phys_mm": 12,
+   "w_mm": 6,
+   "h_mm": 12,
+   "keep_mm": [
+    7.9,
+    9.3
+   ],
+   "name": "",
+   "hex": "#DCDCDE",
+   "mat": "base",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "faceted/#e0e8ed"
+  },
+  {
+   "id": 4,
+   "x_mm": 126.2,
+   "y_mm": 28.7,
+   "code": "5",
+   "shape": "round",
+   "rot_deg": -104,
+   "phys_mm": 5,
+   "keep_mm": [
+    5.1,
+    6.3
+   ],
+   "name": "pearl white",
+   "hex": "#EDE9E2",
+   "mat": "pearl",
+   "src": "hint",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 5,
+   "x_mm": 133.5,
+   "y_mm": 29,
+   "code": "5",
+   "shape": "round",
+   "rot_deg": -95,
+   "phys_mm": 5,
+   "keep_mm": [
+    5.4,
+    6.4
+   ],
+   "name": "pearl white",
+   "hex": "#EDE9E2",
+   "mat": "pearl",
+   "src": "hint",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 6,
+   "x_mm": 172.7,
+   "y_mm": 30.9,
+   "code": "5",
+   "shape": "round",
+   "rot_deg": -105,
+   "phys_mm": 5,
+   "keep_mm": [
+    5.6,
+    6.9
+   ],
+   "name": "pearl white",
+   "hex": "#EDE9E2",
+   "mat": "pearl",
+   "src": "hint",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 7,
+   "x_mm": 181.7,
+   "y_mm": 31.4,
+   "code": "5",
+   "shape": "round",
+   "rot_deg": -75,
+   "phys_mm": 5,
+   "keep_mm": [
+    5.9,
+    7.1
+   ],
+   "name": "pearl white",
+   "hex": "#EDE9E2",
+   "mat": "pearl",
+   "src": "hint",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 8,
+   "x_mm": 117.5,
+   "y_mm": 31.6,
+   "code": "5",
+   "shape": "round",
+   "rot_deg": -136,
+   "phys_mm": 5,
+   "keep_mm": [
+    5.3,
+    8.2
+   ],
+   "name": "pearl white",
+   "hex": "#EDE9E2",
+   "mat": "pearl",
+   "src": "hint",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 9,
+   "x_mm": 150.6,
+   "y_mm": 37.2,
+   "code": "S082",
+   "shape": "teardrop",
+   "rot_deg": 0,
+   "phys_mm": 13,
+   "w_mm": 8,
+   "h_mm": 13,
+   "keep_mm": [
+    9.7,
+    15.6
+   ],
+   "name": "",
+   "hex": "#E7E9EE",
+   "mat": "facet",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "pearl/#f1e8d8"
+  },
+  {
+   "id": 10,
+   "x_mm": 127.5,
+   "y_mm": 47.5,
+   "code": "6",
+   "shape": "round",
+   "rot_deg": 0,
+   "phys_mm": 6,
+   "keep_mm": [
+    8.4,
+    9.9
+   ],
+   "name": "pearl white",
+   "hex": "#EDE9E2",
+   "mat": "pearl",
+   "src": "hint-box",
+   "tier": 1,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 11,
+   "x_mm": 172.2,
+   "y_mm": 50.5,
+   "code": "6",
+   "shape": "round",
+   "rot_deg": -158,
+   "phys_mm": 6,
+   "keep_mm": [
+    6,
+    7.5
+   ],
+   "name": "pearl white",
+   "hex": "#EDE9E2",
+   "mat": "pearl",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 12,
+   "x_mm": 194,
+   "y_mm": 55.9,
+   "code": "5",
+   "shape": "round",
+   "rot_deg": 0,
+   "phys_mm": 5,
+   "keep_mm": [
+    6.6,
+    6.6
+   ],
+   "name": "pearl white",
+   "hex": "#EDE9E2",
+   "mat": "pearl",
+   "src": "hint",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 13,
+   "x_mm": 147.9,
+   "y_mm": 56.3,
+   "code": "X039",
+   "shape": "heart",
+   "rot_deg": 0,
+   "phys_mm": 12,
+   "w_mm": 12,
+   "h_mm": 12,
+   "keep_mm": [
+    16.2,
+    16.5
+   ],
+   "name": "deep red",
+   "hex": "#8B1F23",
+   "mat": "facet",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "faceted/#be0417"
+  },
+  {
+   "id": 14,
+   "x_mm": 115.1,
+   "y_mm": 61.8,
+   "code": "5",
+   "shape": "round",
+   "rot_deg": -3,
+   "phys_mm": 5,
+   "keep_mm": [
+    5.9,
+    6.9
+   ],
+   "name": "pearl white",
+   "hex": "#EDE9E2",
+   "mat": "pearl",
+   "src": "hint",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 15,
+   "x_mm": 187.6,
+   "y_mm": 66.9,
+   "code": "6",
+   "shape": "round",
+   "rot_deg": -9,
+   "phys_mm": 6,
+   "keep_mm": [
+    6.6,
+    7.7
+   ],
+   "name": "pearl white",
+   "hex": "#EDE9E2",
+   "mat": "pearl",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 16,
+   "x_mm": 145.2,
+   "y_mm": 71,
+   "code": "7",
+   "shape": "round",
+   "rot_deg": 0,
+   "phys_mm": 7,
+   "keep_mm": [
+    9.1,
+    9.1
+   ],
+   "name": "pearl white",
+   "hex": "#EDE9E2",
+   "mat": "pearl",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 17,
+   "x_mm": 176.4,
+   "y_mm": 78.9,
+   "code": "6",
+   "shape": "round",
+   "rot_deg": -43,
+   "phys_mm": 6,
+   "keep_mm": [
+    8.1,
+    10.2
+   ],
+   "name": "pearl white",
+   "hex": "#EDE9E2",
+   "mat": "pearl",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 18,
+   "x_mm": 260.4,
+   "y_mm": 89.7,
+   "code": "M063",
+   "shape": "marquise",
+   "rot_deg": -164,
+   "phys_mm": 12,
+   "w_mm": 6,
+   "h_mm": 12,
+   "keep_mm": [
+    9.1,
+    15.6
+   ],
+   "name": "",
+   "hex": "#DCDCDE",
+   "mat": "facet",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "faceted/#e5edf2"
+  },
+  {
+   "id": 19,
+   "x_mm": 249.4,
+   "y_mm": 96.4,
+   "code": "M063",
+   "shape": "marquise",
+   "rot_deg": -59,
+   "phys_mm": 12,
+   "w_mm": 6,
+   "h_mm": 12,
+   "keep_mm": [
+    9.5,
+    13.4
+   ],
+   "name": "",
+   "hex": "#DCDCDE",
+   "mat": "facet",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "faceted/#e5edf2"
+  },
+  {
+   "id": 20,
+   "x_mm": 268.3,
+   "y_mm": 100.8,
+   "code": "M063",
+   "shape": "marquise",
+   "rot_deg": 90,
+   "phys_mm": 12,
+   "w_mm": 6,
+   "h_mm": 12,
+   "keep_mm": [
+    10.2,
+    15.3
+   ],
+   "name": "",
+   "hex": "#DCDCDE",
+   "mat": "facet",
+   "src": "hint-box",
+   "tier": 1,
+   "vlm": "faceted/#e5edf2"
+  },
+  {
+   "id": 21,
+   "x_mm": 243.2,
+   "y_mm": 107.4,
+   "code": "Z16",
+   "shape": "round",
+   "rot_deg": 0,
+   "phys_mm": 4,
+   "keep_mm": [
+    5.9,
+    5.9
+   ],
+   "name": "gold amber",
+   "hex": "#C8952F",
+   "mat": "gold",
+   "src": "hint-box",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 22,
+   "x_mm": 240.7,
+   "y_mm": 110.8,
+   "code": "Z16",
+   "shape": "round",
+   "rot_deg": 0,
+   "phys_mm": 4,
+   "keep_mm": [
+    4.9,
+    6.3
+   ],
+   "name": "gold amber",
+   "hex": "#C8952F",
+   "mat": "gold",
+   "src": "hint-box",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 23,
+   "x_mm": 253.2,
+   "y_mm": 116.6,
+   "code": "X039",
+   "shape": "heart",
+   "rot_deg": 0,
+   "phys_mm": 12,
+   "w_mm": 12,
+   "h_mm": 12,
+   "keep_mm": [
+    18.9,
+    20.4
+   ],
+   "name": "deep red",
+   "hex": "#8B1F23",
+   "mat": "facet",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "faceted/#c40316"
+  },
+  {
+   "id": 24,
+   "x_mm": 239.9,
+   "y_mm": 117.2,
+   "code": "Z16",
+   "shape": "round",
+   "rot_deg": 0,
+   "phys_mm": 4,
+   "keep_mm": [
+    4.9,
+    4.9
+   ],
+   "name": "gold amber",
+   "hex": "#C8952F",
+   "mat": "gold",
+   "src": "hint-box",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 25,
+   "x_mm": 267.2,
+   "y_mm": 117.7,
+   "code": "Z16",
+   "shape": "round",
+   "rot_deg": 0,
+   "phys_mm": 4,
+   "keep_mm": [
+    5,
+    5.8
+   ],
+   "name": "gold amber",
+   "hex": "#C8952F",
+   "mat": "gold",
+   "src": "hint-box",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 26,
+   "x_mm": 245.1,
+   "y_mm": 126.8,
+   "code": "Z16",
+   "shape": "round",
+   "rot_deg": 0,
+   "phys_mm": 4,
+   "keep_mm": [
+    5.1,
+    5.1
+   ],
+   "name": "gold amber",
+   "hex": "#C8952F",
+   "mat": "gold",
+   "src": "hint-box",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 27,
+   "x_mm": 143.7,
+   "y_mm": 169.9,
+   "code": "M063",
+   "shape": "marquise",
+   "rot_deg": -161,
+   "phys_mm": 12,
+   "w_mm": 6,
+   "h_mm": 12,
+   "keep_mm": [
+    7.4,
+    10
+   ],
+   "name": "",
+   "hex": "#DCDCDE",
+   "mat": "facet",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "faceted/#e2ebf0"
+  },
+  {
+   "id": 28,
+   "x_mm": 131,
+   "y_mm": 173.4,
+   "code": "M063",
+   "shape": "marquise",
+   "rot_deg": 90,
+   "phys_mm": 12,
+   "w_mm": 6,
+   "h_mm": 12,
+   "keep_mm": [
+    9.2,
+    11.1
+   ],
+   "name": "",
+   "hex": "#DCDCDE",
+   "mat": "facet",
+   "src": "hint-box",
+   "tier": 1,
+   "vlm": "faceted/#e2ebf0"
+  },
+  {
+   "id": 29,
+   "x_mm": 153.8,
+   "y_mm": 173.9,
+   "code": "M029",
+   "shape": "marquise",
+   "rot_deg": -139,
+   "phys_mm": 8,
+   "w_mm": 4,
+   "h_mm": 8,
+   "keep_mm": [
+    5.9,
+    8
+   ],
+   "name": "",
+   "hex": "#DCDFE0",
+   "mat": "base",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "faceted/#e2ebf0"
+  },
+  {
+   "id": 30,
+   "x_mm": 127.9,
+   "y_mm": 181,
+   "code": "M029",
+   "shape": "marquise",
+   "rot_deg": -77,
+   "phys_mm": 8,
+   "w_mm": 4,
+   "h_mm": 8,
+   "keep_mm": [
+    5.7,
+    8.2
+   ],
+   "name": "",
+   "hex": "#DCDFE0",
+   "mat": "base",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "faceted/#e2ebf0"
+  },
+  {
+   "id": 31,
+   "x_mm": 157.9,
+   "y_mm": 181.1,
+   "code": "M029",
+   "shape": "marquise",
+   "rot_deg": -98,
+   "phys_mm": 8,
+   "w_mm": 4,
+   "h_mm": 8,
+   "keep_mm": [
+    5.8,
+    8.6
+   ],
+   "name": "",
+   "hex": "#DCDFE0",
+   "mat": "base",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "faceted/#e2ebf0"
+  },
+  {
+   "id": 32,
+   "x_mm": 246.6,
+   "y_mm": 182.1,
+   "code": "Q111",
+   "shape": "round",
+   "rot_deg": 0,
+   "phys_mm": 8,
+   "keep_mm": [
+    10.2,
+    10.2
+   ],
+   "name": "coral red",
+   "hex": "#B64A40",
+   "mat": "base",
+   "src": "hint-box",
+   "tier": 1,
+   "vlm": "rhinestone/red"
+  },
+  {
+   "id": 33,
+   "x_mm": 142.5,
+   "y_mm": 184.1,
+   "code": "X039",
+   "shape": "heart",
+   "rot_deg": 0,
+   "phys_mm": 12,
+   "w_mm": 12,
+   "h_mm": 12,
+   "keep_mm": [
+    20.1,
+    20.4
+   ],
+   "name": "deep red",
+   "hex": "#8B1F23",
+   "mat": "facet",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "faceted/#be0418"
+  },
+  {
+   "id": 34,
+   "x_mm": 155.5,
+   "y_mm": 188,
+   "code": "M029",
+   "shape": "marquise",
+   "rot_deg": -54,
+   "phys_mm": 8,
+   "w_mm": 4,
+   "h_mm": 8,
+   "keep_mm": [
+    6.5,
+    8.6
+   ],
+   "name": "",
+   "hex": "#DCDFE0",
+   "mat": "base",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "faceted/#e2ebf0"
+  },
+  {
+   "id": 35,
+   "x_mm": 130,
+   "y_mm": 188.1,
+   "code": "M029",
+   "shape": "marquise",
+   "rot_deg": -115,
+   "phys_mm": 8,
+   "w_mm": 4,
+   "h_mm": 8,
+   "keep_mm": [
+    5.3,
+    7.7
+   ],
+   "name": "",
+   "hex": "#DCDFE0",
+   "mat": "base",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "faceted/#e2ebf0"
+  },
+  {
+   "id": 36,
+   "x_mm": 259.5,
+   "y_mm": 192.4,
+   "code": "Z16",
+   "shape": "round",
+   "rot_deg": 0,
+   "phys_mm": 4,
+   "keep_mm": [
+    6.2,
+    6.2
+   ],
+   "name": "gold amber",
+   "hex": "#C8952F",
+   "mat": "gold",
+   "src": "hint-box",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 37,
+   "x_mm": 75,
+   "y_mm": 194.2,
+   "code": "Q111",
+   "shape": "round",
+   "rot_deg": -134,
+   "phys_mm": 8,
+   "keep_mm": [
+    8,
+    10.5
+   ],
+   "name": "coral red",
+   "hex": "#B64A40",
+   "mat": "facet",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "rhinestone/red"
+  },
+  {
+   "id": 38,
+   "x_mm": 220,
+   "y_mm": 195.6,
+   "code": "Q111",
+   "shape": "round",
+   "rot_deg": -26,
+   "phys_mm": 8,
+   "keep_mm": [
+    9.5,
+    11.7
+   ],
+   "name": "coral red",
+   "hex": "#B64A40",
+   "mat": "facet",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "rhinestone/red"
+  },
+  {
+   "id": 39,
+   "x_mm": 256.7,
+   "y_mm": 195.8,
+   "code": "Z16",
+   "shape": "round",
+   "rot_deg": 0,
+   "phys_mm": 4,
+   "keep_mm": [
+    5.8,
+    5.8
+   ],
+   "name": "gold amber",
+   "hex": "#C8952F",
+   "mat": "gold",
+   "src": "hint-box",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 40,
+   "x_mm": 253.4,
+   "y_mm": 199.2,
+   "code": "Z16",
+   "shape": "round",
+   "rot_deg": 0,
+   "phys_mm": 4,
+   "keep_mm": [
+    5.8,
+    5.8
+   ],
+   "name": "gold amber",
+   "hex": "#C8952F",
+   "mat": "gold",
+   "src": "hint-box",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 41,
+   "x_mm": 249.8,
+   "y_mm": 201.7,
+   "code": "Z16",
+   "shape": "round",
+   "rot_deg": -90,
+   "phys_mm": 4,
+   "keep_mm": [
+    4.6,
+    5.9
+   ],
+   "name": "gold amber",
+   "hex": "#C8952F",
+   "mat": "gold",
+   "src": "hint-box",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 42,
+   "x_mm": 108,
+   "y_mm": 204.4,
+   "code": "Z16",
+   "shape": "round",
+   "rot_deg": 0,
+   "phys_mm": 4,
+   "keep_mm": [
+    5.4,
+    5.4
+   ],
+   "name": "gold amber",
+   "hex": "#C8952F",
+   "mat": "gold",
+   "src": "hint-box",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 43,
+   "x_mm": 104.4,
+   "y_mm": 208.2,
+   "code": "Z16",
+   "shape": "round",
+   "rot_deg": 0,
+   "phys_mm": 4,
+   "keep_mm": [
+    4,
+    4
+   ],
+   "name": "gold amber",
+   "hex": "#C8952F",
+   "mat": "gold",
+   "src": "hint",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 44,
+   "x_mm": 101.1,
+   "y_mm": 211.2,
+   "code": "Z16",
+   "shape": "round",
+   "rot_deg": 0,
+   "phys_mm": 4,
+   "keep_mm": [
+    4,
+    4
+   ],
+   "name": "gold amber",
+   "hex": "#C8952F",
+   "mat": "gold",
+   "src": "hint",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 45,
+   "x_mm": 141.9,
+   "y_mm": 211.5,
+   "code": "S082",
+   "shape": "teardrop",
+   "rot_deg": -177,
+   "phys_mm": 13,
+   "w_mm": 8,
+   "h_mm": 13,
+   "keep_mm": [
+    10.4,
+    19.5
+   ],
+   "name": "",
+   "hex": "#E7E9EE",
+   "mat": "facet",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "pearl/#f1e9da"
+  },
+  {
+   "id": 46,
+   "x_mm": 67.5,
+   "y_mm": 213.1,
+   "code": "Z16",
+   "shape": "round",
+   "rot_deg": 0,
+   "phys_mm": 4,
+   "keep_mm": [
+    5.5,
+    5.5
+   ],
+   "name": "gold amber",
+   "hex": "#C8952F",
+   "mat": "gold",
+   "src": "hint-box",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 47,
+   "x_mm": 186.2,
+   "y_mm": 213.1,
+   "code": "Z16",
+   "shape": "round",
+   "rot_deg": 0,
+   "phys_mm": 4,
+   "keep_mm": [
+    5.5,
+    5.5
+   ],
+   "name": "gold amber",
+   "hex": "#C8952F",
+   "mat": "gold",
+   "src": "hint-box",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 48,
+   "x_mm": 97.1,
+   "y_mm": 214,
+   "code": "Z16",
+   "shape": "round",
+   "rot_deg": -129,
+   "phys_mm": 4,
+   "keep_mm": [
+    4,
+    4.8
+   ],
+   "name": "gold amber",
+   "hex": "#C8952F",
+   "mat": "gold",
+   "src": "hint",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 49,
+   "x_mm": 189.9,
+   "y_mm": 216.5,
+   "code": "Z16",
+   "shape": "round",
+   "rot_deg": 0,
+   "phys_mm": 4,
+   "keep_mm": [
+    4,
+    4
+   ],
+   "name": "gold amber",
+   "hex": "#C8952F",
+   "mat": "gold",
+   "src": "hint",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 50,
+   "x_mm": 92.5,
+   "y_mm": 217.1,
+   "code": "Z16",
+   "shape": "round",
+   "rot_deg": 0,
+   "phys_mm": 4,
+   "keep_mm": [
+    4,
+    4
+   ],
+   "name": "gold amber",
+   "hex": "#C8952F",
+   "mat": "gold",
+   "src": "hint",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 51,
+   "x_mm": 69.3,
+   "y_mm": 217.5,
+   "code": "5",
+   "shape": "round",
+   "rot_deg": -120,
+   "phys_mm": 5,
+   "keep_mm": [
+    6.3,
+    8.9
+   ],
+   "name": "pearl white",
+   "hex": "#EDE9E2",
+   "mat": "pearl",
+   "src": "hint",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 52,
+   "x_mm": 87.6,
+   "y_mm": 217.7,
+   "code": "Z16",
+   "shape": "round",
+   "rot_deg": 0,
+   "phys_mm": 4,
+   "keep_mm": [
+    5.5,
+    5.5
+   ],
+   "name": "gold amber",
+   "hex": "#C8952F",
+   "mat": "gold",
+   "src": "hint-box",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 53,
+   "x_mm": 76.6,
+   "y_mm": 218.1,
+   "code": "Z16",
+   "shape": "round",
+   "rot_deg": -43,
+   "phys_mm": 4,
+   "keep_mm": [
+    4,
+    5
+   ],
+   "name": "gold amber",
+   "hex": "#C8952F",
+   "mat": "gold",
+   "src": "hint",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 54,
+   "x_mm": 194.5,
+   "y_mm": 218.9,
+   "code": "Z16",
+   "shape": "round",
+   "rot_deg": -51,
+   "phys_mm": 4,
+   "keep_mm": [
+    4,
+    4.6
+   ],
+   "name": "gold amber",
+   "hex": "#C8952F",
+   "mat": "gold",
+   "src": "hint",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 55,
+   "x_mm": 160.7,
+   "y_mm": 223,
+   "code": "Z16",
+   "shape": "round",
+   "rot_deg": 0,
+   "phys_mm": 4,
+   "keep_mm": [
+    5.1,
+    5.1
+   ],
+   "name": "gold amber",
+   "hex": "#C8952F",
+   "mat": "gold",
+   "src": "hint-box",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 56,
+   "x_mm": 237.7,
+   "y_mm": 226.6,
+   "code": "5",
+   "shape": "round",
+   "rot_deg": -74,
+   "phys_mm": 5,
+   "keep_mm": [
+    6,
+    7.9
+   ],
+   "name": "pearl white",
+   "hex": "#EDE9E2",
+   "mat": "pearl",
+   "src": "hint",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 57,
+   "x_mm": 130.8,
+   "y_mm": 229.8,
+   "code": "5",
+   "shape": "round",
+   "rot_deg": 0,
+   "phys_mm": 5,
+   "keep_mm": [
+    5.7,
+    5.7
+   ],
+   "name": "pearl white",
+   "hex": "#EDE9E2",
+   "mat": "pearl",
+   "src": "hint",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 58,
+   "x_mm": 150.3,
+   "y_mm": 230.2,
+   "code": "5",
+   "shape": "round",
+   "rot_deg": 0,
+   "phys_mm": 5,
+   "keep_mm": [
+    5.8,
+    5.8
+   ],
+   "name": "pearl white",
+   "hex": "#EDE9E2",
+   "mat": "pearl",
+   "src": "hint",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 59,
+   "x_mm": 140.4,
+   "y_mm": 231.2,
+   "code": "7",
+   "shape": "round",
+   "rot_deg": 0,
+   "phys_mm": 7,
+   "keep_mm": [
+    9.7,
+    9.7
+   ],
+   "name": "pearl white",
+   "hex": "#EDE9E2",
+   "mat": "pearl",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 60,
+   "x_mm": 96.7,
+   "y_mm": 243.2,
+   "code": "M063",
+   "shape": "marquise",
+   "rot_deg": -13,
+   "phys_mm": 12,
+   "w_mm": 6,
+   "h_mm": 12,
+   "keep_mm": [
+    8.6,
+    16.2
+   ],
+   "name": "",
+   "hex": "#DCDCDE",
+   "mat": "facet",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "faceted/#dee7ee"
+  },
+  {
+   "id": 61,
+   "x_mm": 139.8,
+   "y_mm": 243.5,
+   "code": "Q111",
+   "shape": "round",
+   "rot_deg": 0,
+   "phys_mm": 8,
+   "keep_mm": [
+    8,
+    8
+   ],
+   "name": "coral red",
+   "hex": "#B64A40",
+   "mat": "facet",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "rhinestone/red"
+  },
+  {
+   "id": 62,
+   "x_mm": 37.6,
+   "y_mm": 245.4,
+   "code": "M081",
+   "shape": "marquise",
+   "rot_deg": -54,
+   "phys_mm": 18,
+   "w_mm": 9,
+   "h_mm": 18,
+   "keep_mm": [
+    10,
+    16.7
+   ],
+   "name": "",
+   "hex": "#D9D9DB",
+   "mat": "facet",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "faceted/#dfe8ee"
+  },
+  {
+   "id": 63,
+   "x_mm": 187.7,
+   "y_mm": 245.5,
+   "code": "M081",
+   "shape": "marquise",
+   "rot_deg": -161,
+   "phys_mm": 18,
+   "w_mm": 9,
+   "h_mm": 18,
+   "keep_mm": [
+    8.7,
+    17.7
+   ],
+   "name": "",
+   "hex": "#D9D9DB",
+   "mat": "facet",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "faceted/#e0e9ee"
+  },
+  {
+   "id": 64,
+   "x_mm": 272.4,
+   "y_mm": 249.5,
+   "code": "M081",
+   "shape": "marquise",
+   "rot_deg": -125,
+   "phys_mm": 18,
+   "w_mm": 9,
+   "h_mm": 18,
+   "keep_mm": [
+    9.1,
+    20
+   ],
+   "name": "",
+   "hex": "#D9D9DB",
+   "mat": "facet",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "faceted/#e1e9ee"
+  },
+  {
+   "id": 65,
+   "x_mm": 138.4,
+   "y_mm": 268,
+   "code": "Q111",
+   "shape": "round",
+   "rot_deg": 0,
+   "phys_mm": 8,
+   "keep_mm": [
+    8.6,
+    8.6
+   ],
+   "name": "coral red",
+   "hex": "#B64A40",
+   "mat": "facet",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "rhinestone/red"
+  },
+  {
+   "id": 66,
+   "x_mm": 12.1,
+   "y_mm": 273.7,
+   "code": "M063",
+   "shape": "marquise",
+   "rot_deg": -94,
+   "phys_mm": 12,
+   "w_mm": 6,
+   "h_mm": 12,
+   "keep_mm": [
+    7.3,
+    13.8
+   ],
+   "name": "",
+   "hex": "#DCDCDE",
+   "mat": "facet",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "faceted/#dee7ee"
+  },
+  {
+   "id": 67,
+   "x_mm": 89.5,
+   "y_mm": 276,
+   "code": "5",
+   "shape": "round",
+   "rot_deg": 0,
+   "phys_mm": 5,
+   "keep_mm": [
+    6.6,
+    6.6
+   ],
+   "name": "pearl white",
+   "hex": "#EDE9E2",
+   "mat": "pearl",
+   "src": "hint",
+   "tier": 2,
+   "vlm": "pearl/white"
+  },
+  {
+   "id": 68,
+   "x_mm": 22.5,
+   "y_mm": 284.3,
+   "code": "M063",
+   "shape": "marquise",
+   "rot_deg": 90,
+   "phys_mm": 12,
+   "w_mm": 6,
+   "h_mm": 12,
+   "keep_mm": [
+    11,
+    15
+   ],
+   "name": "",
+   "hex": "#DCDCDE",
+   "mat": "facet",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "faceted/#dee7ee"
+  },
+  {
+   "id": 69,
+   "x_mm": 290.1,
+   "y_mm": 284.6,
+   "code": "M081",
+   "shape": "marquise",
+   "rot_deg": 90,
+   "phys_mm": 18,
+   "w_mm": 9,
+   "h_mm": 18,
+   "keep_mm": [
+    10.5,
+    16.8
+   ],
+   "name": "",
+   "hex": "#D9D9DB",
+   "mat": "facet",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "faceted/#e1e9ee"
+  },
+  {
+   "id": 70,
+   "x_mm": 247.7,
+   "y_mm": 289.9,
+   "code": "M063",
+   "shape": "marquise",
+   "rot_deg": -168,
+   "phys_mm": 12,
+   "w_mm": 6,
+   "h_mm": 12,
+   "keep_mm": [
+    6.9,
+    16.8
+   ],
+   "name": "",
+   "hex": "#DCDCDE",
+   "mat": "facet",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "faceted/#e1e9ee"
+  },
+  {
+   "id": 71,
+   "x_mm": 137.3,
+   "y_mm": 291.8,
+   "code": "Q111",
+   "shape": "round",
+   "rot_deg": 0,
+   "phys_mm": 8,
+   "keep_mm": [
+    8.4,
+    8.4
+   ],
+   "name": "coral red",
+   "hex": "#B64A40",
+   "mat": "facet",
+   "src": "hint",
+   "tier": 1,
+   "vlm": "rhinestone/red"
+  }
+ ]
+}

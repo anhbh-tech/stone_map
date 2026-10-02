@@ -1,0 +1,9 @@
+.env
+outputs/
+requirements/
+.venv/
+node_modules/
+__pycache__/
+kit/db/stones_*.json
+tools/bin/
+.DS_Store

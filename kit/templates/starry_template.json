@@ -1,0 +1,33 @@
+{
+ "schema": "pearl-kit-template/1",
+ "name": "starry",
+ "layer": "background",
+ "source": "BG.png",
+ "canvasMm": 300,
+ "widthPx": 3543,
+ "heightPx": 3543,
+ "pxPerMm": 11.81,
+ "mask": {
+  "file": "starry_mask.png",
+  "legend": {
+   "stones": "#FFFFFF",
+   "none": "#000000"
+  }
+ },
+ "svg": "starry_background.svg",
+ "stones": 11759,
+ "codes": [
+  "L47",
+  "L50",
+  "L94",
+  "L37",
+  "L16"
+ ],
+ "sharedWith": {
+  "queen": [
+   "L94",
+   "L16"
+  ]
+ },
+ "rebuild": "node tools/starry_template.mjs"
+}

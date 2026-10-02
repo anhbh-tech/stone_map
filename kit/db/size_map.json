@@ -1,0 +1,93 @@
+[
+ {
+  "physical_mm": 2.8,
+  "reference_mm": 2.2,
+  "status": "CONFIRMED",
+  "rule": "lookup confirmed",
+  "notes": ""
+ },
+ {
+  "physical_mm": 4.0,
+  "reference_mm": 3.2,
+  "status": "CONFIRMED",
+  "rule": "lookup confirmed",
+  "notes": ""
+ },
+ {
+  "physical_mm": 5.0,
+  "reference_mm": 4.2,
+  "status": "CONFIRMED",
+  "rule": "lookup confirmed",
+  "notes": ""
+ },
+ {
+  "physical_mm": 6.0,
+  "reference_mm": 5.2,
+  "status": "DERIVED",
+  "rule": "physical - 0.8 mm",
+  "notes": "Derived value; editable when a measured value becomes available."
+ },
+ {
+  "physical_mm": 8.0,
+  "reference_mm": 7.2,
+  "status": "CONFIRMED",
+  "rule": "lookup confirmed",
+  "notes": ""
+ },
+ {
+  "physical_mm": 10.0,
+  "reference_mm": 9.2,
+  "status": "DERIVED",
+  "rule": "physical - 0.8 mm",
+  "notes": "Derived value; editable when a measured value becomes available."
+ },
+ {
+  "physical_mm": 12.0,
+  "reference_mm": 11.2,
+  "status": "DERIVED",
+  "rule": "physical - 0.8 mm",
+  "notes": "Derived value; editable when a measured value becomes available."
+ },
+ {
+  "physical_mm": 14.0,
+  "reference_mm": 13.2,
+  "status": "DERIVED",
+  "rule": "physical - 0.8 mm",
+  "notes": "Derived value; editable when a measured value becomes available."
+ },
+ {
+  "physical_mm": 16.0,
+  "reference_mm": 15.2,
+  "status": "DERIVED",
+  "rule": "physical - 0.8 mm",
+  "notes": "Derived value; editable when a measured value becomes available."
+ },
+ {
+  "physical_mm": 18.0,
+  "reference_mm": 17.2,
+  "status": "DERIVED",
+  "rule": "physical - 0.8 mm",
+  "notes": "Derived value; editable when a measured value becomes available."
+ },
+ {
+  "physical_mm": 20.0,
+  "reference_mm": 19.2,
+  "status": "DERIVED",
+  "rule": "physical - 0.8 mm",
+  "notes": "Derived value; editable when a measured value becomes available."
+ },
+ {
+  "physical_mm": 25.0,
+  "reference_mm": 24.2,
+  "status": "DERIVED",
+  "rule": "physical - 0.8 mm",
+  "notes": "Derived value; editable when a measured value becomes available."
+ },
+ {
+  "physical_mm": 30.0,
+  "reference_mm": 29.2,
+  "status": "DERIVED",
+  "rule": "physical - 0.8 mm",
+  "notes": "Derived value; editable when a measured value becomes available."
+ }
+]

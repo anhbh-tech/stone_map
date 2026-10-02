@@ -1,0 +1,14 @@
+﻿physical_diameter_mm,reference_diameter_mm,status,rule,notes
+2.8,2.2,CONFIRMED,lookup confirmed,
+4,3.2,CONFIRMED,lookup confirmed,
+5,4.2,CONFIRMED,lookup confirmed,
+6,5.2,DERIVED,physical - 0.8 mm,Derived value; editable when a measured value becomes available.
+8,7.2,CONFIRMED,lookup confirmed,
+10,9.2,DERIVED,physical - 0.8 mm,Derived value; editable when a measured value becomes available.
+12,11.2,DERIVED,physical - 0.8 mm,Derived value; editable when a measured value becomes available.
+14,13.2,DERIVED,physical - 0.8 mm,Derived value; editable when a measured value becomes available.
+16,15.2,DERIVED,physical - 0.8 mm,Derived value; editable when a measured value becomes available.
+18,17.2,DERIVED,physical - 0.8 mm,Derived value; editable when a measured value becomes available.
+20,19.2,DERIVED,physical - 0.8 mm,Derived value; editable when a measured value becomes available.
+25,24.2,DERIVED,physical - 0.8 mm,Derived value; editable when a measured value becomes available.
+30,29.2,DERIVED,physical - 0.8 mm,Derived value; editable when a measured value becomes available.

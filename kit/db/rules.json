@@ -1,0 +1,26 @@
+[
+ {
+  "key": "max_codes_target",
+  "value": "13"
+ },
+ {
+  "key": "max_codes_hard",
+  "value": "15"
+ },
+ {
+  "key": "stone_symbol",
+  "value": "\"uppercase letter, must map to a real catalog code\""
+ },
+ {
+  "key": "pearl_symbol",
+  "value": "\"digit(s) = pearl diameter in mm\""
+ },
+ {
+  "key": "symbols_scope",
+  "value": "\"per design (same code may have different symbols in different designs)\""
+ },
+ {
+  "key": "source_text",
+  "value": "\"RHINESTONE-APPLIED SIDE\\n\\n Mỗi thiết kế kiểm soát trong phạm vi 13 mã đá. (tối đa không quá 15 mã đá).  \\n\\n Ký hiệu đá cần to, rõ ràng, dùng chữ in hoa. \\n\\n Mỗi ký hiệu đá phải tương ứng với mã đá thực tế trong bảng mã đá.\\n Ví dụ: A, B, C \\n\\n Ký hiệu ngọc trai cần to, rõ ràng, dùng số tương ứng với kích thước viên ngọc trai.\\n Ví dụ:\\n 3 = 3mm\\n 8 = 8mm\\n 5 = 5mm\""
+ }
+]

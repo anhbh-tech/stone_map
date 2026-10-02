@@ -23,7 +23,6 @@ const args = process.argv.slice(2), flag = (n, d) => { const i = args.indexOf(n)
 const SEG = path.resolve(ROOT, flag('--seg', 'outputs/kit/kit20/seg_sam_all.json')), OUT = path.resolve(ROOT, flag('--out', 'outputs/kit/kit20'));
 const UP4 = path.join(ROOT, 'outputs', 'kit', 'kit20', 'up4.png'); // Real-ESRGAN ×4 của ảnh nguồn (tools/kit20_segment.py cùng dùng)
 // hàng hạt captain chỉ ra (msg 015): tâm px 3543 của 7 hạt vẽ cùng cỡ dọc đường cong, khung crop
-const chainCollide = flag('--chain-collide', 'shrink');
 const CAPTAIN = { box: [2093, 1504, 306, 508], row: [[2343, 1693], [2332, 1773], [2310, 1818], [2277, 1862], [2232, 1904], [2178, 1939], [2118, 1970]] };
 const MM = 300, W = 3543, PPM = W / MM, GAP = 0.15, maxCodes = +flag('--max-codes', 13), minCodes = +flag('--min-codes', 9);
 const cat = loadCatalog(), t0 = Date.now();
@@ -199,7 +198,8 @@ if (!args.includes('--no-neigh')) {
 // Chuỗi vẽ chồng (bước vẽ < cỡ viên + khe) → đặt lại viên dọc đường chuỗi, bước = cỡ viên + 0.15 mm (không va chạm)
 const chains = { enabled: !args.includes('--no-chains'), chains: 0, groups: 0, beadsInChains: 0, relabeled: 0, resized: 0, resampledChains: 0, removed: 0, added: 0, relabeledBy: {}, prior: {} };
 if (chains.enabled) {
-  const resampleMin = args.includes('--no-resample') ? Infinity : +flag('--resample-min', 4), chainSize = flag('--chain-size', 'd'), wPrior = +flag('--chain-wprior', 0.1), maxStepDE = +flag('--chain-step-de', 20), sizeTol = 1.15, pitchTol = 1.65; // bước lệch ≤ 65 % qua 1 hạt (hạt sau bị che → bước vẽ đổi)
+  const resampleMin = +flag('--resample-min', Infinity), // KIT-22: mặc định giữ vị trí vẽ (KIT-21 = --resample-min 4)
+  taperTol = +flag('--taper', 1.45), chainSize = flag('--chain-size', 'd'), wPrior = +flag('--chain-wprior', 0.1), maxStepDE = +flag('--chain-step-de', 20), sizeTol = 1.15, pitchTol = 1.65; // bước lệch ≤ 65 % qua 1 hạt (hạt sau bị che → bước vẽ đổi)
   const sz = (b) => (b.hMm / b.wMm >= 0.6 ? b.wMm : b.dMm); // hạt cầu bị che một phần: trục dài ≈ đường kính thật
   for (const b of beads) b.conf ??= matConf(b);
   const C = beads.filter((b) => b.cls.shape === 'round' && sz(b) >= 2.2 && b.src !== 'chain');
@@ -219,10 +219,12 @@ if (chains.enabled) {
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const t of G.get(`${gx + dx},${gy + dy}`) || []) {
       if (t.ci <= b.ci) continue;
       const d1 = sz(b), d2 = sz(t), dm = (d1 + d2) / 2, D = Math.hypot(t.x - b.x, t.y - b.y) / PPM;
-      if (Math.max(d1, d2) / Math.min(d1, d2) > sizeTol || D < 0.6 * dm || D > 1.5 * dm) continue;
+      // KIT-22: chuỗi thu nhỏ dần (hàng xa hơn): cạnh lệch cỡ tới taperTol được nếu màu không mâu thuẫn (cùng nhãn hoặc ΔE ≤ maxStepDE)
+      const rr = Math.max(d1, d2) / Math.min(d1, d2), taper = rr > sizeTol;
+      if (rr > taperTol || D < 0.6 * dm || D > 1.5 * dm) continue;
       // cùng nhãn, hoặc màu chuyển dần (ΔE76 ≤ maxStepDE giữa 2 hạt kề: ánh sáng), không nối hạt vàng với đá đỏ cạnh nó
       if (b.cls.m4 !== t.cls.m4 && Math.hypot(b.L - t.L, b.a - t.a, b.b - t.b) > maxStepDE) continue;
-      E.push({ a: b, b: t, D, q: Math.abs(D - dm) / dm });
+      E.push({ a: b, b: t, D, q: Math.abs(D - dm) / dm + (taper ? 0.3 : 0), taper }); // cạnh cùng cỡ trước
     }
   }
   // hạt vẽ chồng kiểu 3D làm bước lệch cỡ → xếp cạnh theo độ thẳng của đoạn nối tiếp ở hai đầu (−cos góc a-b-c tốt nhất) trước,
@@ -317,7 +319,8 @@ if (chains.enabled) {
     const gl = g.filter((c) => c.grad).map((c) => c.grad), L = g.flatMap((c) => c.path), V = gl.length ? { m: gl.sort((x, y) => gl.filter((v) => v === y).length - gl.filter((v) => v === x).length)[0] } : vote(L), ds = L.map(chainSize === 'w' ? sz : (b) => b.dMm).sort((x, y) => x - y), dMed = ds[ds.length >> 1];
     for (const b of L) {
       const before = `${b.cls.m4}/${b.cls.physMm}`;
-      b.cls = classify({ ...b, dMm: dMed, wMm: dMed, hMm: dMed, shape: 'round' }, V.m);
+      const dB = chainSize === 'own' || Math.max(b.dMm, dMed) / Math.min(b.dMm, dMed) > sizeTol ? b.dMm : dMed; // own: chỉ nhãn theo nhóm, cỡ từng hạt
+      b.cls = classify({ ...b, dMm: dB, wMm: dB, hMm: dB, shape: 'round' }, V.m);
       const after = `${b.cls.m4}/${b.cls.physMm}`;
       if (before.split('/')[0] !== V.m) { chains.relabeled++; const k = `${before.split('/')[0]}→${V.m}`; chains.relabeledBy[k] = (chains.relabeledBy[k] || 0) + 1; }
       else if (before !== after) chains.resized++;
@@ -434,38 +437,78 @@ const fits = (s, e) => {
   }
   return true;
 };
-for (const s of stones) {
-  // hạt trong nhóm chuỗi (KIT-21): cả chuỗi 1 mã → va chạm thì bỏ hạt, không thu thành mã khác (--chain-collide drop)
-  const tryE = s.b.group && chainCollide === 'drop' ? [s.e] : [s.e, ...s.opts.slice(1).filter((e) => R(e) < R(s.e) - 1e-6 && (e.kind === 'pearl') === (s.e.kind === 'pearl')), ...s.alt];
-  const e = tryE.find((x) => fits(s, x));
-  if (!e) { lost.collision++; if (args.includes('--debug')) { const w = placed.reduce((a, t) => (Math.hypot(t.b.x - s.b.x, t.b.y - s.b.y) < Math.hypot(a.b.x - s.b.x, a.b.y - s.b.y) ? t : a), placed[0]); console.error('va chạm', JSON.stringify({ d: +(Math.hypot(w.b.x - s.b.x, w.b.y - s.b.y) / PPM).toFixed(2), lose: [s.e.code, +s.b.dMm.toFixed(1), s.b.cls.m4, s.rec.mat, s.rec.physMm, s.opts.map((e) => e.code).join()], win: [w.e.code, +w.b.dMm.toFixed(1), w.b.cls.m4] })); } continue; }
-  if (e !== s.e) lost.shrunk++;
-  s.e = e;
-  placed.push(s);
+// KIT-22: va chạm → đẩy ≤ nudgeMm (12 hướng, bước 0.1 mm) trước, rồi hạ cỡ cùng vật liệu (mat4 mã = mat4 hạt; ngọc → đá trắng chỉ
+// ngoài chuỗi); viên trong nhóm chuỗi giữ mã (chỉ đẩy, không đổi mã). Thứ tự: hạt vẽ ≥ 4 mm / hình → viền vàng 2.8 → hạt nhỏ
+const nudgeMm = +flag('--nudge', 0.2), // 0.5 = trần captain; 0.2 giữ GT ≥ KIT-20 (bảng docs/KIT-20.md §KIT-22)
+  lost2 = { nudged: 0, nudgeMm: [] };
+const sameMat = (s, e) => { const m = mat4Of(e.code), b = s.b.cls.m4; return m === b || (b === 'pearl' && m === 'white') || (b === 'white' && m === 'pearl' && false); };
+const DIRS = Array.from({ length: 12 }, (_, k) => [Math.cos((k * Math.PI) / 6), Math.sin((k * Math.PI) / 6)]);
+const altNudge = args.includes('--alt-nudge'), shrinkSteps = +flag('--shrink-steps', 1);
+function placeOne(s, tryE) {
+  for (const e of tryE) {
+    if (fits(s, e)) return { e };
+    if (!altNudge && mat4Of(e.code) !== s.b.cls.m4) continue; // đổi vật liệu (ngọc → đá trắng) chỉ tại chỗ, không đẩy
+    for (let r = 0.1; r <= nudgeMm + 1e-9; r += 0.1) for (const [dx, dy] of DIRS) {
+      const t = { ...s, b: { ...s.b, x: s.b.x + dx * r * PPM, y: s.b.y + dy * r * PPM } };
+      if (fits(t, e)) return { e, b: t.b, r };
+    }
+  }
+  return null;
+}
+function commit(s, got) {
+  if (got.b) { s.b = { ...got.b, nudgedMm: +got.r.toFixed(1) }; lost2.nudged++; }
+  s.e = got.e; placed.push(s);
   const k = keyOf(s.b.x, s.b.y);
   (grid.get(k) || grid.set(k, []).get(k)).push(s);
 }
+function placeBead(s) {
+  let smaller = s.opts.slice(1).filter((e) => R(e) < R(s.e) - 1e-6 && (e.kind === 'pearl') === (s.e.kind === 'pearl') && sameMat(s, e));
+  // captain KIT-22: hạ tối đa shrinkSteps bậc cỡ catalog (các cỡ có trong bảng mã cùng vật liệu, theo thứ tự giảm)
+  const steps = [...new Set(smaller.map(R))].sort((a, b) => b - a).slice(0, shrinkSteps);
+  smaller = smaller.filter((e) => steps.includes(R(e)));
+  const tryE = s.b.group ? [s.e, ...smaller.filter((e) => e.kind === s.e.kind && mat4Of(e.code) === mat4Of(s.e.code)).slice(0, 1)] : [s.e, ...smaller, ...s.alt.filter((e) => sameMat(s, e))];
+  const got = placeOne(s, tryE);
+  if (args.includes('--debug') && CAPTAIN.row.some(([x, y]) => Math.hypot(x - s.b.x, y - s.b.y) < 12)) console.error('placeC', Math.round(s.b.x), Math.round(s.b.y), s.b.cls.m4, 'try', tryE.map((x) => x.code).join(','), '→', got?.e.code, got?.r ?? 0, 'group', !!s.b.group);
+  if (!got) { lost.collision++; return; }
+  if (got.e !== s.e) lost.shrunk++;
+  commit(s, got);
+}
+const bigFirst = (s) => s.b.dMm >= 4 || !!s.e.shape;
+const borderLast = args.includes('--border-last');
+for (const s of stones) if (bigFirst(s)) placeBead(s);
+if (borderLast) for (const s of stones) if (!bigFirst(s)) placeBead(s);
 
-// ── 3b. chuỗi / viền vàng li ti (tools/kit20_chain.py: vùng vàng → đường giữa → điểm cách 3.0 mm): viên vàng 2.8 sau mọi hạt khác,
-// chỉ nơi còn chỗ (hạt vàng vẽ ~1 mm không thể mỗi hạt 1 viên; 1 viên 2.8 thay ~3 hạt dọc chuỗi)
-const chainF = flag('--chain'), chain = { points: 0, placed: 0, collision: 0 };
+// ── 3b. viền vàng li ti (tools/kit20_chain.py: vùng vàng → đường tâm → điểm cách 2.95 mm): viên vàng 2.8 sau hạt to, TRƯỚC hạt nhỏ
+// (captain KIT-22: dải viền ưu tiên hơn hạt nhỏ detect chồng lên nó); đẩy ≤ nudgeMm
+const chainF = flag('--chain'), chain = { points: 0, placed: 0, collision: 0, nudged: 0 };
 if (chainF) {
   const C = JSON.parse(fs.readFileSync(path.resolve(ROOT, chainF), 'utf8')).points;
-  chain.points = C.length;
+  chain.points = C.length; chain.insideBead = 0;
+  // "không có hạt thì không có đá" ngược lại: điểm viền nằm trong lòng 1 hạt vẽ không phải vàng (ngọc / đá ánh vàng, kể cả hạt bị bỏ
+  // vì va chạm) là hạt, không phải viền → bỏ
+  const bc = 8 * PPM, BG = new Map();
+  for (const b of beads) if (b.cls.m4 !== 'gold') { const q = `${Math.floor(b.x / bc)},${Math.floor(b.y / bc)}`; (BG.get(q) || BG.set(q, []).get(q)).push(b); }
+  const inBead = (x, y) => { const gx = Math.floor(x / bc), gy = Math.floor(y / bc); for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const b of BG.get(`${gx + dx},${gy + dy}`) || []) if (Math.hypot(b.x - x, b.y - y) / PPM < 0.5 * b.dMm) return true; return false; };
   for (const c of C) {
+    if (inBead(c.x, c.y)) { chain.insideBead++; continue; }
     const rec = { layer: 'queen', mat: 'gold', physMm: 2.8, t: [c.L, c.a, c.b], one: false, gwl: 1 };
     const s = { b: { x: c.x, y: c.y, dMm: 2.8, score: 0, rotDeg: 0, cls: { m4: 'gold', physMm: 2.8, shape: 'round' }, src: 'chain' }, rec, opts: ranked(rec), alt: [] };
-    const e = s.opts.find((x) => x.physMm === 2.8 && fits(s, x));
-    if (!e) {
+    const got = placeOne(s, s.opts.filter((x) => x.physMm === 2.8 && mat4Of(x.code) === 'gold').slice(0, 1));
+    if (!got) {
       chain.collision++;
       if (args.includes('--debug')) { const w = placed.reduce((a, t) => (Math.hypot(t.b.x - c.x, t.b.y - c.y) < Math.hypot(a.b.x - c.x, a.b.y - c.y) ? t : a), placed[0]); const k = `${w.e.code}/${w.b.src || 'sam'}/${w.b.cls.m4}`; (chain.blockedBy ||= {})[k] = (chain.blockedBy[k] || 0) + 1; }
       continue;
     }
-    s.e = e; placed.push(s); chain.placed++;
-    const k = keyOf(s.b.x, s.b.y);
-    (grid.get(k) || grid.set(k, []).get(k)).push(s);
+    if (got.b) chain.nudged++;
+    commit(s, got); chain.placed++;
   }
 }
+// hạt nhỏ có tâm trong lòng 1 hạt vẽ to hơn ≥ 1.6× (đã đặt hay bị bỏ vì va chạm) là mảnh / ánh sáng của hạt đó → không viên
+const BB = new Map(), bbc = 12 * PPM;
+for (const s of stones) if (bigFirst(s)) { const q = `${Math.floor(s.b.x / bbc)},${Math.floor(s.b.y / bbc)}`; (BB.get(q) || BB.set(q, []).get(q)).push(s.b); }
+const insideBig = (b) => { const gx = Math.floor(b.x / bbc), gy = Math.floor(b.y / bbc); for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const t of BB.get(`${gx + dx},${gy + dy}`) || []) if (t.dMm >= 1.6 * b.dMm && Math.hypot(t.x - b.x, t.y - b.y) / PPM < 0.5 * t.dMm) return true; return false; };
+lost.insideBig = 0;
+if (!borderLast) for (const s of stones) if (!bigFirst(s)) { if (!args.includes('--keep-inside') && insideBig(s.b)) { lost.insideBig++; continue; } placeBead(s); }
 
 // ── 4. SVG + chấm + phủ
 const src = decodePng(fs.readFileSync(UP4)), img = upscale(src, W, W);
@@ -489,7 +532,7 @@ for (const s of placed) byCode[s.e.code] = (byCode[s.e.code] || 0) + 1;
 const evQ = pal.layers.queen, evS = pal.layers.starry;
 const report = {
   schema: 'pearl-kit20-report/1', source: 'requirements/Trang phục Queen.png', segmentation: { file: path.relative(ROOT, SEG), method: seg.method, region: seg.region, tiles: seg.tiles, seconds: seg.seconds, params: seg.params },
-  instances: { masks: all.length, beadLike: cand.length, droppedParts: drop.size, beads: beads.length, noCode: noCode.length, collisionDropped: lost.collision, shrunkForGap: lost.shrunk, stones: placed.length },
+  instances: { masks: all.length, beadLike: cand.length, droppedParts: drop.size, beads: beads.length, noCode: noCode.length, collisionDropped: lost.collision, shrunkForGap: lost.shrunk, nudged: lost2.nudged, nudgeMaxMm: nudgeMm, insideBigSkipped: lost.insideBig, stones: placed.length },
   materialRule: MAT, sizeK, coverage: { costumeMm2: Math.round(costMm2), stoneMm2: Math.round(covered), pct: +((100 * covered) / costMm2).toFixed(1), note: seg.region === 'gt' ? 'chỉ 3 ô GT được tách → % phủ toàn trang phục không có nghĩa' : undefined },
   codeCurve: curve.map(({ codes, ...c }) => ({ ...c, added: codes.filter((x) => !(curve.find((d) => d.union === c.union - 1)?.codes || []).includes(x)) })),
   palette: { codes, crystal: pal.crystal, union: codes.length, maxCodes, queenCodesUsed: Object.keys(byCode).length, byCode, starryMeanDE: evS?.meanDE, queenMeanDE: evQ?.meanDE, },
@@ -500,10 +543,24 @@ const report = {
   // (lẽ ra toàn '5') + mã mọi viên ≥ 4 mm trong khung
   captainRegion: (() => {
     const box = CAPTAIN.box, inB = (s) => s.b.x >= box[0] && s.b.y >= box[1] && s.b.x < box[0] + box[2] && s.b.y < box[1] + box[3];
-    const row = CAPTAIN.row.map(([x, y]) => { const s = placed.reduce((a, t) => (Math.hypot(t.b.x - x, t.b.y - y) < Math.hypot(a.b.x - x, a.b.y - y) ? t : a), placed[0]); const d = Math.hypot(s.b.x - x, s.b.y - y) / PPM; return { x, y, code: d <= 3 ? s.e.code : null, dMm: +d.toFixed(2) }; });
+    // mỗi hạt vẽ của hàng → viên sinh từ CHÍNH hạt đó (cùng i, có thể đã đẩy ≤ 0.5 mm) hoặc '-' (bỏ vì va chạm); viên đặt lại
+    // dọc chuỗi (--resample-min) không giữ i → viên gần nhất ≤ 3 mm
+    const row = CAPTAIN.row.map(([x, y]) => {
+      const b = beads.reduce((a, t) => (Math.hypot(t.x - x, t.y - y) < Math.hypot(a.x - x, a.y - y) ? t : a), beads[0]);
+      let s = Math.hypot(b.x - x, b.y - y) / PPM < 1 ? placed.find((t) => t.b.i === b.i && t.b.src !== 'chain') : null;
+      if (!s && b.src === 'chain-resample') { const t = placed.reduce((a, q) => (Math.hypot(q.b.x - x, q.b.y - y) < Math.hypot(a.b.x - x, a.b.y - y) ? q : a), placed[0]); if (Math.hypot(t.b.x - x, t.b.y - y) / PPM <= 3) s = t; }
+      return { x, y, code: s ? s.e.code : null, shiftMm: s ? +(Math.hypot(s.b.x - x, s.b.y - y) / PPM).toFixed(2) : null };
+    });
     const big = {};
     for (const s of placed) if (inB(s) && Math.max(s.e.physMm || 0, s.e.physW || 0) >= 4) big[s.e.code] = (big[s.e.code] || 0) + 1;
-    return { box, row, rowCodes: row.map((r) => r.code ?? '-').join(' '), bigStonesInBox: big };
+    // vùng đỏ A (captain KIT-22): hạt vẽ trong khung theo vật liệu vs viên đặt được (hạt đỏ ~2.5–3 mm vẽ khít nhau < 2.95 mm)
+    const inP = (p) => p.x >= box[0] && p.y >= box[1] && p.x < box[0] + box[2] && p.y < box[1] + box[3];
+    const beadsBy = {}, stonesBy = {};
+    for (const b of beads) if (inP(b)) beadsBy[b.cls.m4] = (beadsBy[b.cls.m4] || 0) + 1;
+    for (const t of placed) if (inP(t.b)) stonesBy[t.b.cls.m4] = (stonesBy[t.b.cls.m4] || 0) + 1;
+    const red = beads.filter((b) => inP(b) && b.cls.m4 === 'color' && b.a > 30), redNN = red.map((b) => Math.min(...red.filter((q) => q !== b).map((q) => Math.hypot(q.x - b.x, q.y - b.y) / PPM))).sort((x, y) => x - y);
+    return { box, row, rowCodes: row.map((r) => r.code ?? '-').join(' '), bigStonesInBox: big, beadsBy, stonesBy,
+      red: { beads: red.length, stones: placed.filter((t) => inP(t.b) && t.b.cls.m4 === 'color' && t.b.a > 30).length, medianDrawnMm: +(red.map((b) => b.dMm).sort((x, y) => x - y)[red.length >> 1] || 0).toFixed(2), medianNeighbourMm: +(redNN[redNN.length >> 1] || 0).toFixed(2) } };
   })(),
   neighbour: { enabled: !args.includes('--no-neigh'), relabeled: neigh.relabeled.length, added: neigh.added.length, relabeledBy: neigh.relabeled.reduce((a, r) => ((a[`${r.from}→${r.to}`] = (a[`${r.from}→${r.to}`] || 0) + 1), a), {}), addedBy: neigh.added.reduce((a, r) => ((a[r.m4] = (a[r.m4] || 0) + 1), a), {}),
     beforeAfter: undefined },

@@ -137,3 +137,44 @@ ngọc→vàng 1), đổi cỡ 94, luật gradient 2 chuỗi; đặt lại 93 ch
 Đặt lại dọc chuỗi giảm điểm GT vì GT (nháp VLM) giữ mỗi hạt vẽ chồng 1 viên ở đúng tâm vẽ; viên đặt lại lệch tâm vẽ tới ~2.3 mm.
 Không đặt lại thì viên ngọc 5 ở bước vẽ 4.2–4.7 mm va chạm → 2 viên thu thành Z16. Hàng captain tiếp lên trên bằng 3 hạt nhỏ
 hơn (vẽ ~3.3 mm, xa hơn) vẫn là B (L23 2.8): lệch cỡ > 15 % nên không vào chuỗi.
+
+## KIT-22 — giữ vị trí vẽ (captain msg 017)
+
+`node tools/kit20.mjs --seg outputs/kit/kit20/seg_sam_all.json --chain outputs/kit/kit20/chain_all.json --out outputs/kit/kit22
+--chains-off outputs/kit/kit21/neigh_summary.json` (trước = KIT-21 head). Mặc định mới: không đặt lại dọc chuỗi
+(`--resample-min 4` = KIT-21), va chạm → thử nudge ≤ `--nudge` mm (mặc định 0.2, 12 hướng, bước 0.1) rồi hạ 1 size catalog
+cùng loại / cùng vật liệu (`--shrink-steps`), không đổi mã; viền vàng đặt sau hạt to (≥ 4 mm / hình), trước hạt nhỏ
+(`--border-last` = KIT-21); bỏ điểm viền nằm trong hạt vẽ không vàng; hạt nhỏ có tâm nằm trong hạt to vẽ gấp ≥ 1.6× thì bỏ
+(`--keep-inside` tắt). Chuỗi cho phép cỡ thu dần tới 1.45× (`--taper`).
+
+- (1) Vì sao `--no-resample` ra `5 Z16 Z16 5 5 5 5`: viên ngọc 5 va chạm → fallback `alt` (đá trắng 6 mm, mat 'base') đi qua
+  nhánh thu cỡ của `stoneCost`, nhánh này không phân biệt vàng / base → ra Z16 (vàng 4 mm). Sửa: fallback chỉ nhận mã cùng
+  vật liệu (`sameMat`), nhãn chuỗi giữ nguyên. 7 viên ngọc 5 không vừa trong ±0.5 mm: cung từ hạt 2 tới hạt 4 dài 8.86 mm,
+  3 viên 5 mm cần ≥ 10.3 mm (5 + 0.15 mỗi bước) → thiếu ~0.4 mm sau nudge. Tốt nhất giữ vị trí: `5 5 - 5 5 5 5`
+  (hạt 3 bỏ, không có viên mã khác lấp vào).
+- (2) Recall: nudge + hạ cỡ cứu 263 viên (lệch ≤ 0.2 mm). Vùng đỏ A trong khung captain: 34 hạt đỏ → 16 viên; cỡ vẽ trung vị
+  2.51 mm, khoảng cách láng giềng trung vị 2.22 mm < bước 2.95 mm của viên nhỏ nhất (2.8) → không thể mỗi hạt 1 viên. Khung
+  captain theo vật liệu (hạt → viên): ngọc 21 → 10, màu 34 → 16, vàng 15 → 7, trắng 3 → 0.
+- (3) Viền vàng 2.8: đặt 812 / 2179 điểm (KIT-21: 125); 846 điểm nằm trong hạt vẽ không vàng (bỏ, để không đè ngọc / màu),
+  521 va chạm, 54 nhờ nudge. Đổi lại hạt nhỏ mất chỗ: 1319 viên từ hạt + 812 viền = 2131 (KIT-21: 1804 + 125 = 1929).
+- (4) Chuỗi thu cỡ dần: 333 chuỗi (KIT-21 278); hàng captain nối thêm lên trên tới (2330,1637) thành ngọc nhưng viên này va
+  chạm → bỏ; 2 hạt trên (2364,1657), (2277,1619) chỉ có mask 1.6 / 1.9 mm (SAM tách kém) nên không vào chuỗi, không có viên.
+
+Viên GT vẽ ≥ 2 mm (3 ô) recall / vật liệu / cỡ:
+
+| | recall | vật liệu | cỡ | viên / viền | hàng captain |
+|---|---|---|---|---|---|
+| KIT-20 | 39.8 | 65.7 | 51.4 | 1949 / 127 | — |
+| KIT-21 head (đặt lại dọc chuỗi) | 36.4 | 62.5 | 46.9 | 1929 / 125 | 5 5 5 5 5 5 5 |
+| KIT-21 `--no-resample` | 39.8 | 65.7 | 48.6 | — | 5 Z16 Z16 5 5 5 5 |
+| **KIT-22 (nudge 0.2, mặc định)** | **43.2** | **65.8** | **52.6** | 2131 / 812 | 5 5 - 5 5 5 5 |
+| KIT-22 nudge 0 | 40.9 | 69.4 | 50.0 | 1974 / 797 | |
+| KIT-22 nudge 0.3 | 44.3 | 66.7 | 51.3 | 2196 | |
+| KIT-22 nudge 0.4 | 45.5 | 65.0 | 50.0 | 2250 | |
+| KIT-22 nudge 0.5 | 45.5 | 67.5 | 50.0 | 2300 | |
+| KIT-22 nudge 0.5 + `--alt-nudge` | 47.7 | 64.3 | 50.0 | 2344 / 877 | |
+| KIT-22 `--border-last` | 46.6 | 63.4 | 46.3 | 2200 / 115 | |
+
+Hạt GT ≥ 2 mm: 60.2 / 77.4 / 35.8 (KIT-21 53.4 / 72.3 / 38.3). Vàng GT: 18 / 166 có viên (KIT-21 12), 17 nhãn vàng. Bảng mã
+union 13 (Queen 12), sản phẩm 15, check ok, phủ 44.2 %. Nudge 0.5 (trần captain) tăng recall nhưng cỡ 50.0 < 51.4 (KIT-20) →
+mặc định 0.2. `--alt-nudge` (nudge cả mã đổi vật liệu) chủ yếu thêm ngọc→trắng nên hạ vật liệu.

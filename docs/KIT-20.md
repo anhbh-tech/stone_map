@@ -249,3 +249,36 @@ không còn ra Z16. Hạt GT: 60.2 / 75.5 / 35.8.
 
 Cần captain quyết: (a) ngọc 8 mm có mã riêng (gộp L50, ΔE Starry 10.3) hay về 6; (b) chuỗi cùng nhãn hạ cỡ đồng loạt
 (chuỗi 19) hay cho lẫn cỡ; (c) 1369 viên neo bỏ để lỗ thay vì lẫn mã — đúng ý "1 nhãn" nhưng phủ 44.2 % (KIT-22 44.2 %).
+
+## KIT-24 — cánh motif dài → hình giọt (captain msg 019)
+
+`node tools/kit20.mjs --seg outputs/kit/kit20/seg_sam_all.json --chain outputs/kit/kit20/chain_all.json --out outputs/kit/kit24
+--before outputs/kit/kit23/neigh_summary.json` ($0 API; `--no-petal` = KIT-23). Bước 2c1 sau khi tìm motif KIT-23: với mỗi vòng
+đo trên ảnh ×4 trong hình quạt ±π/n của từng cánh — lõi = điểm ảnh giống màu cánh (ΔE76 ≤ 22) nối với tâm cánh. Dài thân = mép ngoài
+lõi − bán kính hạt tâm (mũi cánh nằm dưới viền vàng của tâm: lõi bắt đầu ở 2.8–3.7 mm ≈ bán kính tâm), rộng = bề ngang lớn nhất.
+Tỉ lệ trung vị vòng ≥ `--petal-ratio` (mặc định 1.25) → cả vòng thành hình: giọt nếu cánh chạm tâm (lõi bắt đầu ≤ 1 mm ngoài tâm),
+không thì marquise. Cỡ = hình catalog cùng chất liệu gần nhất (log) với thân + viền vàng của cánh (viền = (bề ngang lõi + viền −
+lõi) / 2, trung vị). Mọi cánh cùng 1 bán kính = max(trung vị vẽ, tâm tròn nhỏ nhất / 2 + khe + dài / 2), góc = góc vẽ, mũi giọt chỉ vào
+tâm. MRF KIT-23 giữ cả vòng 1 nhãn (cạnh motif); hạt tâm không đổi.
+
+| motif (px) | cánh | tỉ lệ thân từng cánh | trung vị | thân / + viền (mm) | trước (KIT-23) | sau | bán kính, lệch vẽ |
+|---|---|---|---|---|---|---|---|
+| fb4 (842,3259) | 5 | 1.29 1.21 1.35 1.39 1.14 | 1.29 | 5.3×6.9 / 7.4×8.8 | D1 ×5 (6 mm tròn) | **S057 ×5** (giọt 6×10) | 6.55 mm, ≤ 0.55 |
+| hoa 2 (2653,3166) | 6 | 1.42 1.26 1.35 1.22 1.22 1.52 | 1.32 | 5.1×6.8 / 7.2×9.3 | D1 ×6 | **S057 ×6** | 7.35 mm, ≤ 1.05 |
+| (2375,2401) ngọc | 4 | | 0.43 | | 5 | 5 (tròn) | |
+| (2725,2798) đỏ | 4 | | 0.74 | | L4 | L4 (tròn) | |
+
+Ngưỡng: captain nói ≥ 1.4; thân cánh đo được chỉ 1.29 / 1.32 (cánh vẽ có viền vàng dày ~1 mm, bề ngang thân 5.1–5.3 mm). Ở 1.4
+không vòng nào đổi → mặc định 1.25 (2 vòng giả ngọc / đỏ 0.43 / 0.74 vẫn tròn). SAM fit tự xếp các cánh này marquise ≥ giọt
+(fb4 tổng IoU 4.56 / 4.32) vì mũi bị viền tâm che; luật chạm tâm → giọt.
+
+Bảng hình (viên đặt, cả ảnh):
+
+| | tròn | giọt 6×10 | marquise 6×12 | tim 12×12 | tổng |
+|---|---|---|---|---|---|
+| KIT-23 | 2036 | 7 | 20 | 2 | 2065 |
+| **KIT-24** | 2012 | 18 | 20 | 2 | 2052 |
+
+S057 7 → 18 (+11 cánh); 13 viên tròn khác mất chỗ vì giọt 6×10 phủ cả viền vàng cánh (fb4: L23 14 → 12, L4 30 → 26, L94 3 → 2).
+Bảng mã không đổi (13 mã, S057 đã có; ΔE Starry 8.85), check ok, phủ 44.3 %. GT ≥ 2 mm 42.0 / 73.0 / 45.9 = KIT-23 (3 ô GT không
+có hoa); consistency 1.0 %, fb1–4 + captain 0 %, hàng captain `5 5 - 5 5 5 5`.

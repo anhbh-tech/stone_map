@@ -240,6 +240,66 @@ const motifs = [];
   }
 }
 
+// ── 2c1. KIT-24 cánh dài (captain msg 019): motif xoay có cánh dài → cả vòng thành hình giọt (cánh chạm tâm) / marquise (không chạm),
+// trục dài theo hướng tâm → ngoài, mũi giọt chỉ vào tâm. Đo trên ảnh ×4 trong hình quạt ±π/n của từng cánh: lõi = điểm ảnh giống
+// màu cánh (ΔE76 ≤ 22) nối với tâm cánh; dài thân = mép ngoài lõi − bán kính hạt tâm (mũi cánh nằm dưới viền tâm), rộng = bề ngang
+// lớn nhất; tỉ lệ trung vị vòng ≥ --petal-ratio → hình. Cỡ = hình catalog gần nhất (cùng chất liệu) với thân + viền vàng của cánh
+// (viền = (bề ngang lõi+viền − lõi) / 2, trung vị); mọi cánh cùng 1 bán kính = max(trung vị vẽ, tâm nhỏ nhất / 2 + khe + dài / 2).
+const petal = { enabled: !kit22 && !args.includes('--no-petal'), ratioMin: +flag('--petal-ratio', 1.25), motifs: [] };
+if (petal.enabled && motifs.length) {
+  const up = decodePng(fs.readFileSync(UP4)), K = up.w / W, st = 1 / K / PPM;
+  const px = (x, y) => { const X = Math.round(x * K), Y = Math.round(y * K); if (X < 0 || Y < 0 || X >= up.w || Y >= up.h) return null; const j = (Y * up.w + X) * 4; return lab([up.data[j], up.data[j + 1], up.data[j + 2]]); };
+  const isGold = (p) => { const C = Math.hypot(p[1], p[2]), h = ((Math.atan2(p[2], p[1]) * 180) / Math.PI + 360) % 360; return h >= 55 && h <= 100 && C >= 30 && p[0] >= 40; };
+  const med = (v) => [...v].sort((x, y) => x - y)[v.length >> 1];
+  const grow = (t, c, n, rc, rim) => {
+    const ang = Math.atan2(t.y - c.y, t.x - c.x), ux = Math.cos(ang), uy = Math.sin(ang), R0 = Math.hypot(t.x - c.x, t.y - c.y) / PPM;
+    const sd = []; for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) sd.push(px(t.x + dx / K, t.y + dy / K));
+    const md = [0, 1, 2].map((k) => med(sd.map((p) => p[k])));
+    const ok = (p) => Math.hypot(p[0] - md[0], p[1] - md[1], p[2] - md[2]) <= 22 || (rim && isGold(p));
+    const key = (r, u) => `${Math.round(r / st)},${Math.round(u / st)}`, seen = new Set([key(R0, 0)]), q = [[R0, 0]], P = [];
+    while (q.length) {
+      const [r, u] = q.pop(); P.push([r, u]);
+      for (const [dr, du] of [[st, 0], [-st, 0], [0, st], [0, -st]]) {
+        const r2 = r + dr, u2 = u + du, k = key(r2, u2); if (seen.has(k)) continue; seen.add(k);
+        if (r2 < rc || r2 > 2.2 * R0 || Math.abs(Math.atan2(u2, r2)) > Math.PI / n) continue;
+        const p = px(c.x + (r2 * ux - u2 * uy) * PPM, c.y + (r2 * uy + u2 * ux) * PPM); if (!p || !ok(p)) continue;
+        q.push([r2, u2]);
+      }
+    }
+    const rs = P.map((p) => p[0]).sort((x, y) => x - y), r0 = rs[Math.floor(rs.length * 0.01)], r1 = rs[Math.floor(rs.length * 0.99)];
+    const widthAt = (r) => { const T = P.filter((p) => Math.abs(p[0] - r) < 0.3).map((p) => p[1]); return T.length ? Math.max(...T) - Math.min(...T) : 0; };
+    const ws = Array.from({ length: 9 }, (_, k) => widthAt(r0 + ((r1 - r0) * (k + 1)) / 10)), wmax = Math.max(...ws);
+    return { ang, ux, uy, R0, r0, r1, wmax, rWide: r0 + ((r1 - r0) * (ws.indexOf(wmax) + 1)) / 10, widthAt };
+  };
+  for (const m of motifs) {
+    const c = m.centre, n = m.ring.length, rc = c.dMm / 2;
+    const ms = m.ring.map((t) => ({ t, core: grow(t, c, n, rc, false), rim: grow(t, c, n, rc, true) }));
+    const Lb = med(ms.map((q) => q.core.r1 - rc)), Wc = med(ms.map((q) => q.core.wmax)), ratio = Lb / Wc;
+    const rim = Math.min(1.5, Math.max(0, (med(ms.map((q) => q.rim.widthAt(q.core.rWide))) - Wc) / 2)), touch = med(ms.map((q) => q.core.r0 - rc)) <= 1;
+    const rep = { centre: [Math.round(c.x), Math.round(c.y)], n, ratio: +ratio.toFixed(2), ratios: ms.map((q) => +((q.core.r1 - rc) / q.core.wmax).toFixed(2)), bodyMm: [+Wc.toFixed(2), +Lb.toFixed(2)], rimMm: +rim.toFixed(2), touch, before: m.ring.map((t) => t.cls.shape === 'round' ? `${t.cls.m4}/${t.cls.physMm}` : `${t.cls.shape} ${t.cls.w}x${t.cls.h}`) };
+    petal.motifs.push(rep);
+    if (ratio < petal.ratioMin) { rep.shape = 'round'; continue; }
+    const shape = touch ? 'teardrop' : 'marquise', rIn = touch ? SZ[c.cls.m4][0] / 2 + GAP : med(ms.map((q) => q.core.r0)) - rim;
+    const Lout = med(ms.map((q) => q.core.r1)) + rim - rIn, Wout = Wc + 2 * rim, R0 = med(ms.map((q) => q.core.R0));
+    rep.outlineMm = [+Wout.toFixed(2), +Lout.toFixed(2)]; rep.shape = shape; rep.shiftMm = [];
+    for (const q of ms) {
+      const t = q.t, cls0 = t.cls;
+      const tt = { ...t, shape, wMm: Lout, hMm: Wout };
+      const cl = classify(tt, cls0.m4 === 'pearl' ? 'white' : cls0.m4);
+      if (cl.shape !== shape) { rep.shape = `round (${shape} không vừa catalog)`; break; }
+      t.shape = shape; t.wMm = Lout; t.hMm = Wout; t.cls = cl; t.petal = rep;
+    }
+    if (!m.ring.every((t) => t.petal === rep)) { for (const t of m.ring) if (t.petal === rep) delete t.petal; continue; }
+    const H = m.ring[0].cls.h, R = Math.max(R0, shape === 'teardrop' ? SZ[c.cls.m4][0] / 2 + GAP + H / 2 : R0);
+    for (const q of ms) {
+      const t = q.t, x = c.x + R * q.core.ux * PPM, y = c.y + R * q.core.uy * PPM;
+      rep.shiftMm.push(+(Math.hypot(x - t.x, y - t.y) / PPM).toFixed(2));
+      t.x = x; t.y = y; t.rotDeg = (Math.atan2(q.core.ux, -q.core.uy) * 180) / Math.PI; // +v cục bộ (mũi giọt) → −u (về tâm)
+    }
+    rep.radiusMm = +R.toFixed(2); rep.after = m.ring.map((t) => `${t.cls.shape} ${t.cls.w}x${t.cls.h}`);
+  }
+}
+
 // ── 2c. KIT-21 chuỗi hạt (captain msg 015): hạt liên tiếp cùng cỡ (±15 %), bước đều, hướng mượt = 1 chuỗi; hàng song song kề bên
 // (cùng cỡ, cùng bước) = hàng xếp lớp → 1 nhóm. CỠ quyết định chuỗi (cùng cỡ dọc chuỗi = cùng loại), mỗi nhóm 1 nhãn vật liệu + 1 cỡ:
 // phiếu = Σ độ tin màu + wPrior × tần suất vật liệu theo khoảng cỡ (chỉ phá hoà); chuyển màu dọc chuỗi = ánh sáng (luật gradient).
@@ -744,6 +804,9 @@ function consistency(box) {
   return r;
 }
 const consist = { all: consistency(null), regions: Object.fromEntries([...Object.entries(FB), ['captain', CAPTAIN.box]].map(([k, box]) => [k, consistency(box)])) };
+// KIT-24 bảng hình: số viên đặt theo hình catalog; cánh motif đã đặt (mã / hình / cỡ / xoay)
+const shapeCount = {}; for (const s of placed) { const k = s.e.shape ? `${s.e.shape} ${s.e.physW}x${s.e.physH}` : 'round'; shapeCount[k] = (shapeCount[k] || 0) + 1; }
+const petalPlaced = placed.filter((s) => s.b.petal).map((s) => ({ x: Math.round(s.b.x), y: Math.round(s.b.y), code: s.e.code, shape: s.e.shape || 'round', size: s.e.shape ? `${s.e.physW}x${s.e.physH}` : s.e.physMm, rot: Math.round(s.b.rotDeg) }));
 const motifRep = motifs.map((m) => ({ centre: [Math.round(m.centre.x), Math.round(m.centre.y)], centreCode: codeAt.get(BI.get(m.centre)) ?? null, ring: m.ring.map((t) => codeAt.get(BI.get(t)) ?? '-').join(' '), ringMm: m.ring.map((t) => +t.dMm.toFixed(1)) }));
 
 if (args.includes('--dump')) {
@@ -783,6 +846,7 @@ const report = {
   chain: chainF ? { file: chainF, ...chain } : undefined,
   chains: { ...chains },
   kit23: { mrf, paletteMerge, consistency: consist, motifs: motifRep, anchorDropped: lost.anchorDropped || 0, fb: FB },
+  kit24: { petal, shapes: shapeCount, petalStones: petalPlaced },
   // vùng ảnh captain gửi (msg 015, outputs/kit/kit20/captain_chain_5EEEE.png, tìm bằng khớp mẫu trên review.svg): hàng hạt to trước
   // (lẽ ra toàn '5') + mã mọi viên ≥ 4 mm trong khung
   captainRegion: (() => {
@@ -845,6 +909,7 @@ fs.writeFileSync(path.join(OUT, 'report.json'), JSON.stringify(report, null, 1) 
 const T = (s) => `recall ${s.recall} prec ${s.precision} mat ${s.materialOk} size ${s.sizeOk} shape ${s.shapeOk} | ≥4mm rec ${s.gt4mm.recall} mat ${s.gt4mm.materialOk} size ${s.gt4mm.sizeOk}`;
 console.log(`${seg.method}/${seg.region}: ${all.length} mask → ${cand.length} giống hạt → ${beads.length} hạt → ${placed.length} viên (va chạm bỏ ${lost.collision}, thu cỡ ${lost.shrunk}, không mã ${noCode.length}); ${codes.length} mã chung [${codes.join(' ')}] pha lê ${pal.crystal}, Queen dùng ${Object.keys(byCode).length}; chuỗi vàng ${chain.placed}/${chain.points}; phủ ${report.coverage.pct}%; check ${check.ok ? 'ok' : 'LỖI'}`);
 for (const c of report.codeCurve) console.log(`  mã ${c.union} (+pet ${c.product}) +[${c.added.join(' ')}]: sai vật liệu ${c.material}, hình ${c.shape}, cỡ ${c.size}, không mã ${c.noCode}, ΔE ${c.dE}, Starry ΔE ${c.starryDE}`);
+console.log(`  KIT-24: cánh ${petal.motifs.map((m) => `[${m.centre}] ${m.shape} tỉ lệ ${m.ratio}${m.after ? ' → ' + m.after[0] : ''}`).join('; ')}; đặt ${petalPlaced.length} cánh ${petalPlaced.map((q) => q.code).join(' ')}; hình ` + JSON.stringify(shapeCount));
 console.log(`  KIT-23: MRF ${mrf.enabled ? `đổi ${mrf.changed} nhãn, chất liệu ${mrf.relabeledMaterial}` : 'tắt'}; motif ${motifs.length}; bảng thử +[${pearlAdd.join(' ')}] gộp −[${merged.history.map((h) => h.removed).join(' ')}]; neo bỏ ${lost.anchorDropped || 0}; consistency ${consist.all.pct}% (${consist.all.differ}/${consist.all.pairs}, thiếu 1 bên ${consist.all.missing}); ` + Object.entries(consist.regions).map(([k, v]) => `${k} ${v.pct}%`).join(' ') + `; hàng captain ${report.captainRegion.rowCodes}`);
 console.log(`  hạt:  ${T(detScore.total)}`);
 console.log(`  viên: ${T(mapScore.total)}`);

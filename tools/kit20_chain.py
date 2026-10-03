@@ -35,9 +35,12 @@ def main():
     lab = cv2.cvtColor(bgr.astype(np.float32) / 255.0, cv2.COLOR_BGR2Lab)
     L, A, B = lab[:, :, 0], lab[:, :, 1], lab[:, :, 2]
     C, hue = np.hypot(A, B), (np.degrees(np.arctan2(B, A)) + 360) % 360
-    m = cv2.imread(a.mask, cv2.IMREAD_COLOR)
-    m = cv2.resize(m, (W, H), interpolation=cv2.INTER_NEAREST)
-    cost = (m[:, :, 0] > 200) & (m[:, :, 1] > 200) & (m[:, :, 2] > 200)
+    if a.mask == 'none':  # KIT-25: không mask trang phục → cả ảnh
+        cost = np.ones((H, W), bool)
+    else:
+        m = cv2.imread(a.mask, cv2.IMREAD_COLOR)
+        m = cv2.resize(m, (W, H), interpolation=cv2.INTER_NEAREST)
+        cost = (m[:, :, 0] > 200) & (m[:, :, 1] > 200) & (m[:, :, 2] > 200)
     gold = cost & (hue >= 55) & (hue <= 100) & (C >= 30) & (L >= 40)
     # đóng khe tối giữa các hạt li ti (bóng giữa 2 hạt) để chuỗi liền
     k = max(3, int(round(0.4 * ppm)) | 1)

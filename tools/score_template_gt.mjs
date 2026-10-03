@@ -28,12 +28,13 @@ export function scoreSvg(file) {
 // stones: [{ x, y (px trên 3543), code }] hoặc chưa có mã [{ x, y, mat4, physMm, shape }] (KIT-20 chấm mức hạt)
 // hình: GT oval / square → round (catalog không có), so với hình mã (hoặc hình hạt)
 const shapeN = (sh) => ({ oval: 'round', square: 'round' }[sh] || sh || 'round');
-export function scoreStones(list, { minGtMm = 0 } = {}) { // minGtMm: chỉ hạt GT vẽ ≥ cỡ này (measuredMm), vd 2 = bỏ hạt li ti ~1 mm
+export function scoreStones(list, { minGtMm = 0, gtFilter = null } = {}) { // gtFilter(g): chỉ chấm hạt GT thoả (KIT-25: ngoài vùng phủ)
+  // minGtMm: chỉ hạt GT vẽ ≥ cỡ này (measuredMm), vd 2 = bỏ hạt li ti ~1 mm
   const stones = list.map((s) => { const e = s.code ? entryOf(s.code, cat) : null; return { x: s.x, y: s.y, code: s.code, physMm: s.physMm ?? e.physMm, mat4: s.mat4 ?? mat4Of(s.code), shape: shapeN(s.shape ?? e?.shape) }; });
   const out = { tiles: {} };
   const tot = { gt: 0, map: 0, matched: 0, mat: 0, size: 0, shape: 0, big: 0, bigMatched: 0, bigMat: 0, bigSize: 0, gold: 0, goldMatched: 0, goldOk: 0 };
   for (const id of TILES) {
-    const gt = JSON.parse(fs.readFileSync(path.join(GT, `${id}.json`), 'utf8')), t = gt.tile, G = gt.stones.filter((g) => (g.measuredMm ?? g.physMm) >= minGtMm);
+    const gt = JSON.parse(fs.readFileSync(path.join(GT, `${id}.json`), 'utf8')), t = gt.tile, G = gt.stones.filter((g) => (g.measuredMm ?? g.physMm) >= minGtMm && (!gtFilter || gtFilter(g)));
     const D = stones.filter((s) => s.x >= t.x && s.y >= t.y && s.x < t.x + t.w && s.y < t.y + t.h), pairs = [];
     D.forEach((p, i) => G.forEach((g, j) => { const dd = Math.hypot(p.x - g.x, p.y - g.y); if (dd < 0.5 * Math.max(1.5, g.measuredMm || g.physMm) * PPM) pairs.push([dd, i, j]); }));
     pairs.sort((a, b) => a[0] - b[0]);

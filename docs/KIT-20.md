@@ -282,3 +282,184 @@ Bảng hình (viên đặt, cả ảnh):
 S057 7 → 18 (+11 cánh); 13 viên tròn khác mất chỗ vì giọt 6×10 phủ cả viền vàng cánh (fb4: L23 14 → 12, L4 30 → 26, L94 3 → 2).
 Bảng mã không đổi (13 mã, S057 đã có; ΔE Starry 8.85), check ok, phủ 44.3 %. GT ≥ 2 mm 42.0 / 73.0 / 45.9 = KIT-23 (3 ô GT không
 có hoa); consistency 1.0 %, fb1–4 + captain 0 %, hàng captain `5 5 - 5 5 5 5`.
+
+## KIT-25 — vùng phủ (fill) đóng gói procedural, 2 chế độ (captain msg 020)
+
+Vấn đề: vùng phủ dày AI vẽ méo (hạt dính, cỡ dao động, nhỏ hơn catalog — đỏ Queen vẽ 2.22 mm < 2.8) nên "1 hạt vẽ = 1 viên" sai.
+Hai chế độ, cùng một code cho mọi ảnh, không màu / toạ độ / tham số riêng ảnh:
+
+- **(A) chi tiết** — big/shaped, chuỗi vàng, cột, motif, viền, vùng dày nhưng vẽ đều: pipeline KIT-24 1:1, không đổi.
+- **(B) phủ** — `lib/kit/fill.js`. Phát hiện → biên → chất liệu/màu/cỡ → đóng gói lại kín vùng, đặt **sau cùng**:
+  mọi viên (A) đã đặt là vật cản.
+
+### Quy ước học từ sản phẩm thật (`node tools/kit25_fill_learn.mjs` → `outputs/kit/kit25/fill_learn.json`)
+
+Snowman + Dachshund (`compliant=1`). Vùng phủ = thành phần ≥ 15 viên cùng mã nhỏ, 2D, không phải chuỗi.
+
+| sản phẩm | viên | vùng phủ | viên phủ | cỡ | bước/cỡ | khe | nn3/nn1 | ψ6 | tỉ lệ hàng | xen cỡ |
+|---|---|---|---|---|---|---|---|---|---|---|
+| snowman | 3233 | 14 | 391 | 100 % 2.8 mm | 1.05 | 0.15 | 1.07 | 0.59 | 0 | ≈ 0 |
+| dachshund | 2147 | 10 | 751 | 100 % 2.8 mm | 1.06 | 0.15 | 1.07 | 0.58 | 0 | ≈ 0 |
+
+Kết luận áp dụng:
+- 1 cỡ 2.8 mm cho mỗi vùng; không xen cỡ, vì dữ liệu không có.
+- Khe 0.15 mm. Xếp kín kiểu hex: nn3/nn1 ≈ 1, không có hàng.
+- Sản phẩm là khoan một phần: mật độ cục bộ 0.53–0.55.
+- Queen DB: cổ ngọc là **L94 2.8 mm trắng**, không phải ngọc 5 mm.
+- King DB: cổ ngọc là ngọc thật 5/6/8 mm, tức chế độ chi tiết. Xem phần King.
+
+### Phát hiện (`detectFill`, mặc định `FILL`)
+
+Không dùng màu cố định. Mỗi hạt nhỏ (< 5 mm) có các đặc trưng:
+- số láng giềng (k = 3, ≥ 6 hạt trong bán kính);
+- **phủ** = tỉ lệ diện tích mọi hạt trong vòng lân cận (≥ 0.55);
+- **2D** = tỉ lệ láng giềng không thẳng hàng (≥ 0.2).
+
+Hạt dày → thành phần cùng chất liệu, ΔE ≤ 20 (ΔL tính ½), khoảng cách ≤ 1.6 × tổng bán kính, ≥ 15 hạt. Tín hiệu vùng:
+twoD, rowFrac, ψ6, CV cỡ, `frag` (SAM vỡ / dính), `sub` (nhỏ hơn cỡ catalog nhỏ nhất × 0.9).
+
+| luật | ngưỡng | loại về (A) |
+|---|---|---|
+| mỏng | twoD < 0.5 | chuỗi, hàng đơn |
+| vẽ đều | twoD < 0.8 **và** CV < 0.15, frag < 0.3, sub < 0.5 | vùng dày vẽ chuẩn → 1:1 (King cổ ngọc: CV 0.11, frag 0.05) |
+| hẹp | bề rộng 2A/P < 1.6 hạt vẽ, xét **sau khi nở** | cột, cuộn vàng, dải ngọc |
+
+**Nở trên ảnh.** SAM chỉ thấy dải hẹp trong mảng dày, nên vùng được nở trên ảnh ×4:
+- lưới 0.5 mm, Lab trung bình làm mượt ±1 mm;
+- BFS từ vùng hạt mầm, nhận ô có ΔE ≤ 20 so với màu trung vị mầm;
+- chặn bởi ngoài mask, viên chi tiết và hạt nhỏ khác chất liệu;
+- vùng chạm nhau cùng chất liệu và màu thì gộp;
+- lỗ > 100 mm² giữ thành `holes`, vd mảng đỏ bị trượng vàng bao quanh.
+
+**Cỡ** (`sizeRule`):
+- bước = trung vị khoảng cách láng giềng gần nhất;
+- cỡ = cỡ catalog lớn nhất có cỡ + 0.15 ≤ bước × 1.05, nếu không có thì cỡ nhỏ nhất (tôn trọng min catalog);
+- ngọc không vừa cỡ ngọc nào thì thành trắng (luật KIT-20, đúng DB Queen L94).
+
+Mọi vùng Queen / King / snowman → 2.8 mm.
+
+### Đóng gói (`packRegion`)
+
+Raster vùng (4 px/mm), trừ `holes` và đĩa vật cản (bán kính + khe). Ba bước:
+1. 1 hàng biên chạy theo contour, ở mức EDT = s/2;
+2. lưới hex theo `angleDeg`, chọn pha tốt nhất trong 12;
+3. lấp lỗ raster.
+
+Bước = cỡ + khe (2.95 mm), hoặc `packPitchMm` nếu captain đặt. Mỗi vùng 1 mã, tô bằng bảng mã chung của sản phẩm.
+
+### File vùng sửa tay (`pearl-kit-fill-regions/1`)
+
+`kit/templates/queen_fill_regions.json` có 1 vùng / dòng. Các trường:
+- `polygon` (px canvas 3543 = 300 mm);
+- `holes`;
+- `material`, `physMm`;
+- `code` (null = theo bảng mã);
+- `angleDeg`;
+- `packPitchMm` (null = kín; lớn hơn = khoan thưa);
+- `enabled`.
+
+Captain sửa xong đặt `checked: true`. Rerun đọc file. `--fill-detect` dò lại nhưng không ghi đè file đã checked, mà ghi ra
+`<out>/fill_regions.detected.json`. Ảnh duyệt `fill_regions.png` tô màu theo chất liệu, ghi nhãn id / chất liệu / cỡ / mã / số viên.
+
+### Lệnh
+
+```
+node tools/kit20.mjs --seg outputs/kit/kit20/seg_sam_all.json --chain outputs/kit/kit20/chain_all.json \
+  --fill-detect --fill-regions kit/templates/queen_fill_regions.json --out outputs/kit/kit25      # rerun: bỏ --fill-detect
+#   baseline: --no-fill --fill-eval <regions> (chấm GT / DB trong cùng vùng)
+node tools/kit25_score_db.mjs --svg outputs/kit/kit25/queen.svg --regions kit/templates/queen_fill_regions.json --product queen \
+  [--align auto|none|dx,dy,s] [--out score_db.json]
+# ảnh khác (King): mask nền chung (alpha, hoặc cụm xám nối viền) → ×4 → SAM → chuỗi → kit20 (không tham số riêng)
+~/.cache/kit20/venv/bin/python tools/kit25_mask.py "<requirements>/Trang phục King.png" outputs/kit/kit25/king/mask.png
+~/.cache/realesrgan/realesrgan-ncnn-vulkan -i <src> -o outputs/kit/kit25/king/up.png -n realesrgan-x4plus -m ~/.cache/realesrgan/models
+~/.cache/kit20/venv/bin/python tools/kit20_segment.py --img outputs/kit/kit25/king/up.png --mask outputs/kit/kit25/king/mask.png …
+~/.cache/kit20/venv/bin/python tools/kit20_chain.py   --img outputs/kit/kit25/king/up.png --mask outputs/kit/kit25/king/mask.png …
+node tools/kit20.mjs --name king --img outputs/kit/kit25/king/up.png --mask outputs/kit/kit25/king/mask.png \
+  --review-bg outputs/kit/kit25/king/input.jpg --seg … --chain … --fill-detect --fill-regions outputs/kit/kit25/king/fill_regions.json --no-gt --out outputs/kit/kit25/king
+```
+
+Chạy hết $0 API: ~3.5 phút kit20 / ảnh; SAM King 22 phút (1295 s), snowman 29 phút (1744 s).
+
+### Queen (`outputs/kit/kit25`)
+
+17 vùng (9 đỏ L4, 7 trắng L94, 1 vàng = trượng), thay 1271 hạt vẽ. Tổng viên 2489 (KIT-24: 2052), phủ 48 % (44.3 %).
+Bảng mã chung 13, Queen dùng 12, product ≤ 15 (đường mã: 13 + pet 15). Check ok.
+
+So với DB thật `queen` (khớp khung, dx 0 dy 0):
+
+| | KIT-24 (cùng vùng) | **KIT-25** |
+|---|---|---|
+| vùng phủ: số viên (DB 1046) | 730 | 1140 |
+| vùng phủ: recall / prec | 37.5 / 53.7 | **54.3** / 49.8 |
+| vùng phủ: đúng chất liệu / cỡ / mã | 80.4 / 80.9 / 44.6 | **84.3 / 94.2 / 57.0** |
+| từng vùng: mã đúng | 7 / 17 | **14 / 17** (15 đạt được; 2 vùng DB L5 không có trong catalog) |
+| từng vùng: chất liệu / cỡ | 17 / 17 | 17 / 17 |
+| phủ trong vùng (DB 51.9 %) | 42.5 % | **52.7 %** |
+| vùng chi tiết: recall / mat / size / mã | 35.4 / 73.3 / 74.7 / 22.4 | 35.7 / 73.6 / 74.7 / 22.2 |
+| cả ảnh: recall / prec | 36.1 / 56.8 | 41.7 / 54.1 |
+
+Theo vùng:
+- 7 vùng trắng: KIT-24 làm ngọc 5 mm hoặc vàng L23 (ta 11–39 viên).
+- KIT-25 làm L94 2.8, giống DB, ví dụ F3 118 vs DB 103 viên, phủ 53.1 vs 49.0 %.
+
+GT KIT-15 chi tiết ≥ 2 mm, chỉ ngoài vùng phủ; cả GT lẫn viên ta lọc theo cùng đa giác:
+- recall / prec / mat / size = **45.1 / 57.1 / 78.1 / 43.8**, bằng KIT-24 cùng vùng: 45.1 / 57.1 / 78.1 / 43.8.
+
+GT cả ô:
+- KIT-25 44.3 / 51.3 / 66.7 / 51.3; KIT-24 42.0 / 54.4 / 73.0 / 45.9.
+- Mat giảm trong vùng phủ, đúng chủ ý: GT vẽ ngọc 2.8/4, còn KIT-25 đặt L94 trắng như DB.
+
+Các chỉ số khác:
+- Consistency 2.4 % (8/340). KIT-24 là 1.0 % (9/929); mẫu số nhỏ hơn vì hạt phủ không còn là hạt vẽ.
+- fb1–4 + captain 0 %, hàng captain `5 5 - 5 5 5 5`.
+
+### Ảnh thứ 2 — King (`outputs/kit/kit25/king`, cùng code, không tham số riêng)
+
+Đầu vào:
+- `requirements/Trang phục King.png`: nền ca-rô vẽ sẵn, không alpha.
+- Mask chung `kit25_mask.py`: 48.6 % trang phục.
+- DB `king` khớp dx 0.1, dy −0.3, s 0.996.
+
+Kết quả: 10 vùng (áo choàng xanh 9 + 1 vàng), thay 921 hạt, 2477 viên, phủ 46.8 %, 13 mã, check ok.
+
+| | KIT-24 (cùng vùng) | **KIT-25** |
+|---|---|---|
+| vùng phủ: số viên (DB 887) | 700 | 862 |
+| vùng phủ: recall / prec | 40.5 / 51.3 | **51.9 / 53.4** |
+| vùng phủ: chất liệu / cỡ | 98.6 / 90.0 | 98.7 / **96.3** |
+| từng vùng: chất liệu / cỡ | 10 / 10 | 10 / 10 |
+| phủ trong vùng (DB 54.8 %) | 44.7 % | **52.4 %** |
+| vùng chi tiết: recall / mat / size | 42.4 / 84.2 / 77.9 | 41.9 / 83.9 / 77.7 |
+
+Mã vùng 0 / 10: DB dùng L35 / L34 (xanh), không có trong catalog hiện tại; chỉ 1 vùng có mã đạt được (vàng L74).
+
+Cổ ngọc King không thành vùng phủ:
+- vẽ đều (44 hạt, 4.76 mm, CV 0.11) → luật "vẽ đều".
+- DB tại đó là ngọc thật 5 / 6 / 8 mm, tức chế độ chi tiết là đúng.
+- Cùng code, Queen cổ ngọc dính/vỡ → phủ L94 2.8, đúng DB Queen.
+
+### Ảnh thứ 3 — Snowman (`outputs/kit/kit25/snowman`, `--mask none`, DB dx −0.5 dy 1)
+
+7 vùng: mã 6 / 7 (KIT-24: 5), chất liệu 7 / 7, cỡ 7 / 7.
+
+| vùng phủ | KIT-24 | KIT-25 |
+|---|---|---|
+| recall / prec | 50.1 / 44.8 | 66.7 / 32.1 |
+| chất liệu | 66.1 | 83.5 |
+| mã | 34.4 | 39.7 |
+
+Vùng chi tiết 38.6 / 70.0 / 67.0 → 39.1 / 70.0 / 67.4.
+
+Nền tuyết F1 (29 225 mm²): DB chỉ khoan 30.6 % (998 viên), ta khoan kín 52.7 % (2359 viên). Prec giảm vì thế.
+
+### Cần captain quyết
+
+1. **Vùng nền lớn khoan thưa.** Snowman nền tuyết DB phủ 30.6 % (khoan một phần). Đặt `packPitchMm` cho vùng đó
+   (≈ 3.9 mm cho 30 %)? Hay luật chung "vùng > N mm² thì khoan thưa"? Hiện để kín.
+2. **Mã DB ngoài catalog.** L5 (Queen đỏ thẫm, 2 vùng), L34 / L35 (King xanh) chưa có trong `kit.sqlite` catalog, nên mã vùng không
+   thể khớp. Thêm vào catalog?
+3. **Trượng vàng Queen (F1).**
+   - Phát hiện là vùng phủ vàng: nở từ dải hẹp thành 2423 mm², DB 2.8 mm vàng 135 viên, phủ 50.7 %.
+   - Phần lớn đã được chuỗi vàng (A) phủ trước: tổng 239 viên, 61.7 %; phủ chỉ thêm 4.
+   - Giữ là chi tiết ("cột"), tắt vùng (`enabled: false`), hay để như hiện tại?
+4. **Mã vùng đỏ.** Queen F5 / F17 DB L5, ta L4. Snowman F3 DB L4, ta L77: màu trung vị vùng gần L77 hơn.

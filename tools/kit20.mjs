@@ -18,11 +18,15 @@ import { decodePng } from '../lib/png.js';
 import { jointPalette, stoneCost } from '../lib/kit/palette.js';
 import { scoreStones, mat4Of } from './score_template_gt.mjs';
 import { pottsExpand } from '../lib/kit/potts.js';
+import { FILL, FILL_SCHEMA, detectFill, packRegion, inPoly, inRegion, regionAreaMm2, readFillRegions, writeFillRegions } from '../lib/kit/fill.js';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2), flag = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
 const SEG = path.resolve(ROOT, flag('--seg', 'outputs/kit/kit20/seg_sam_all.json')), OUT = path.resolve(ROOT, flag('--out', 'outputs/kit/kit20'));
-const UP4 = path.join(ROOT, 'outputs', 'kit', 'kit20', 'up4.png'); // Real-ESRGAN ×4 của ảnh nguồn (tools/kit20_segment.py cùng dùng)
+const UP4 = path.resolve(ROOT, flag('--img', 'outputs/kit/kit20/up4.png')); // Real-ESRGAN ×4 của ảnh nguồn (tools/kit20_segment.py cùng dùng)
+// KIT-25: ảnh khác (vd Snowman) chạy cùng code, không tham số riêng: --name (tên file ra), --img, --mask none; khung captain / GT KIT-15 /
+// nền Starry chỉ là phần chấm của Queen
+const NAME = flag('--name', 'queen'), isQueen = NAME === 'queen', MASKF = flag('--mask', 'kit/templates/queen_mask.png');
 // hàng hạt captain chỉ ra (msg 015): tâm px 3543 của 7 hạt vẽ cùng cỡ dọc đường cong, khung crop
 const CAPTAIN = { box: [2093, 1504, 306, 508], row: [[2343, 1693], [2332, 1773], [2310, 1818], [2277, 1862], [2232, 1904], [2178, 1939], [2118, 1970]] };
 // KIT-23 (msg 018): vùng captain góp ý trên KIT-22 (khớp mẫu trên review.svg KIT-22, px 3543): fb1 mảng ngọc, fb2 viền vàng / ngọc to,
@@ -155,8 +159,8 @@ if (!args.includes('--no-neigh')) {
   }
   // (c) hạt sót trong chuỗi
   const up = decodePng(fs.readFileSync(UP4)), K = up.w / W;
-  const mk = decodePng(fs.readFileSync(path.join(ROOT, 'kit', 'templates', 'queen_mask.png')));
-  const inCostume = (x, y) => { const j = (Math.round(y) * mk.w + Math.round(x)) * 4; return mk.data[j] > 200 && mk.data[j + 1] > 200 && mk.data[j + 2] > 200; };
+  const mk = MASKF === 'none' ? null : decodePng(fs.readFileSync(path.resolve(ROOT, MASKF)));
+  const inCostume = (x, y) => { if (!mk) return true; const j = (Math.round(y) * mk.w + Math.round(x)) * 4; return mk.data[j] > 200 && mk.data[j + 1] > 200 && mk.data[j + 2] > 200; };
   const sample = (x, y, rMm) => {
     const cx = x * K, cy = y * K, R = rMm * PPM * K, Ls = [], As = [], Bs = [];
     for (let yy = Math.round(cy - R); yy <= cy + R; yy++) for (let xx = Math.round(cx - R); xx <= cx + R; xx++) {
@@ -299,6 +303,45 @@ if (petal.enabled && motifs.length) {
     rep.radiusMm = +R.toFixed(2); rep.after = m.ring.map((t) => `${t.cls.shape} ${t.cls.w}x${t.cls.h}`);
   }
 }
+
+// ── 2c2. KIT-25 vùng phủ (lib/kit/fill.js, captain msg 020): hạt nhỏ dày 2 chiều cùng chất liệu (+ màu), vùng đủ rộng (≥ 1.6 hạt) và
+// méo (CV cỡ, hạt vỡ, nhỏ hơn catalog) hoặc đặc (≥ 80 % hạt ≥ 3 láng giềng) → hạt mồi; vùng nở trên ảnh theo màu (SAM sót hạt nơi vẽ
+// dày); mỗi vùng chỉ giữ đa giác + chất liệu + màu + cỡ catalog. Hạt nhỏ cùng chất liệu trong đa giác bỏ khỏi pipeline chi tiết; viên
+// vùng phủ xếp SAU mọi viên chi tiết (§3d). Vùng ghi ra file sửa tay (kit/templates/<name>_fill_regions.json); rerun đọc file
+// (--fill-detect = dò lại; file checked không bị ghi đè → <out>/fill_regions.detected.json)
+const fillOn = !kit22 && !args.includes('--no-fill');
+const FILLF = path.resolve(ROOT, flag('--fill-regions', `kit/templates/${NAME}_fill_regions.json`));
+const fillInfo = { enabled: fillOn, file: path.relative(ROOT, FILLF), source: null, beadsRemoved: 0, stat: null };
+let fillRegions = [], fillRemoved = []; // hạt bỏ khỏi pipeline chi tiết vì nằm trong vùng phủ (vẫn dùng cho lọc viền vàng / ánh khe như KIT-24)
+const fillMember = (b, r) => (b.cls.shape || 'round') === 'round' && !b.motif && !b.petal && b.dMm <= FILL.maxBeadMm && b.cls.m4 === (r.beadMaterial || r.material) && inRegion(b.x, b.y, r);
+if (fillOn) {
+  let doc;
+  if (fs.existsSync(FILLF) && !args.includes('--fill-detect')) { doc = readFillRegions(FILLF); fillInfo.source = 'file'; }
+  else {
+    const upF = decodePng(fs.readFileSync(UP4)), mkF = MASKF === 'none' ? null : decodePng(fs.readFileSync(path.resolve(ROOT, MASKF)));
+    const inside = mkF && ((x, y) => { const j = (Math.min(mkF.h - 1, Math.round(y)) * mkF.w + Math.min(mkF.w - 1, Math.round(x))) * 4; return mkF.data[j] > 200 && mkF.data[j + 1] > 200 && mkF.data[j + 2] > 200; });
+    const det = detectFill(beads, (m4) => SZ[m4] || [], { ppm: PPM, image: upF, imageK: upF.w / W, inside });
+    fillInfo.stat = det.stat; fillInfo.source = 'detect';
+    doc = { schema: FILL_SCHEMA, image: path.relative(ROOT, UP4), canvasPx: W, canvasMm: MM, checked: false,
+      note: 'sửa tay: polygon (px canvas 3543 = 300 mm), holes (vòng lỗ bên trong, không đính), material (viên), physMm, code (null = theo bảng mã), angleDeg, packPitchMm (null = đính kín cỡ + 0.15 mm; lớn hơn = khoan thưa), enabled; đặt checked: true khi captain duyệt; rerun đọc file này, --fill-detect dò lại (file checked không bị ghi đè)',
+      params: FILL, createdAt: new Date().toISOString(), regions: det.regions };
+    const target = fs.existsSync(FILLF) && readFillRegions(FILLF).checked ? path.join(OUT, 'fill_regions.detected.json') : FILLF;
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    writeFillRegions(target, doc); fillInfo.written = path.relative(ROOT, target);
+  }
+  fillInfo.checked = !!doc.checked;
+  fillRegions = doc.regions.filter((r) => r.enabled !== false).map((r) => ({ ...r }));
+  const take = new Set();
+  for (const r of fillRegions) {
+    r.members = beads.filter((b) => !take.has(b) && fillMember(b, r));
+    r.members.forEach((b) => take.add(b));
+    r.packed = packRegion(r, { ppm: PPM, gapMm: GAP });
+  }
+  fillInfo.beadsRemoved = take.size; fillRemoved = [...take];
+  for (let k = beads.length - 1; k >= 0; k--) if (take.has(beads[k])) beads.splice(k, 1);
+}
+// đa giác vùng phủ để chấm GT "vùng chi tiết" (cả khi --no-fill: --fill-eval <file>)
+const evalPolys = fillOn ? fillRegions : flag('--fill-eval') ? readFillRegions(path.resolve(ROOT, flag('--fill-eval'))).regions.filter((r) => r.enabled !== false) : [];
 
 // ── 2c. KIT-21 chuỗi hạt (captain msg 015): hạt liên tiếp cùng cỡ (±15 %), bước đều, hướng mượt = 1 chuỗi; hàng song song kề bên
 // (cùng cỡ, cùng bước) = hàng xếp lớp → 1 nhóm. CỠ quyết định chuỗi (cùng cỡ dọc chuỗi = cùng loại), mỗi nhóm 1 nhãn vật liệu + 1 cỡ:
@@ -461,6 +504,8 @@ if (chains.enabled) {
   beads.push(...add);
 }
 const recQ = beads.map((b) => ({ layer: 'queen', mat: catMat(b.cls), physMm: b.cls.physMm, ...(b.cls.shape !== 'round' && { shape: b.cls.shape, w: b.cls.w, h: b.cls.h }), t: b.cls.t, one: false, gwl: 1, from: 'bead', wt: Math.max(1, (b.dMm / 2.8) ** 2) }));
+// KIT-25: mỗi vùng phủ = 1 bản ghi, trọng số = số viên xếp được → bảng mã chọn chung với hạt chi tiết
+const recF = fillRegions.map((r) => ({ layer: 'queen', mat: catMat({ mm: r.material, m4: r.material, physMm: r.physMm }), physMm: r.physMm, t: r.lab, one: false, gwl: 1, from: 'fill', wt: r.packed.points.length }));
 
 if (args.includes('--analyze')) {
   // đặc trưng theo vật liệu GT (ghép tâm như scorer) — để chỉnh ngưỡng MAT
@@ -483,7 +528,7 @@ if (args.includes('--analyze')) {
 
 // ── bảng mã chung với nền Starry (bản ghi trước chọn mã của Starry từ KIT-18 collect)
 const STARRY = path.join(ROOT, 'outputs', 'kit', 'product_palette', 'collect_starry.json');
-const recS = fs.existsSync(STARRY) ? JSON.parse(fs.readFileSync(STARRY, 'utf8')).records : [];
+const recS = isQueen && fs.existsSync(STARRY) ? JSON.parse(fs.readFileSync(STARRY, 'utf8')).records : [];
 const isCrystal = (e) => e && !e.shape && e.kind !== 'pearl' && /clear|crystal/i.test(e.name || '') && materialOf(e) !== 'gold' && e.physMm >= 4 && (([L, a, b]) => L >= 75 && Math.hypot(a, b) <= 12)(lab(hex2(e.fill)));
 // ưu tiên captain (msg 013): đúng vật liệu + hình > đúng cỡ > ΔE: đổi vật liệu cấm, hình → tròn +60, thu cỡ +20 +2/mm, rồi ΔE
 const NOCROSS = { crossPenalty: 1e4, shapeToRound: 60, shapeWhitePenalty: 1e4 };
@@ -505,7 +550,7 @@ function errorsOf(codes) {
   r.dE = +(r.dE / Math.max(1, r.n)).toFixed(2); delete r.n;
   return r;
 }
-const bestPalette = (n) => crystals.map((c) => ({ crystal: c, ...jointPalette([...recQ, ...recS], cat, { maxCodes: n, fixed: [c], ...NOCROSS }) })).sort((a, b) => a.total - b.total)[0];
+const bestPalette = (n) => crystals.map((c) => ({ crystal: c, ...jointPalette([...recQ, ...recF, ...recS], cat, { maxCodes: n, fixed: [c], ...NOCROSS }) })).sort((a, b) => a.total - b.total)[0];
 // bảng "thêm mã → giảm lỗi": union nền + trang phục từ minCodes tới maxCodes (sản phẩm = union + 2 mã pet; 13 lý tưởng / 15 trần)
 const curve = [];
 for (let n = minCodes; n <= maxCodes; n++) { const p = bestPalette(n); curve.push({ union: n, product: n + 2, crystal: p.crystal, codes: p.codes, starryDE: p.layers.starry?.meanDE, ...errorsOf(p.codes) }); }
@@ -527,7 +572,7 @@ const pearlMin = +flag('--pearl-min', 5);
 const pearlAdd = kit22 || args.includes('--no-pearl-codes') ? [] : Object.entries(pearlHist).filter(([mm, n]) => n >= pearlMin && cat.codes[String(+mm)]?.kind === 'pearl' && !pal0.codes.includes(String(+mm))).map(([mm]) => String(+mm));
 function mergeDown(start, keep, n) {
   const E = (c) => entryOf(c, cat), Lb = new Map(start.map((c) => [c, lab(hex2(E(c).fill))])), grp = new Map();
-  for (const r of [...recQ, ...recS]) {
+  for (const r of [...recQ, ...recF, ...recS]) {
     const k = [r.layer, r.mat, r.physMm, r.shape || '', r.w || '', r.h || '', r.one ? 1 : 0, r.gwl, ...r.t.map((v) => Math.round(v))].join('|'), g = grp.get(k);
     if (g) { g.n += r.wt ?? 1; g.c++; } else grp.set(k, { r, n: r.wt ?? 1, c: 1 });
   }
@@ -561,7 +606,7 @@ function mergeDown(start, keep, n) {
 }
 const pearlKeep = args.includes('--pearl-keep') ? pearlAdd : [];
 const merged = pearlAdd.length ? mergeDown([...pal0.codes, ...pearlAdd], [pal0.crystal, ...pal0.codes.filter((c) => cat.codes[c]?.kind === 'pearl'), ...pearlKeep], maxCodes) : { codes: pal0.codes, history: [] };
-const pal = merged.codes.join() !== pal0.codes.join() ? { ...jointPalette([...recQ, ...recS], cat, { maxCodes: merged.codes.length, cands: merged.codes, fixed: merged.codes, ...NOCROSS }), crystal: pal0.crystal } : pal0;
+const pal = merged.codes.join() !== pal0.codes.join() ? { ...jointPalette([...recQ, ...recF, ...recS], cat, { maxCodes: merged.codes.length, cands: merged.codes, fixed: merged.codes, ...NOCROSS }), crystal: pal0.crystal } : pal0;
 const codes = pal.codes, palE = codes.map((c) => entryOf(c, cat)), palL = palE.map((e) => lab(hex2(e.fill)));
 const paletteMerge = { pearlHist, pearlMin, before: pal0.codes, added: pearlAdd, history: merged.history, after: codes, errorsBefore: errorsOf(pal0.codes), errorsAfter: errorsOf(codes) };
 
@@ -748,17 +793,24 @@ if (chainF) {
   // "không có hạt thì không có đá" ngược lại: điểm viền nằm trong lòng 1 hạt vẽ không phải vàng (ngọc / đá ánh vàng, kể cả hạt bị bỏ
   // vì va chạm) là hạt, không phải viền → bỏ
   const bc = 8 * PPM, BG = new Map();
-  for (const b of beads) if (b.cls.m4 !== 'gold') { const q = `${Math.floor(b.x / bc)},${Math.floor(b.y / bc)}`; (BG.get(q) || BG.set(q, []).get(q)).push(b); }
+  for (const b of [...beads, ...fillRemoved]) if (b.cls.m4 !== 'gold') { const q = `${Math.floor(b.x / bc)},${Math.floor(b.y / bc)}`; (BG.get(q) || BG.set(q, []).get(q)).push(b); }
   const inBead = (x, y) => { const gx = Math.floor(x / bc), gy = Math.floor(y / bc); for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const b of BG.get(`${gx + dx},${gy + dy}`) || []) if (Math.hypot(b.x - x, b.y - y) / PPM < 0.5 * b.dMm) return true; return false; };
   // KIT-23 (captain fb1): bóng ấm giữa các hạt ngọc lọt ngưỡng vàng (C* 43–46, viền thật C* ≥ 52) → điểm C* < 50 cách mép 1 hạt ngọc
   // ≤ 1 mm là bóng ngọc, không phải viền
   const PG = new Map();
-  for (const b of beads) if (b.cls.m4 === 'pearl') { const q = `${Math.floor(b.x / bc)},${Math.floor(b.y / bc)}`; (PG.get(q) || PG.set(q, []).get(q)).push(b); }
+  for (const b of [...beads, ...fillRemoved]) if (b.cls.m4 === 'pearl') { const q = `${Math.floor(b.x / bc)},${Math.floor(b.y / bc)}`; (PG.get(q) || PG.set(q, []).get(q)).push(b); }
   const pearlShade = (c) => { if (keepShade || Math.hypot(c.a, c.b) >= 47 || c.widthMm >= 1) return false; const gx = Math.floor(c.x / bc), gy = Math.floor(c.y / bc); for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const b of PG.get(`${gx + dx},${gy + dy}`) || []) if (Math.hypot(b.x - c.x, b.y - c.y) / PPM < 0.5 * b.dMm + 1) return true; return false; };
   chain.pearlShade = 0;
+  // KIT-25: điểm viền lẻ (< 2 điểm viền khác trong 1.2 bước) nằm trong vùng phủ không phải vàng = bóng ấm giữa hạt của vùng (trước đây
+  // hạt vẽ ≥ 4 mm đặt trước chặn chúng; nay hạt vùng phủ bỏ khỏi pipeline chi tiết); đường viền thật đi qua vùng có láng giềng 2 phía
+  const CG = new Map(), cgc = 4 * PPM, nonGold = fillRegions.filter((r) => r.material !== 'gold');
+  for (const c of C) { const q = `${Math.floor(c.x / cgc)},${Math.floor(c.y / cgc)}`; (CG.get(q) || CG.set(q, []).get(q)).push(c); }
+  const lonely = (c) => { let n = 0; const gx = Math.floor(c.x / cgc), gy = Math.floor(c.y / cgc); for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const t of CG.get(`${gx + dx},${gy + dy}`) || []) if (t !== c && Math.hypot(t.x - c.x, t.y - c.y) / PPM <= 1.2 * 2.95) n++; return n < 2; };
+  chain.fillLonely = 0;
   for (const c of C) {
     if (inBead(c.x, c.y)) { chain.insideBead++; continue; }
     if (pearlShade(c)) { chain.pearlShade++; continue; }
+    if (nonGold.length && lonely(c) && nonGold.some((r) => inRegion(c.x, c.y, r))) { chain.fillLonely++; continue; }
     const rec = { layer: 'queen', mat: 'gold', physMm: 2.8, t: [c.L, c.a, c.b], one: false, gwl: 1 };
     const s = { b: { x: c.x, y: c.y, dMm: 2.8, score: 0, rotDeg: 0, cls: { m4: 'gold', physMm: 2.8, shape: 'round' }, src: 'chain' }, rec, opts: ranked(rec), alt: [] };
     const got = placeOne(s, s.opts.filter((x) => x.physMm === 2.8 && mat4Of(x.code) === 'gold').slice(0, 1));
@@ -777,10 +829,29 @@ for (const s of stones) if (bigFirst(s)) { const q = `${Math.floor(s.b.x / bbc)}
 const insideBig = (b) => { const gx = Math.floor(b.x / bbc), gy = Math.floor(b.y / bbc); for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const t of BB.get(`${gx + dx},${gy + dy}`) || []) if (t.dMm >= 1.6 * b.dMm && Math.hypot(t.x - b.x, t.y - b.y) / PPM < 0.5 * t.dMm) return true; return false; };
 // KIT-23 (captain fb1): hạt trắng nhỏ (< 3 mm) giữa ≥ 3 hạt ngọc to hơn ≥ 1.6× (chạm nhau) = ánh sáng khe giữa ngọc → không viên
 const PB = new Map();
-for (const b of beads) if (b.cls.m4 === 'pearl') { const q = `${Math.floor(b.x / bbc)},${Math.floor(b.y / bbc)}`; (PB.get(q) || PB.set(q, []).get(q)).push(b); }
+for (const b of [...beads, ...fillRemoved]) if (b.cls.m4 === 'pearl') { const q = `${Math.floor(b.x / bbc)},${Math.floor(b.y / bbc)}`; (PB.get(q) || PB.set(q, []).get(q)).push(b); }
 const gapGlint = (b) => { if (keepShade || b.dMm >= 3 || (b.cls.m4 !== 'white' && b.cls.m4 !== 'pearl')) return false; let n = 0; const gx = Math.floor(b.x / bbc), gy = Math.floor(b.y / bbc); for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const t of PB.get(`${gx + dx},${gy + dy}`) || []) if (t !== b && t.dMm >= 1.6 * b.dMm && Math.hypot(t.x - b.x, t.y - b.y) / PPM < 0.75 * (t.dMm + b.dMm)) n++; return n >= 3; };
 lost.insideBig = 0; lost.gapGlint = 0;
 if (!borderLast) for (const s of stones) if (!bigFirst(s)) { if (!args.includes('--keep-inside') && insideBig(s.b)) { lost.insideBig++; continue; } if (gapGlint(s.b)) { lost.gapGlint++; continue; } placeBead(s); }
+
+// ── 3d. KIT-25 vùng phủ SAU mọi viên chi tiết (to / hình, viền vàng, hạt nhỏ khác chất liệu giữ 1:1 như KIT-24): xếp lại trong đa giác
+// với viên đã đặt làm vật cản (đĩa bán kính + khe), 1 mã / vùng (mã rẻ nhất trong bảng cho bản ghi vùng, hoặc mã sửa tay có trong bảng);
+// va chạm (viên hình) → đẩy ≤ nudge, không thì bỏ
+for (const [k, r] of fillRegions.entries()) {
+  const rec = recF[k], e = (r.code && palE.find((x) => x.code === r.code)) || ranked(rec)[0];
+  r.result = { code: e?.code ?? null, codeNote: r.code && !palE.some((x) => x.code === r.code) ? `mã sửa tay ${r.code} không có trong bảng` : undefined, points: r.packed.points.length, placed: 0, collision: 0, nudged: 0 };
+  if (!e) continue;
+  const obstacles = placed.map((t) => ({ x: t.b.x, y: t.b.y, rMm: R(t.e) }));
+  r.packed = packRegion(r, { ppm: PPM, gapMm: GAP, obstacles });
+  r.result.points = r.packed.points.length;
+  for (const q of r.packed.points) {
+    const s = { b: { x: q.x, y: q.y, dMm: r.physMm, score: 0, rotDeg: 0, cls: { m4: r.material, physMm: r.physMm, shape: 'round' }, src: 'fill', fill: r.id }, rec, opts: [e], e, alt: [] };
+    const got = placeOne(s, [e]);
+    if (!got) { r.result.collision++; continue; }
+    if (got.b) r.result.nudged++;
+    commit(s, got); r.result.placed++;
+  }
+}
 
 // ── 3c. KIT-23 consistency: % cặp láng giềng mạnh (cùng cấu trúc: chuỗi / cột, motif, láng giềng cùng chất liệu + cỡ ≤ 1.2× + ΔE nhỏ)
 // mà cả 2 đều có viên nhưng khác mã; missing = cặp chỉ 1 hạt có viên
@@ -803,7 +874,7 @@ function consistency(box) {
   if (box) { r.codes = {}; for (const t of placed) if (inB(t.b)) r.codes[t.e.code] = (r.codes[t.e.code] || 0) + 1; }
   return r;
 }
-const consist = { all: consistency(null), regions: Object.fromEntries([...Object.entries(FB), ['captain', CAPTAIN.box]].map(([k, box]) => [k, consistency(box)])) };
+const consist = { all: consistency(null), regions: Object.fromEntries((isQueen ? [...Object.entries(FB), ['captain', CAPTAIN.box]] : []).map(([k, box]) => [k, consistency(box)])) };
 // KIT-24 bảng hình: số viên đặt theo hình catalog; cánh motif đã đặt (mã / hình / cỡ / xoay)
 const shapeCount = {}; for (const s of placed) { const k = s.e.shape ? `${s.e.shape} ${s.e.physW}x${s.e.physH}` : 'round'; shapeCount[k] = (shapeCount[k] || 0) + 1; }
 const petalPlaced = placed.filter((s) => s.b.petal).map((s) => ({ x: Math.round(s.b.x), y: Math.round(s.b.y), code: s.e.code, shape: s.e.shape || 'round', size: s.e.shape ? `${s.e.physW}x${s.e.physH}` : s.e.physMm, rot: Math.round(s.b.rotDeg) }));
@@ -816,22 +887,55 @@ if (args.includes('--dump')) {
     placed: placed.map((s) => ({ i: s.b.i, x: r1(s.b.x), y: r1(s.b.y), code: s.e.code, src: s.b.src, want: s.opts[0]?.code })),
   }));
 }
+// ── KIT-25 báo cáo vùng phủ: mỗi vùng → mã, số viên xếp / đặt, phủ (diện tích viên / diện tích đa giác), hạt vẽ bị thay
+function fillReport() {
+  return fillRegions.map((r) => {
+    const st = placed.filter((q) => q.b.fill === r.id), area = regionAreaMm2(r, PPM), e = st[0]?.e;
+    // phủ tất cả viên có tâm trong vùng (gồm chuỗi vàng / viên chi tiết đặt trước) — so được với DB
+    const all = placed.filter((q) => inRegion(q.b.x, q.b.y, r)), allPct = +((100 * all.reduce((a, q) => a + (q.e.physW ? 0.7 * q.e.physW * q.e.physH : Math.PI * (q.e.physMm / 2) ** 2), 0)) / area).toFixed(1);
+    return { id: r.id, material: r.material, lab: r.lab, drawnMm: r.drawnMm, physMm: r.physMm, angleDeg: r.angleDeg, code: r.result?.code ?? null, codeNote: r.result?.codeNote,
+      beadsReplaced: r.members.length, areaMm2: +area.toFixed(0), points: r.packed.points.length, ring: r.packed.ring, hex: r.packed.hex, holes: r.packed.holes, pitchMm: r.packed.pitchMm,
+      placed: st.length, collision: r.result?.collision ?? 0, nudged: r.result?.nudged ?? 0, coveragePct: e ? +((100 * st.length * Math.PI * (e.physMm / 2) ** 2) / area).toFixed(1) : 0, allStones: all.length, allCoveragePct: allPct,
+      signals: r.signals };
+  });
+}
+// ảnh duyệt vùng: nền + đa giác (màu theo chất liệu) + nhãn id / chất liệu / cỡ / mã / số viên
+function drawFillRegions(png) {
+  const mime = /\.png$/i.test(reviewBg) ? 'image/png' : 'image/jpeg', href = `data:${mime};base64,${fs.readFileSync(reviewBg).toString('base64')}`;
+  const col = { pearl: '#00e5ff', white: '#39ff14', gold: '#ffd400', color: '#ff2bd6' }, rp = fillReport(); // trắng → xanh lá (nổi trên ngọc)
+  const body = fillRegions.map((r, k) => {
+    const d = [r.polygon, ...(r.holes || [])].map((q) => 'M' + q.map(([x, y]) => `${x},${y}`).join('L') + 'Z').join(''), c = col[r.material] || '#00ff00', [cx, cy] = r.polygon.reduce((a, [x, y]) => [a[0] + x / r.polygon.length, a[1] + y / r.polygon.length], [0, 0]);
+    const t = `${r.id} ${r.material} ${r.physMm}mm ${rp[k].code ?? '-'} ×${rp[k].placed}`;
+    return `<path d="${d}" fill-rule="evenodd" fill="${c}" fill-opacity="0.22" stroke="${c}" stroke-width="5"/><text x="${cx.toFixed(0)}" y="${cy.toFixed(0)}" font-family="Helvetica" font-size="34" font-weight="bold" fill="#000" stroke="#fff" stroke-width="6" paint-order="stroke" text-anchor="middle">${t}</text>`;
+  }).join('\n');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${W}" width="${W}" height="${W}"><image href="${href}" x="0" y="0" width="${W}" height="${W}" preserveAspectRatio="none"/>\n${body}\n</svg>`;
+  const f = png.replace(/\.png$/, '.svg');
+  fs.writeFileSync(f, svg);
+  try { execFileSync('rsvg-convert', ['-w', '1772', '-h', '1772', '-o', png, f]); fs.rmSync(f); return png; } catch (e) { return `rsvg-convert lỗi: ${String(e.message).slice(0, 80)}`; }
+}
+
 // ── 4. SVG + chấm + phủ
 const src =decodePng(fs.readFileSync(UP4)), img = upscale(src, W, W);
 const doc0 = buildDoc(img, placed.map((s) => ({ x: s.b.x, y: s.b.y, code: s.e.code, rot: s.e.shape ? s.b.rotDeg : 0 })), cat, PPM, MM, { mode: 'kit-20 bead-instance', seg: path.basename(SEG), method: seg.method, gapMm: GAP });
 const doc = normalizeDoc({ ...doc0, source: { name: 'Trang phục Queen.png (Real-ESRGAN ×4, hạt → viên)', widthPx: W, heightPx: W }, createdAt: new Date().toISOString() });
 const check = checkDesign(doc, cat);
-fs.writeFileSync(path.join(OUT, 'queen.svg'), writeKitSvg(doc));
-const mask = decodePng(fs.readFileSync(path.join(ROOT, 'kit', 'templates', 'queen_mask.png')));
-let costPx = 0;
-for (let j = 0; j < mask.w * mask.h; j++) { const r = mask.data[j * 4], g = mask.data[j * 4 + 1], b = mask.data[j * 4 + 2]; if (r > 200 && g > 200 && b > 200) costPx++; }
+fs.writeFileSync(path.join(OUT, `${NAME}.svg`), writeKitSvg(doc));
+const mask = MASKF === 'none' ? null : decodePng(fs.readFileSync(path.resolve(ROOT, MASKF)));
+let costPx = mask ? 0 : W * W;
+if (mask) for (let j = 0; j < mask.w * mask.h; j++) { const r = mask.data[j * 4], g = mask.data[j * 4 + 1], b = mask.data[j * 4 + 2]; if (r > 200 && g > 200 && b > 200) costPx++; }
 const areaOf = (e) => (e.shape ? (e.shape === 'marquise' ? 0.6 : e.shape === 'teardrop' ? 0.7 : 0.72) * e.physW * e.physH : (Math.PI * e.physMm ** 2) / 4);
 const covered = placed.reduce((a, s) => a + areaOf(s.e), 0), costMm2 = costPx / PPM ** 2;
-const detScore = scoreStones(beads.map((b) => ({ x: b.x, y: b.y, mat4: b.cls.m4, physMm: b.cls.physMm, shape: b.cls.shape })));
-const mapScore = scoreStones(placed.map((s) => ({ x: s.b.x, y: s.b.y, code: s.e.code })));
+// KIT-25: GT KIT-15 chỉ có cho Queen; detail = bỏ hạt GT nằm trong vùng phủ
+const gtOn = isQueen && !args.includes('--no-gt');
+const NOGT = { tiles: {}, total: { gt: 0, map: 0, recall: null, precision: null, materialOk: null, sizeOk: null, shapeOk: null, gt4mm: { n: 0, recall: null, materialOk: null, sizeOk: null }, gold: {} } };
+const scoreGT = (list, o) => (gtOn ? scoreStones(list, o) : NOGT);
+const outsideFill = (g) => !evalPolys.some((r) => inRegion(g.x, g.y, r));
+const detScore = scoreGT(beads.map((b) => ({ x: b.x, y: b.y, mat4: b.cls.m4, physMm: b.cls.physMm, shape: b.cls.shape })));
+const mapScore = scoreGT(placed.map((s) => ({ x: s.b.x, y: s.b.y, code: s.e.code })));
 // GT có 186 / 274 hạt vẽ < 2 mm (viền hạt vàng li ti ~1 mm, không thể mỗi hạt 1 viên 2.8): chấm riêng tập hạt vẽ ≥ 2 mm
-const detScore2 = scoreStones(beads.map((b) => ({ x: b.x, y: b.y, mat4: b.cls.m4, physMm: b.cls.physMm, shape: b.cls.shape })), { minGtMm: 2 });
-const mapScore2 = scoreStones(placed.map((s) => ({ x: s.b.x, y: s.b.y, code: s.e.code })), { minGtMm: 2 });
+const detScore2 = scoreGT(beads.map((b) => ({ x: b.x, y: b.y, mat4: b.cls.m4, physMm: b.cls.physMm, shape: b.cls.shape })), { minGtMm: 2 });
+const mapScore2 = scoreGT(placed.map((s) => ({ x: s.b.x, y: s.b.y, code: s.e.code })), { minGtMm: 2 });
+const mapScoreD = scoreGT(placed.filter((s) => outsideFill(s.b)).map((s) => ({ x: s.b.x, y: s.b.y, code: s.e.code })), { minGtMm: 2, gtFilter: outsideFill }); // cả GT lẫn viên ta: chỉ ngoài vùng phủ
 const tiles = (sc) => Object.fromEntries(Object.entries(sc.tiles).map(([k, v]) => [k, { gt: v.gt, map: v.map, recall: v.recall, precision: v.precision, materialOk: v.materialOk, sizeOk: v.sizeOk, shapeOk: v.shapeOk, gt4mm: v.gt4mm, gold: v.gold, wrong: v.wrong }]));
 const byCode = {};
 for (const s of placed) byCode[s.e.code] = (byCode[s.e.code] || 0) + 1;
@@ -847,6 +951,7 @@ const report = {
   chains: { ...chains },
   kit23: { mrf, paletteMerge, consistency: consist, motifs: motifRep, anchorDropped: lost.anchorDropped || 0, fb: FB },
   kit24: { petal, shapes: shapeCount, petalStones: petalPlaced },
+  kit25: { fill: fillInfo, regions: fillReport(), detailGt2mm: { stones: mapScoreD.total, tiles: tiles(mapScoreD), polygons: evalPolys.length } },
   // vùng ảnh captain gửi (msg 015, outputs/kit/kit20/captain_chain_5EEEE.png, tìm bằng khớp mẫu trên review.svg): hàng hạt to trước
   // (lẽ ra toàn '5') + mã mọi viên ≥ 4 mm trong khung
   captainRegion: (() => {
@@ -878,12 +983,14 @@ const report = {
   apiCalls: 0, seconds: 0,
 };
 // review: ảnh gốc + viền mảnh + ký hiệu (tools/kit_review_overlay.mjs), crop ô GT
+const reviewBg = path.resolve(ROOT, flag('--review-bg', 'outputs/kit/queen_template/input_upscaled.jpg'));
+if (!args.includes('--no-review') && fillRegions.length) report.kit25.overlay = drawFillRegions(path.join(OUT, 'fill_regions.png'));
 if (!args.includes('--no-review')) {
-  const bg = path.join(ROOT, 'outputs', 'kit', 'queen_template', 'input_upscaled.jpg'), rv = path.join(OUT, 'review.svg');
-  execFileSync(process.execPath, [path.join(ROOT, 'tools', 'kit_review_overlay.mjs'), path.join(OUT, 'queen.svg'), bg, rv], { stdio: 'ignore' });
+  const bg = reviewBg, rv = path.join(OUT, 'review.svg');
+  execFileSync(process.execPath, [path.join(ROOT, 'tools', 'kit_review_overlay.mjs'), path.join(OUT, `${NAME}.svg`), bg, rv], { stdio: 'ignore' });
   const svg = fs.readFileSync(rv, 'utf8');
   report.review = { svg: rv, crops: {} };
-  for (const id of ['heart', 'pearls', 'cape', 'captain', ...Object.keys(FB)]) {
+  for (const id of isQueen ? ['heart', 'pearls', 'cape', 'captain', ...Object.keys(FB)] : []) {
     const fixed = id === 'captain' ? CAPTAIN.box : FB[id]; // khung ảnh captain gửi (không lề)
     const t = fixed ? { x: fixed[0], y: fixed[1], w: fixed[2], h: fixed[3] } : JSON.parse(fs.readFileSync(path.join(ROOT, 'outputs', 'kit', 'queen_gt', `${id}.json`), 'utf8')).tile, m = fixed ? 0 : 4 * PPM;
     const vb = `${(t.x - m).toFixed(0)} ${(t.y - m).toFixed(0)} ${(t.w + 2 * m).toFixed(0)} ${(t.h + 2 * m).toFixed(0)}`, pw = 1200, ph = Math.round((1200 * (t.h + 2 * m)) / (t.w + 2 * m));
@@ -909,6 +1016,7 @@ fs.writeFileSync(path.join(OUT, 'report.json'), JSON.stringify(report, null, 1) 
 const T = (s) => `recall ${s.recall} prec ${s.precision} mat ${s.materialOk} size ${s.sizeOk} shape ${s.shapeOk} | ≥4mm rec ${s.gt4mm.recall} mat ${s.gt4mm.materialOk} size ${s.gt4mm.sizeOk}`;
 console.log(`${seg.method}/${seg.region}: ${all.length} mask → ${cand.length} giống hạt → ${beads.length} hạt → ${placed.length} viên (va chạm bỏ ${lost.collision}, thu cỡ ${lost.shrunk}, không mã ${noCode.length}); ${codes.length} mã chung [${codes.join(' ')}] pha lê ${pal.crystal}, Queen dùng ${Object.keys(byCode).length}; chuỗi vàng ${chain.placed}/${chain.points}; phủ ${report.coverage.pct}%; check ${check.ok ? 'ok' : 'LỖI'}`);
 for (const c of report.codeCurve) console.log(`  mã ${c.union} (+pet ${c.product}) +[${c.added.join(' ')}]: sai vật liệu ${c.material}, hình ${c.shape}, cỡ ${c.size}, không mã ${c.noCode}, ΔE ${c.dE}, Starry ΔE ${c.starryDE}`);
+console.log(`  KIT-25: vùng phủ ${fillOn ? `${fillInfo.source} ${fillRegions.length} vùng, thay ${fillInfo.beadsRemoved} hạt` : 'tắt'}; ` + report.kit25.regions.map((r) => `${r.id} ${r.material} ${r.drawnMm}→${r.physMm}mm ${r.code} ${r.placed}/${r.points} phủ ${r.coveragePct}% (tất cả ${r.allStones} viên ${r.allCoveragePct}%)`).join('; ') + (gtOn ? `; GT chi tiết ≥ 2 mm (ngoài vùng phủ) ${T(mapScoreD.total)}` : ''));
 console.log(`  KIT-24: cánh ${petal.motifs.map((m) => `[${m.centre}] ${m.shape} tỉ lệ ${m.ratio}${m.after ? ' → ' + m.after[0] : ''}`).join('; ')}; đặt ${petalPlaced.length} cánh ${petalPlaced.map((q) => q.code).join(' ')}; hình ` + JSON.stringify(shapeCount));
 console.log(`  KIT-23: MRF ${mrf.enabled ? `đổi ${mrf.changed} nhãn, chất liệu ${mrf.relabeledMaterial}` : 'tắt'}; motif ${motifs.length}; bảng thử +[${pearlAdd.join(' ')}] gộp −[${merged.history.map((h) => h.removed).join(' ')}]; neo bỏ ${lost.anchorDropped || 0}; consistency ${consist.all.pct}% (${consist.all.differ}/${consist.all.pairs}, thiếu 1 bên ${consist.all.missing}); ` + Object.entries(consist.regions).map(([k, v]) => `${k} ${v.pct}%`).join(' ') + `; hàng captain ${report.captainRegion.rowCodes}`);
 console.log(`  hạt:  ${T(detScore.total)}`);

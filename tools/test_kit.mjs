@@ -1,6 +1,7 @@
 // Test KIT (bản đồ đá → JSON → render), không mạng, không cần file nguồn: node tools/test_kit.mjs
 import fs from 'node:fs';
 import os from 'node:os';
+import path from 'node:path';
 import { parseKitSvg, buildPalette, toKitSvg, PX } from '../lib/kit/svg.js';
 import { renderMap, stoneField, edt2, over, hex } from '../lib/kit/render.js';
 import { advancePx, loadGlyphs, CHARS } from '../lib/kit/glyphs.js';
@@ -13,6 +14,7 @@ import * as vlm from '../lib/kit/vlm.js';
 import { assignSymbols, loadCatalog, checkDesign, LETTERS } from '../lib/kit/catalog.js';
 import { gapMm, stonePoly, sdPoly } from '../lib/kit/shapes.js';
 import { pottsExpand, pottsICM, pottsEnergy } from '../lib/kit/potts.js';
+import { detectFill, packRegion, polyAreaMm2, readFillRegions, writeFillRegions, FILL_SCHEMA } from '../lib/kit/fill.js';
 
 let fail = 0;
 const ok = (cond, msg) => { if (!cond) { fail++; console.log('FAIL', msg); } };
@@ -652,6 +654,31 @@ ok(vlm.mat4('pearl', 'gold') === 'gold' && vlm.mat4('pearl', 'white') === 'pearl
   ok(worst <= 2 && opt0 >= 36, `potts: tối ưu ${opt0}/40, xấu nhất ${worst.toFixed(3)}× (≤ 2×)`);
   const chain = { n: 5, L: 2, unary: Float64Array.from([0, 1, 0, 1, 1.5, 0, 0, 1, 0, 1]), edges: [[0, 1, 2], [1, 2, 2], [2, 3, 2], [3, 4, 2]] };
   ok([...pottsExpand(chain).labels].every((l) => l === 0), 'potts: chuỗi 5 hạt cạnh mạnh → cùng 1 nhãn');
+}
+// KIT-25 vùng phủ: mảng hạt đỏ dày 2 chiều (cỡ dao động) → 1 vùng; hàng vàng 1 hạt / dải 2 hạt hẹp → không; xếp kín đúng khe, ôm vật cản
+{
+  const P = 11.81, beads = [], red = { L: 40, a: 60, b: 35 }, gold = { L: 75, a: 10, b: 70 };
+  let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let j = 0; j < 10; j++) for (let i = 0; i < 12; i++) beads.push({ x: (50 + i * 3 + (j & 1) * 1.5) * P, y: (50 + j * 2.6) * P, dMm: 2.3 + 0.8 * rnd(), cls: { m4: 'color', shape: 'round' }, ...red, src: 'sam', solidity: 0.95 });
+  for (let i = 0; i < 25; i++) beads.push({ x: (50 + i * 3) * P, y: 120 * P, dMm: 2.8, cls: { m4: 'gold', shape: 'round' }, ...gold, src: 'sam', solidity: 0.95 });
+  for (let i = 0; i < 20; i++) for (let j = 0; j < 2; j++) beads.push({ x: (50 + i * 3 + j * 1.5) * P, y: (140 + j * 2.6) * P, dMm: 2.8, cls: { m4: 'gold', shape: 'round' }, ...gold, src: 'sam', solidity: 0.95 });
+  const sizes = (m) => ({ color: [2.8, 4, 5], gold: [2.8, 4] })[m];
+  const { regions, stat } = detectFill(beads, sizes, { ppm: P });
+  ok(regions.length === 1 && regions[0].material === 'color' && regions[0].physMm === 2.8 && regions[0].beads >= 60, `fill detect: 1 vùng đỏ 2.8 mm (${regions.map((r) => `${r.material}×${r.beads}`)}; ${JSON.stringify({ ...stat, thin: stat.thin.length, tidy: stat.tidy.length })})`);
+  const sq = { physMm: 2.8, angleDeg: 0, polygon: [[0, 0], [30 * P, 0], [30 * P, 20 * P], [0, 20 * P]].map(([x, y]) => [x + 100, y + 100]) };
+  const ob = { x: 100 + 15 * P, y: 100 + 10 * P, rMm: 3 };
+  for (const [name, o] of [['vuông', {}], ['vật cản', { obstacles: [ob] }]]) {
+    const pk = packRegion(sq, { ppm: P, ...o }), pts = pk.points;
+    let minD = Infinity; for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) minD = Math.min(minD, Math.hypot(pts[i].x - pts[j].x, pts[i].y - pts[j].y) / P);
+    const inside = pts.every((q) => q.x - 100 >= 1.25 * P && q.y - 100 >= 1.25 * P && q.x - 100 <= 28.75 * P && q.y - 100 <= 18.75 * P); // tâm cách biên ≥ s/2 (± ô raster 0.25 mm)
+    const clear = pts.every((q) => Math.hypot(q.x - ob.x, q.y - ob.y) / P >= (o.obstacles ? 3 + 0.15 + 1.4 - 0.2 : 0));
+    const cover = (pts.length * Math.PI * 1.4 ** 2) / (polyAreaMm2(sq.polygon, P) - (o.obstacles ? Math.PI * 3 ** 2 : 0));
+    ok(minD >= 2.95 - 0.02 && inside && clear && cover >= 0.55, `fill pack ${name}: ${pts.length} viên (biên ${pk.ring}, lục giác ${pk.hex}, lỗ ${pk.holes}), khoảng tâm nhỏ nhất ${minD.toFixed(2)} mm, phủ ${(100 * cover).toFixed(1)} %`);
+  }
+  const f = path.join(os.tmpdir(), `fill_${process.pid}.json`);
+  writeFillRegions(f, { schema: FILL_SCHEMA, checked: false, regions });
+  const back = readFillRegions(f); fs.unlinkSync(f);
+  ok(back.regions.length === 1 && JSON.stringify(back.regions[0].polygon) === JSON.stringify(regions[0].polygon), 'fill file: ghi / đọc lại y nguyên');
 }
 console.log(fail ? `test_kit: ${fail} FAIL` : 'test_kit: OK');
 process.exit(fail ? 1 : 0);

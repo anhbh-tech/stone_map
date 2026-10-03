@@ -27,6 +27,8 @@ def load_rgb(p):
 
 
 def costume_mask(p, w, h):
+    if p == 'none':  # KIT-25: ảnh khác (vd Snowman) không có mask trang phục → cả ảnh
+        return np.ones((h, w), bool)
     m = cv2.imread(p, cv2.IMREAD_COLOR)
     m = cv2.resize(m, (w, h), interpolation=cv2.INTER_NEAREST)
     b, g, r = m[:, :, 0].astype(int), m[:, :, 1].astype(int), m[:, :, 2].astype(int)

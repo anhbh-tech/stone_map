@@ -15,7 +15,8 @@ import { normalizeDoc, writeKitSvg } from '../lib/kit/svgio.js';
 import { buildDoc, upscale, materialOf, lab } from '../lib/kit/select.js';
 import { gapMm } from '../lib/kit/shapes.js';
 import { decodePng, encodePng } from '../lib/png.js';
-import { symmetryOf, mirrorPairs, pairRate } from '../lib/kit/symmetry.js';
+import { heartCue } from '../lib/kit/shapecue.js';
+import { symmetryOf, mirrorPairs, pairRate, twinPairs } from '../lib/kit/symmetry.js';
 import { jointPalette, stoneCost } from '../lib/kit/palette.js';
 import { scoreStones, mat4Of } from './score_template_gt.mjs';
 import { pottsExpand } from '../lib/kit/potts.js';
@@ -73,9 +74,10 @@ const maskInside = () => {
 // Vùng "sym": cặp gương hạt trái ↔ hạt phải (≤ ½ cỡ sau lật, cỡ ≤ 1.4×, ΔE ≤ 30) = cạnh Potts rất mạnh (1 nhãn chung, §2e); hạt không
 // đổi (bảng mã / GT 1 bên như cũ). Union + xuất 2 bên y hệt ở mức viên (§3e), vùng phủ xếp lại đối xứng, lượt kín (§3f).
 // Vật thể / vẽ lệch: giữ nguyên pipeline cũ
-const symOn = !kit22 && !args.includes('--no-sym'), symInfo = { enabled: symOn };
+// KIT-27: captain msg 022 — đối xứng tuyệt đối không khả thi (DB thật chỉ 7.7 % cặp gương), mặc định TẮT; --sym / --sym-force bật lại
+const symOn = !kit22 && (args.includes('--sym') || args.includes('--sym-force')), symInfo = { enabled: symOn };
 let sym = null;
-if (!kit22) {
+if (symOn) {
   sym = symmetryOf(upImage(), upImage().w / W, maskInside(), W, PPM, { ...(flag('--sym-axis') && { axisMm: +flag('--sym-axis') }), ...(args.includes('--sym-force') && { force: true }) });
   Object.assign(symInfo, { on: !!sym.on, reason: sym.reason, axisMm: sym.axisMm, axisPx: sym.axisPx && +sym.axisPx.toFixed(1), manualAxis: sym.manualAxis, maskIoU: sym.iou, score: sym.score, objAreaMm2: sym.objAreaMm2, objComps: sym.objComps, params: sym.params && { ...sym.params, axisMm: undefined } });
   if (sym.grid) { const z = {}; for (let gy = 0; gy < sym.grid.n; gy++) for (let gx = 0; gx < sym.grid.n; gx++) { const k = sym.zone((gx + 0.5) * sym.grid.cp, (gy + 0.5) * sym.grid.cp); z[k] = (z[k] || 0) + 1; } symInfo.zoneMm2 = Object.fromEntries(Object.entries(z).filter(([k]) => k !== 'out').map(([k, v]) => [k, Math.round(v / sym.params.res ** 2)])); }
@@ -131,7 +133,42 @@ const classifyAs = (b, m4) => classify(b, m4);
 // lớp catalog (cho stoneCost): pearl | gold | base | facet; màu ≥ 8 mm = facet (Q), trắng ≥ 8 = facet
 const catMat = (c) => (c.mm === 'pearl' ? 'pearl' : c.m4 === 'gold' ? 'gold' : c.physMm >= 8 && !c.w ? 'facet' : 'base');
 
+// KIT-27 tim từ ảnh (lib/kit/shapecue.js): hạt màu ≥ --heart-min 8 mm mà SAM không gọi là tim → đo khía trên mask màu; tim → hình tim,
+// góc theo khía (SAM khớp khuôn: tim có khung vàng / mặt cắt ra tròn — tim giữa vương miện). --no-heart-cue tắt
+const heartRep = [];
+if (!kit22 && !args.includes('--no-heart-cue')) {
+  const hMin = +flag('--heart-min', 8);
+  for (const b of beads) {
+    if (b.shape === 'heart' || b.dMm < hMin || mat4(b) !== 'color') continue;
+    const K = upImage().w / W, c = heartCue(upImage(), b.x * K, b.y * K, 0.55 * Math.max(b.wMm, b.hMm) * PPM * K, [b.L, b.a, b.b]);
+    if (c.heart) { heartRep.push({ x: Math.round(b.x), y: Math.round(b.y), dMm: +b.dMm.toFixed(1), samShape: b.shape, ...c }); b.samShape = b.shape; b.shape = 'heart'; b.rotDeg = c.rotDeg; b.wMm = b.hMm = Math.max(b.wMm, b.hMm); }
+  }
+}
 for (const b of beads) b.cls = classify(b);
+// KIT-27 cặp gương cục bộ làm bằng chứng (lib/kit/symmetry.js twinPairs; KHÔNG ép xuất đối xứng): hạt ≥ --twin-min 4.5 mm ghép với
+// ảnh gương qua trục từng dải cao (vương miện / áo có trục riêng). 2 bên khác chất liệu / hình → chất liệu theo đặc trưng trung bình
+// 2 bên; hình + cỡ theo bên có mask SAM lớn hơn rõ (≥ 1.15×, SAM hay cắt thiếu 1 bên), không thì tổng độ khớp hình 2 bên; góc gương
+// (−rot); mã nối bằng cạnh Potts rất mạnh (--mrf-mirror). --no-twin tắt
+const twinRep = { on: false };
+let twinE = [];
+if (!kit22 && !args.includes('--no-twin')) {
+  const prior = sym?.axisMm ?? (() => { const s0 = symmetryOf(upImage(), upImage().w / W, maskInside(), W, PPM, {}); return s0.iou >= 0.8 ? s0.axisMm : undefined; })();
+  const tp = twinPairs(beads, PPM, W, { priorMm: prior, minMm: +flag('--twin-min', 4.5) });
+  Object.assign(twinRep, { on: true, priorMm: prior, bands: tp.bands.length, pairs: tp.pairs.length, changed: 0, by: {} });
+  const NUM = ['L', 'a', 'b', 'chroma', 'edge', 'spec', 'Lstd', 'Lp10', 'Lp90'];
+  for (const [i, j] of tp.pairs) {
+    const A = beads[i], B = beads[j], before = [A, B].map((x) => `${x.cls.m4}/${x.cls.shape}`).join('|');
+    const avg = { ...A }; for (const f of NUM) if (Number.isFinite(A[f]) && Number.isFinite(B[f])) avg[f] = (A[f] + B[f]) / 2;
+    const m = mat4(avg);
+    const sh = (x) => x.shape === 'oval' ? 'round' : x.shape, fit = (sp) => (A.fits?.[sp] ?? 0) + (B.fits?.[sp] ?? 0);
+    const win = A.dMm >= 1.15 * B.dMm ? A : B.dMm >= 1.15 * A.dMm ? B : sh(A) === sh(B) ? A : (fit(sh(A)) >= fit(sh(B)) ? A : B), lose = win === A ? B : A;
+    if (sh(lose) !== sh(win) || Math.abs(lose.dMm - win.dMm) > 0.15 * win.dMm) { lose.twinFrom = { shape: lose.shape, dMm: lose.dMm }; lose.shape = win.shape; lose.dMm = win.dMm; lose.wMm = win.wMm; lose.hMm = win.hMm; lose.rotDeg = -(win.rotDeg || 0); }
+    for (const x of [A, B]) x.cls = classify(x, m);
+    const after = [A, B].map((x) => `${x.cls.m4}/${x.cls.shape}`).join('|');
+    if (after !== before) { twinRep.changed++; const k = `${before}→${after}`; twinRep.by[k] = (twinRep.by[k] || 0) + 1; }
+    twinE.push([i, j]); beads[i].twin = beads[j].twin = true;
+  }
+}
 
 // ── 2b. ngữ cảnh láng giềng (msg 014): hạt cùng màu / chất liệu đi thành tập thể (chuỗi vàng, mảng ngọc, mảng đá đỏ)
 // đồ thị: 2 hạt là láng giềng khi khoảng tâm ≤ 1.35·(r1 + r2) + 0.5 mm; "cùng cụm" khi cỡ vẽ lệch ≤ 40 %
@@ -229,6 +266,8 @@ if (!args.includes('--no-neigh')) {
 // ±15 %, cách góc đều (mỗi khe lệch ≤ 35 % khe trung bình), giống nhau (cỡ ≤ 1.4×, ΔE76 ≤ 25 so với hạt mồi), tâm khác vòng (ΔE76 > 20
 // hoặc cỡ lệch > 1.25×: mảng ngọc xếp lục giác không phải hoa). Hạt trong motif không vào chuỗi KIT-21 (cánh hoa không phải hàng hạt)
 const dE76 = (p, q) => Math.hypot(p.L - q.L, p.a - q.a, p.b - q.b);
+// KIT-27: hoa vẽ tay lệch góc (hoa đỏ ở tà áo (174, 228) mm: khe 48–94° quanh 60°) → dung sai khe --motif-gap 0.5 (KIT-23: 0.35)
+const MOTIF_GAP = +flag('--motif-gap', kit22 ? 0.35 : 0.5);
 const motifs = [];
 {
   const cell = 14 * PPM, G = new Map(), kk = (x, y) => `${Math.floor(x / cell)},${Math.floor(y / cell)}`;
@@ -246,8 +285,11 @@ const motifs = [];
     for (const s0 of R) {
       const S = R.filter((r) => Math.max(r.t.dMm, s0.t.dMm) / Math.min(r.t.dMm, s0.t.dMm) <= 1.4 && dE76(r.t, s0.t) <= 25 && Math.abs(r.D - s0.D) <= 0.15 * s0.D);
       if (S.length < 4 || S.length > 8 || (best && S.length <= best.length)) continue;
-      const A = S.map((r) => r.ang).sort((x, y) => x - y), gaps = A.map((a, k) => (k + 1 < A.length ? A[k + 1] - a : A[0] + 2 * Math.PI - a)), mg = (2 * Math.PI) / S.length;
-      if (gaps.some((g) => Math.abs(g - mg) > 0.35 * mg)) continue;
+      // góc quanh trọng tâm vòng (hạt tâm vẽ lệch tâm hoa vài mm, KIT-27)
+      const gx0 = S.reduce((a, r) => a + r.t.x, 0) / S.length, gy0 = S.reduce((a, r) => a + r.t.y, 0) / S.length;
+      if (Math.hypot(gx0 - c.x, gy0 - c.y) / PPM > 0.3 * s0.D) continue;
+      const A = S.map((r) => Math.atan2(r.t.y - gy0, r.t.x - gx0)).sort((x, y) => x - y), gaps = A.map((a, k) => (k + 1 < A.length ? A[k + 1] - a : A[0] + 2 * Math.PI - a)), mg = (2 * Math.PI) / S.length;
+      if (gaps.some((g) => Math.abs(g - mg) > MOTIF_GAP * mg)) continue;
       const ring = S.map((r) => r.t), md = ring.map((t) => t.dMm).sort((x, y) => x - y)[ring.length >> 1];
       const mc = { L: ring.reduce((a, t) => a + t.L, 0) / ring.length, a: ring.reduce((a, t) => a + t.a, 0) / ring.length, b: ring.reduce((a, t) => a + t.b, 0) / ring.length };
       if (dE76(c, mc) <= 20 && Math.max(c.dMm, md) / Math.min(c.dMm, md) <= 1.25) continue;
@@ -297,16 +339,30 @@ if (petal.enabled && motifs.length) {
     const ws = Array.from({ length: 9 }, (_, k) => widthAt(r0 + ((r1 - r0) * (k + 1)) / 10)), wmax = Math.max(...ws);
     return { ang, ux, uy, R0, r0, r1, wmax, rWide: r0 + ((r1 - r0) * (ws.indexOf(wmax) + 1)) / 10, widthAt };
   };
-  for (const m of motifs) {
+  // KIT-27: đo mọi motif trước, rồi gộp motif cùng kiểu (tâm cùng chất liệu + cỡ ≤ 1.25×, cùng số cánh, cánh cỡ ≤ 1.25× + ΔE76 ≤ 15:
+  // 2 hoa gương 2 bên tà áo ra marquise 6x12 / giọt 8x13 vì tỉ lệ 1.41 / 1.28 quanh ngưỡng) → 1 quyết định hình + cỡ cho cả nhóm (trung vị)
+  const meas = motifs.map((m) => {
     const c = m.centre, n = m.ring.length, rc = c.dMm / 2;
     const ms = m.ring.map((t) => ({ t, core: grow(t, c, n, rc, false), rim: grow(t, c, n, rc, true) }));
-    const Lb = med(ms.map((q) => q.core.r1 - rc)), Wc = med(ms.map((q) => q.core.wmax)), ratio = Lb / Wc;
-    const rim = Math.min(1.5, Math.max(0, (med(ms.map((q) => q.rim.widthAt(q.core.rWide))) - Wc) / 2)), touch = med(ms.map((q) => q.core.r0 - rc)) <= 1;
+    const Lb = med(ms.map((q) => q.core.r1 - rc)), Wc = med(ms.map((q) => q.core.wmax));
+    const rim = Math.min(1.5, Math.max(0, (med(ms.map((q) => q.rim.widthAt(q.core.rWide))) - Wc) / 2)), touchD = med(ms.map((q) => q.core.r0 - rc));
+    const rd = med(m.ring.map((t) => t.dMm)), rl = ['L', 'a', 'b'].reduce((o, k) => ({ ...o, [k]: m.ring.reduce((a, t) => a + t[k], 0) / n }), {});
+    return { m, ms, Lb, Wc, rim, touchD, rd, rl, grp: null };
+  });
+  const sameKind = (p, q) => p.m.centre.cls.m4 === q.m.centre.cls.m4 && Math.max(p.m.centre.dMm, q.m.centre.dMm) / Math.min(p.m.centre.dMm, q.m.centre.dMm) <= 1.25
+    && p.m.ring.length === q.m.ring.length && Math.max(p.rd, q.rd) / Math.min(p.rd, q.rd) <= 1.25 && dE76(p.rl, q.rl) <= 15;
+  meas.forEach((p, i) => { p.grp ||= [p]; for (const q of meas.slice(i + 1)) if (!q.grp && sameKind(p, q)) { q.grp = p.grp; p.grp.push(q); } });
+  for (const g0 of meas) {
+    const { m, ms } = g0, c = m.centre, n = m.ring.length, rc = c.dMm / 2, G = g0.grp;
+    const Lb = med(G.map((q) => q.Lb)), Wc = med(G.map((q) => q.Wc)), ratio = Lb / Wc, rim = med(G.map((q) => q.rim)), touch = med(G.map((q) => q.touchD)) <= 1;
     const rep = { centre: [Math.round(c.x), Math.round(c.y)], n, ratio: +ratio.toFixed(2), ratios: ms.map((q) => +((q.core.r1 - rc) / q.core.wmax).toFixed(2)), bodyMm: [+Wc.toFixed(2), +Lb.toFixed(2)], rimMm: +rim.toFixed(2), touch, before: m.ring.map((t) => t.cls.shape === 'round' ? `${t.cls.m4}/${t.cls.physMm}` : `${t.cls.shape} ${t.cls.w}x${t.cls.h}`) };
     petal.motifs.push(rep);
-    if (ratio < petal.ratioMin) { rep.shape = 'round'; continue; }
-    const shape = touch ? 'teardrop' : 'marquise', rIn = touch ? SZ[c.cls.m4][0] / 2 + GAP : med(ms.map((q) => q.core.r0)) - rim;
-    const Lout = med(ms.map((q) => q.core.r1)) + rim - rIn, Wout = Wc + 2 * rim, R0 = med(ms.map((q) => q.core.R0));
+    // KIT-27: cánh ngắn → cả vòng tròn (SAM ra 1 cánh marquise / giọt giữa các cánh tròn = lệch hình trong 1 hoa, soát tile)
+    const roundRing = () => { rep.toRound = 0; for (const t of m.ring) if (t.cls.shape !== 'round') { t.samShape = t.shape; t.shape = 'round'; t.wMm = t.hMm = t.dMm; t.cls = classify(t, t.cls.m4); rep.toRound++; } };
+    if (ratio < petal.ratioMin) { rep.shape = 'round'; roundRing(); continue; }
+    const shape = touch ? 'teardrop' : 'marquise', rInOf = (q0) => (touch ? SZ[q0.m.centre.cls.m4][0] / 2 + GAP : med(q0.ms.map((q) => q.core.r0)) - rim);
+    const Lout = med(G.map((q0) => med(q0.ms.map((q) => q.core.r1)) + rim - rInOf(q0))), Wout = Wc + 2 * rim, R0 = med(ms.map((q) => q.core.R0));
+    if (G.length > 1) rep.group = G.map((q) => [Math.round(q.m.centre.x), Math.round(q.m.centre.y)]);
     rep.outlineMm = [+Wout.toFixed(2), +Lout.toFixed(2)]; rep.shape = shape; rep.shiftMm = [];
     for (const q of ms) {
       const t = q.t, cls0 = t.cls;
@@ -315,7 +371,7 @@ if (petal.enabled && motifs.length) {
       if (cl.shape !== shape) { rep.shape = `round (${shape} không vừa catalog)`; break; }
       t.shape = shape; t.wMm = Lout; t.hMm = Wout; t.cls = cl; t.petal = rep;
     }
-    if (!m.ring.every((t) => t.petal === rep)) { for (const t of m.ring) if (t.petal === rep) delete t.petal; continue; }
+    if (!m.ring.every((t) => t.petal === rep)) { for (const t of m.ring) if (t.petal === rep) delete t.petal; roundRing(); continue; }
     const H = m.ring[0].cls.h, R = Math.max(R0, shape === 'teardrop' ? SZ[c.cls.m4][0] / 2 + GAP + H / 2 : R0);
     for (const q of ms) {
       const t = q.t, x = c.x + R * q.core.ux * PPM, y = c.y + R * q.core.uy * PPM;
@@ -596,6 +652,32 @@ const pearlHist = {};
 for (const b of beads) if (b.cls.m4 === 'pearl' && b.cls.shape === 'round') pearlHist[b.cls.physMm] = (pearlHist[b.cls.physMm] || 0) + 1;
 const pearlMin = +flag('--pearl-min', 5);
 const pearlAdd = kit22 || args.includes('--no-pearl-codes') ? [] : Object.entries(pearlHist).filter(([mm, n]) => n >= pearlMin && cat.codes[String(+mm)]?.kind === 'pearl' && !pal0.codes.includes(String(+mm))).map(([mm]) => String(+mm));
+// KIT-27 (captain msg 022: đá đỏ to ra 'B' 2.8 mm): đá to (≥ --big-min 5 mm, không ngọc, tròn) mà mã rẻ nhất trong bảng nhỏ hơn
+// ≥ 1.5 mm (bảng không có cỡ đó) → cụm theo chất liệu + màu (ΔE76 < 15 quanh hạt nặng nhất), cụm ≥ --big-count 5 hạt thêm mã catalog
+// rẻ nhất cho cả cụm (Σ trọng số · stoneCost), rồi cùng ngọc gộp xuống ≤ maxCodes bằng mergeDown (mã nào lợi ít nhất thì bị gộp)
+const bigMin = +flag('--big-min', 5), bigCount = +flag('--big-count', 5), bigAdd = [], bigKeep = [], bigReport = [];
+if (!kit22 && !args.includes('--no-big-codes')) {
+  const P0 = pal0.codes.map((c) => entryOf(c, cat)), P0L = P0.map((e) => lab(hex2(e.fill)));
+  const cheapest = (r) => P0.reduce((a, e, j) => { const c = stoneCost(r, e, P0L[j], NOCROSS)[0]; return c < a.c ? { c, e } : a; }, { c: Infinity, e: null }).e;
+  const left = recQ.map((r, i) => ({ r, b: beads[i] })).filter(({ r, b }) => !r.shape && b.cls.m4 !== 'pearl' && r.physMm >= bigMin && (cheapest(r)?.physMm ?? 0) < r.physMm - 1.5).sort((x, y) => y.r.wt - x.r.wt);
+  while (left.length) {
+    const c0 = left[0], cl = left.filter((x) => x.b.cls.m4 === c0.b.cls.m4 && Math.hypot(...x.r.t.map((v, j) => v - c0.r.t[j])) < 15);
+    for (const x of cl) left.splice(left.indexOf(x), 1);
+    if (cl.length < bigCount) continue;
+    let best = null, bc = Infinity;
+    for (const e of Object.values(cat.codes)) {
+      if (e.kind === 'pearl' || pal0.codes.includes(e.code) || bigAdd.includes(e.code)) continue;
+      const L = lab(hex2(e.fill)); let sum = 0;
+      for (const x of cl) sum += x.r.wt * Math.min(stoneCost(x.r, e, L, NOCROSS)[0], 1e4);
+      if (sum < bc) { bc = sum; best = e; }
+    }
+    if (!best) continue;
+    // giữ cứng (như pha lê) khi mã cũ thu đá còn ≤ 60 % cỡ trung vị cụm (đỏ 5–10 mm → L4 2.8): ưu tiên captain đá to nhìn thấy rõ
+    const sizes = cl.map((x) => x.r.physMm).sort((u, v) => u - v), was = cheapest(c0.r), keep = (was?.physMm ?? 0) <= 0.6 * sizes[sizes.length >> 1];
+    bigAdd.push(best.code); if (keep) bigKeep.push(best.code);
+    bigReport.push({ code: best.code, physMm: best.physMm, m4: c0.b.cls.m4, beads: cl.length, sizes: [...new Set(sizes)], was: was?.code, keep });
+  }
+}
 function mergeDown(start, keep, n) {
   const E = (c) => entryOf(c, cat), Lb = new Map(start.map((c) => [c, lab(hex2(E(c).fill))])), grp = new Map();
   for (const r of [...recQ, ...recF, ...recS]) {
@@ -630,11 +712,15 @@ function mergeDown(start, keep, n) {
   }
   return { codes: set, history };
 }
-const pearlKeep = args.includes('--pearl-keep') ? pearlAdd : [];
-const merged = pearlAdd.length ? mergeDown([...pal0.codes, ...pearlAdd], [pal0.crystal, ...pal0.codes.filter((c) => cat.codes[c]?.kind === 'pearl'), ...pearlKeep], maxCodes) : { codes: pal0.codes, history: [] };
+// KIT-27: mã ngọc mới có ≥ --pearl-keep-min 20 hạt giữ cứng (captain fb2: ngọc to / nhỏ tách mã; không thì mã đá to giữ cứng đẩy nó ra)
+const pearlKeep = args.includes('--pearl-keep') ? pearlAdd : pearlAdd.filter((c) => (pearlHist[c] || pearlHist[+c] || 0) >= +flag('--pearl-keep-min', 20));
+// KIT-27: bảng đầu < maxCodes (đường cong chọn ít mã) mà có mã thêm → mã của bảng maxCodes trên đường cong cũng vào xét, để mã to mới
+// không chiếm chỗ trống mà mã đường cong lợi hơn (King: Q113/D50 lấy 2 chỗ của Q123/L16, mã DB vùng chi tiết 30.1 → 18.9 %)
+const curveMore = pal0.codes.length < maxCodes ? (curve.find((c) => c.union === maxCodes)?.codes || []).filter((c) => !pal0.codes.includes(c)) : [];
+const merged = pearlAdd.length || bigAdd.length ? mergeDown([...new Set([...pal0.codes, ...pearlAdd, ...bigAdd, ...curveMore])], [pal0.crystal, ...pal0.codes.filter((c) => cat.codes[c]?.kind === 'pearl'), ...pearlKeep, ...bigKeep], maxCodes) : { codes: pal0.codes, history: [] };
 const pal = merged.codes.join() !== pal0.codes.join() ? { ...jointPalette([...recQ, ...recF, ...recS], cat, { maxCodes: merged.codes.length, cands: merged.codes, fixed: merged.codes, ...NOCROSS }), crystal: pal0.crystal } : pal0;
 const codes = pal.codes, palE = codes.map((c) => entryOf(c, cat)), palL = palE.map((e) => lab(hex2(e.fill)));
-const paletteMerge = { pearlHist, pearlMin, before: pal0.codes, added: pearlAdd, history: merged.history, after: codes, errorsBefore: errorsOf(pal0.codes), errorsAfter: errorsOf(codes) };
+const paletteMerge = { pearlHist, pearlMin, before: pal0.codes, added: pearlAdd, bigAdded: bigReport, history: merged.history, after: codes, errorsBefore: errorsOf(pal0.codes), errorsAfter: errorsOf(codes) };
 
 // mã từng viên: rẻ nhất trong bảng theo stoneCost; không lớp nào → bỏ
 const ranked = (r) => palE.map((e, j) => [stoneCost(r, e, palL[j], NOCROSS)[0], e]).filter(([c]) => c < 1e4).sort((a, b) => a[0] - b[0]).map(([, e]) => e);
@@ -723,7 +809,7 @@ let labels = null;
 if (mrfOn) {
   const init = Int32Array.from({ length: nB }, (_, k) => argmin(k));
   // KIT-26: cặp gương (hạt chủ ↔ bản gương, cùng mid) = cạnh rất mạnh → 1 nhãn (không tính vào consistency)
-  const mirE = symPairs.map(([a, c]) => [a, c, MRF.mirror]);
+  const mirE = [...symPairs, ...twinE].map(([a, c]) => [a, c, MRF.mirror]);
   mrf.mirrorEdges = mirE.length;
   const r = pottsExpand({ n: nB, L: Lc, unary: U, edges: [...[...graph.values()].map((g) => [g.i, g.j, Math.max(g.ws, g.wc)]), ...mirE], init });
   labels = r.labels;
@@ -972,6 +1058,66 @@ if (fillOn && !args.includes('--no-kin')) {
   }
   kin.holesLeftTotal = Object.values(kin.holesLeft).reduce((a, v) => a + v, 0);
 }
+// ── 3g. KIT-27 lỗ kẹp (captain msg 022 "fill còn sót / lỗ", soát tile): sau mọi viên, điểm lưới 0.5 mm trong mask còn trống
+// ≥ 1.4 + khe mm tới mọi viên (vừa 1 viên 2.8) và BỊ KẸP: ≥ --gap-enclose 12/16 tia ở bán kính (trống + 1.5 mm) chạm viên hoặc ra ngoài mask
+// → lỗ giữa vùng đã đính / dải mép giữa vùng đính và mép trang phục; vùng in trống rộng (sản phẩm thật khoan 1 phần) không kẹp nên giữ.
+// Đặt viên 2.8 mm, trống nhất trước; mã = mã tròn 2.8 trong bảng gần màu ảnh nhất (trung vị Lab ±1.2 mm). Trong khung hạt vẽ ≥ 4 mm (bị bỏ
+// hoặc vẽ to hơn catalog (tim cổ áo vẽ ~25 mm, tim catalog ≤ 12 mm): cả khung hạt vẽ giữ trống (1 vật thể = 1 viên). --no-gap-fill tắt
+const gapRep = { added: 0, byCode: {}, candidates: 0 };
+if (!kit22 && !args.includes('--no-gap-fill')) {
+  const mi = maskInside(), inM = (x, y) => (!mi || mi(x, y)), Rg = 1.4, need = Rg + GAP, cell = 6 * PPM, enc = +flag('--gap-enclose', 12);
+  const bk = new Map(), key = (cx, cy) => cx * 100000 + cy;
+  const add = (x, y, r) => { const k = key(Math.floor(x / cell), Math.floor(y / cell)); (bk.get(k) || bk.set(k, []).get(k)).push([x, y, r]); };
+  for (const t of placed) add(t.b.x, t.b.y, R(t.e));
+  const clear = (x, y) => { let c = Infinity; const cx = Math.floor(x / cell), cy = Math.floor(y / cell); for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) for (const [sx, sy, r] of bk.get(key(cx + dx, cy + dy)) || []) c = Math.min(c, Math.hypot(sx - x, sy - y) / PPM - r); return c; };
+  // hạt vẽ ≥ 4 mm không viên nào phủ tâm (bị bỏ do va chạm) → đặt lại chính nó: mã tròn cùng chất liệu trong bảng, cỡ 0.55–1 × cỡ vẽ (nhỏ hơn = sai cỡ rõ, để trống), to nhất vừa
+  gapRep.bigRetry = 0;
+  for (const b of beads.filter((q) => q.dMm >= 4 && q.cls && (q.cls.shape || 'round') === 'round').sort((p, q) => q.dMm - p.dMm)) {
+    if (clear(b.x, b.y) <= 0 || !inM(b.x, b.y)) continue;
+    const s1 = { b: { ...b, src: 'gap-big' }, rec: null, opts: [], e: null, alt: [] };
+    for (const e of palE.filter((q) => !q.shape && q.physMm <= b.dMm + 0.5 && q.physMm >= Math.max(2.8, 0.55 * b.dMm) && sameMat(s1, q)).sort((p, q) => q.physMm - p.physMm)) {
+      if (clear(b.x, b.y) < R(e) + GAP || !fits({ ...s1, e, opts: [e] }, e)) continue;
+      const s2 = { ...s1, e, opts: [e] }; commit(s2, { e }); add(b.x, b.y, R(e)); gapRep.bigRetry++; gapRep.byCode[e.code] = (gapRep.byCode[e.code] || 0) + 1; break;
+    }
+  }
+  const bigHoles = beads.filter((b) => b.dMm >= 4).map((b) => [b.x, b.y, 0.5 * b.dMm * PPM]);
+  const inBig = (x, y) => bigHoles.some(([bx, by, r]) => Math.hypot(bx - x, by - y) < r);
+  const D16 = Array.from({ length: 16 }, (_, k) => [Math.cos((k * Math.PI) / 8), Math.sin((k * Math.PI) / 8)]);
+  const enclosed = (x, y, c) => { const rho = (Math.min(c, 4) + 1.5) * PPM; let h = 0; for (const [dx, dy] of D16) { const px = x + dx * rho, py = y + dy * rho; if (!inM(px, py) || clear(px, py) <= 0.2) h++; } return h >= enc; };
+  const within = (x, y) => inM(x, y) && DIRS.every(([dx, dy]) => inM(x + dx * Rg * PPM, y + dy * Rg * PPM));
+  const cands = [], st = 0.5 * PPM;
+  for (let y = st / 2; y < W; y += st) for (let x = st / 2; x < W; x += st) { if (!inM(x, y)) continue; const c = clear(x, y); if (c >= need && within(x, y) && !inBig(x, y)) cands.push([c, x, y]); }
+  gapRep.candidates = cands.length;
+  cands.sort((p, q) => q[0] - p[0]);
+  const up = upImage(), K = up.w / W, small = palE.filter((e) => !e.shape && e.physMm === 2.8 && e.kind !== 'pearl');
+  const colourAt = (x, y) => { const Ls = [[], [], []], r = 1.2 * PPM * K, cx = x * K, cy = y * K; for (let yy = Math.round(cy - r); yy <= cy + r; yy += 2) for (let xx = Math.round(cx - r); xx <= cx + r; xx += 2) { if ((xx - cx) ** 2 + (yy - cy) ** 2 > r * r || xx < 0 || yy < 0 || xx >= up.w || yy >= up.h) continue; const j = (yy * up.w + xx) * 4; lab([up.data[j], up.data[j + 1], up.data[j + 2]]).forEach((v, i) => Ls[i].push(v)); } return Ls.map((v) => v.sort((p, q) => p - q)[v.length >> 1]); };
+  for (const [, x, y] of cands) {
+    const c = clear(x, y); if (c < need || !enclosed(x, y, c)) continue;
+    const t = colourAt(x, y), e = small.reduce((a, q) => { const d = Math.hypot(...lab(hex2(q.fill)).map((v, i) => v - t[i])); return d < a.d ? { d, q } : a; }, { d: Infinity, q: null }).q;
+    if (!e) break;
+    const s0 = { b: { x, y, dMm: 2.8, score: 0, rotDeg: 0, cls: { m4: mat4Of(e.code), physMm: 2.8, shape: 'round' }, src: 'gap' }, rec: null, opts: [e], e, alt: [] };
+    if (!fits(s0, e)) continue;
+    commit(s0, { e }); add(x, y, R(e)); gapRep.added++; gapRep.byCode[e.code] = (gapRep.byCode[e.code] || 0) + 1;
+  }
+}
+// ── 3h. KIT-27 mép vùng phủ: viên phủ / lấp lỗ mà màu ảnh tại lõi (trung vị Lab, bán kính 0.3 × cỡ) gần 1 mã khác cùng cỡ trong bảng hơn
+// ≥ --recode-gain 20 ΔE76 (đa giác vùng trắng tràn lên dây đỏ hẹp, soát tile r07/r08) → đổi mã đó. Không đổi viên chi tiết / chuỗi vàng
+const recodeRep = { changed: 0, byPair: {} };
+if (!kit22 && !args.includes('--no-recode')) {
+  const up = upImage(), K = up.w / W, gainMin = +flag('--recode-gain', 20), recodeDetail = !args.includes('--recode-fill-only');
+  const core = (x, y, rMm) => { const Ls = [[], [], []], r = Math.max(2, rMm * PPM * K), cx = x * K, cy = y * K; for (let yy = Math.round(cy - r); yy <= cy + r; yy++) for (let xx = Math.round(cx - r); xx <= cx + r; xx++) { if ((xx - cx) ** 2 + (yy - cy) ** 2 > r * r || xx < 0 || yy < 0 || xx >= up.w || yy >= up.h) continue; const j = (yy * up.w + xx) * 4; lab([up.data[j], up.data[j + 1], up.data[j + 2]]).forEach((v, i) => Ls[i].push(v)); } return Ls.map((v) => v.sort((p, q) => p - q)[v.length >> 1]); };
+  const dist = (t, e) => Math.hypot(...lab(hex2(e.fill)).map((v, i) => v - t[i]));
+  for (const st of placed) {
+    // hạt chi tiết đơn lẻ (sam / log, không thuộc hàng / motif / cánh / cặp sinh đôi) cũng đổi; chuỗi vàng + nhóm giữ nhãn chung
+    const single = ['sam', 'log'].includes(st.b.src) && !st.b.group && !st.b.motif && !st.b.petal && !st.b.twin;
+    if (!['fill', 'gap'].includes(st.b.src) && !(recodeDetail && single)) continue;
+    if (st.e.shape || st.e.kind === 'pearl') continue;
+    const t = core(st.b.x, st.b.y, 0.3 * st.e.physMm), d0 = dist(t, st.e);
+    const alt = palE.filter((q) => !q.shape && q.kind !== 'pearl' && Math.abs(q.physMm - st.e.physMm) < 0.05 && q.code !== st.e.code);
+    const best = alt.reduce((a, q) => { const d = dist(t, q); return d < a.d ? { d, q } : a; }, { d: Infinity, q: null });
+    if (best.q && d0 - best.d >= gainMin) { const k = `${st.e.code}→${best.q.code}`; recodeRep.byPair[k] = (recodeRep.byPair[k] || 0) + 1; recodeRep.changed++; st.e = best.q; }
+  }
+}
 if (sym?.axisPx) symRep.pairRateAfter = pairRate(stoneList(), sym, PPM);
 
 // ── 3c. KIT-23 consistency: % cặp láng giềng mạnh (cùng cấu trúc: chuỗi / cột, motif, láng giềng cùng chất liệu + cỡ ≤ 1.2× + ΔE nhỏ)
@@ -1088,6 +1234,7 @@ const report = {
   check: check.ok ? 'ok' : check.errors.slice(0, 10),
   chain: chainF ? { file: chainF, ...chain } : undefined,
   chains: { ...chains },
+  kit27: { hearts: heartRep, twins: twinRep, gapFill: gapRep, recode: recodeRep },
   kit23: { mrf, paletteMerge, consistency: consist, motifs: motifRep, anchorDropped: lost.anchorDropped || 0, fb: FB },
   kit24: { petal, shapes: shapeCount, petalStones: petalPlaced },
   kit26: { symmetry: symInfo, mirrorEdges: mrf.mirrorEdges ?? 0, ...symRep, kin },
@@ -1158,7 +1305,8 @@ const T = (s) => `recall ${s.recall} prec ${s.precision} mat ${s.materialOk} siz
 console.log(`${seg.method}/${seg.region}: ${all.length} mask → ${cand.length} giống hạt → ${beads.length} hạt → ${placed.length} viên (va chạm bỏ ${lost.collision}, thu cỡ ${lost.shrunk}, không mã ${noCode.length}); ${codes.length} mã chung [${codes.join(' ')}] pha lê ${pal.crystal}, Queen dùng ${Object.keys(byCode).length}; chuỗi vàng ${chain.placed}/${chain.points}; phủ ${report.coverage.pct}%; check ${check.ok ? 'ok' : 'LỖI'}`);
 for (const c of report.codeCurve) console.log(`  mã ${c.union} (+pet ${c.product}) +[${c.added.join(' ')}]: sai vật liệu ${c.material}, hình ${c.shape}, cỡ ${c.size}, không mã ${c.noCode}, ΔE ${c.dE}, Starry ΔE ${c.starryDE}`);
 console.log(`  KIT-25: vùng phủ ${fillOn ? `${fillInfo.source} ${fillRegions.length} vùng, thay ${fillInfo.beadsRemoved} hạt` : 'tắt'}; ` + report.kit25.regions.map((r) => `${r.id} ${r.material} ${r.drawnMm}→${r.physMm}mm ${r.code} ${r.placed}/${r.points} phủ ${r.coveragePct}% (tất cả ${r.allStones} viên ${r.allCoveragePct}%)`).join('; ') + (gtOn ? `; GT chi tiết ≥ 2 mm (ngoài vùng phủ) ${T(mapScoreD.total)}` : ''));
-console.log(`  KIT-26: đối xứng ${symAct ? 'BẬT' : 'tắt'} (${sym?.reason ?? 'kit22'}) trục ${sym?.axisMm} mm IoU ${sym?.iou} điểm ${sym?.score} vật thể ${sym?.objAreaMm2} mm²; cặp hạt ${JSON.stringify(symInfo.beadPairs || {})}; lượt gương ${JSON.stringify(symRep.final || {})}; kín +${kin.added} (cặp ${kin.pair}, trục ${kin.axis}, đơn ${kin.single}, hỏng ${kin.failed}) lỗ còn ${kin.holesLeftTotal ?? '-'}; cặp gương cùng mã ${symRep.pairRateBefore?.sym.pct ?? '-'}→${symRep.pairRateAfter?.sym.pct ?? '-'}% (sym), ${symRep.pairRateBefore?.all.pct ?? '-'}→${symRep.pairRateAfter?.all.pct ?? '-'}% (tất cả)`);
+if (!symOn) console.log(`  KIT-26: đối xứng tắt (mặc định KIT-27, --sym để bật); kín +${kin.added ?? 0} lỗ còn ${kin.holesLeftTotal ?? '-'}`);
+else console.log(`  KIT-26: đối xứng ${symAct ? 'BẬT' : 'tắt'} (${sym?.reason ?? 'kit22'}) trục ${sym?.axisMm} mm IoU ${sym?.iou} điểm ${sym?.score} vật thể ${sym?.objAreaMm2} mm²; cặp hạt ${JSON.stringify(symInfo.beadPairs || {})}; lượt gương ${JSON.stringify(symRep.final || {})}; kín +${kin.added} (cặp ${kin.pair}, trục ${kin.axis}, đơn ${kin.single}, hỏng ${kin.failed}) lỗ còn ${kin.holesLeftTotal ?? '-'}; cặp gương cùng mã ${symRep.pairRateBefore?.sym.pct ?? '-'}→${symRep.pairRateAfter?.sym.pct ?? '-'}% (sym), ${symRep.pairRateBefore?.all.pct ?? '-'}→${symRep.pairRateAfter?.all.pct ?? '-'}% (tất cả)`);
 console.log(`  KIT-24: cánh ${petal.motifs.map((m) => `[${m.centre}] ${m.shape} tỉ lệ ${m.ratio}${m.after ? ' → ' + m.after[0] : ''}`).join('; ')}; đặt ${petalPlaced.length} cánh ${petalPlaced.map((q) => q.code).join(' ')}; hình ` + JSON.stringify(shapeCount));
 console.log(`  KIT-23: MRF ${mrf.enabled ? `đổi ${mrf.changed} nhãn, chất liệu ${mrf.relabeledMaterial}` : 'tắt'}; motif ${motifs.length}; bảng thử +[${pearlAdd.join(' ')}] gộp −[${merged.history.map((h) => h.removed).join(' ')}]; neo bỏ ${lost.anchorDropped || 0}; consistency ${consist.all.pct}% (${consist.all.differ}/${consist.all.pairs}, thiếu 1 bên ${consist.all.missing}); ` + Object.entries(consist.regions).map(([k, v]) => `${k} ${v.pct}%`).join(' ') + `; hàng captain ${report.captainRegion.rowCodes}`);
 console.log(`  hạt:  ${T(detScore.total)}`);

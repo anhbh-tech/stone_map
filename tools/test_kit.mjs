@@ -15,7 +15,9 @@ import { assignSymbols, loadCatalog, checkDesign, LETTERS } from '../lib/kit/cat
 import { gapMm, stonePoly, sdPoly } from '../lib/kit/shapes.js';
 import { pottsExpand, pottsICM, pottsEnergy } from '../lib/kit/potts.js';
 import { detectFill, packRegion, polyAreaMm2, readFillRegions, writeFillRegions, FILL_SCHEMA } from '../lib/kit/fill.js';
-import { symmetryOf, mirrorPairs, pairRate } from '../lib/kit/symmetry.js';
+import { symmetryOf, mirrorPairs, pairRate, twinPairs } from '../lib/kit/symmetry.js';
+import { heartCue } from '../lib/kit/shapecue.js';
+import { lab } from '../lib/kit/select.js';
 
 let fail = 0;
 const ok = (cond, msg) => { if (!cond) { fail++; console.log('FAIL', msg); } };
@@ -618,7 +620,6 @@ ok(vlm.mat4('pearl', 'gold') === 'gold' && vlm.mat4('pearl', 'white') === 'pearl
 {
   const { mergePalette, remapBig } = await import('../lib/kit/palette.js');
   const { densify } = await import('../lib/kit/pack.js');
-  const { lab } = await import('../lib/kit/select.js');
   const cat = loadCatalog(), labC = (c) => lab(cat.codes[c].fill.replace('#', '').match(/\w\w/g).map((v) => parseInt(v, 16)));
   const rec = (layer, code, n, mat = 'base', physMm = 2.8) => Array.from({ length: n }, () => ({ layer, mat, physMm, t: labC(code), gwl: 1 }));
   const R = [...rec('bg', 'L47', 50), ...rec('bg', 'L37', 5), ...rec('bg', 'L4', 40), ...rec('cos', '5', 10, 'pearl', 5)];
@@ -701,6 +702,25 @@ ok(vlm.mat4('pearl', 'gold') === 'gold' && vlm.mat4('pearl', 'white') === 'pearl
   const full = packRegion(sq, { ppm: P }), again = packRegion(sq, { ppm: P, holesOnly: true, obstacles: full.points.map((q) => ({ x: q.x, y: q.y, rMm: 1.4 })) });
   const half = packRegion(sq, { ppm: P, clip: (x) => x <= 100 + 15 * P });
   ok(again.points.length === 0 && half.points.length > 0.4 * full.points.length && half.points.every((q) => q.x <= 100 + 15 * P + 1e-6), `fill kín: lấp lỗ sau xếp đủ ${again.points.length} điểm (đúng 0); cắt nửa ${half.points.length}/${full.points.length}`);
+}
+// KIT-27 dấu hiệu tim (lib/kit/shapecue.js): tim đỏ tổng hợp (khía lên) → heart, xoay ≈ 0; xoay 90° → ≈ 90; đĩa tròn → không
+{
+  const w = 200, mk = (inside) => { const img = { w, h: w, data: new Uint8Array(w * w * 4) }; let sx = 0, sy = 0, n = 0;
+    for (let y = 0; y < w; y++) for (let x = 0; x < w; x++) { const v = inside(x, y); img.data.set([...(v ? [200, 30, 40] : [245, 245, 240]), 255], (y * w + x) * 4); if (v) { sx += x; sy += y; n++; } }
+    return { img, cx: sx / n, cy: sy / n }; };
+  const heart = (u, v) => (u * u + v * v - 1) ** 3 - u * u * v ** 3 <= 0; // v lên
+  const H = mk((x, y) => heart((x - 100) / 55, (100 - y) / 55)), H90 = mk((x, y) => heart((100 - y) / 55, (100 - x) / 55)), C = mk((x, y) => (x - 100) ** 2 + (y - 100) ** 2 <= 55 * 55);
+  const ref = lab([200, 30, 40]), h = heartCue(H.img, H.cx, H.cy, 0.55 * 125, ref), h90 = heartCue(H90.img, H90.cx, H90.cy, 0.55 * 125, ref), c = heartCue(C.img, C.cx, C.cy, 0.55 * 110, ref);
+  ok(h.heart && Math.abs(h.rotDeg) <= 8 && h90.heart && Math.abs(Math.abs(h90.rotDeg) - 90) <= 8 && !c.heart, `heartCue: tim ${h.heart} xoay ${h.rotDeg} (khía ${h.notch}), tim xoay ${h90.heart} ${h90.rotDeg}, tròn ${c.heart} (khía ${c.notch})`);
+}
+// KIT-27 cặp sinh đôi theo dải: trục cục bộ 48 mm (lệch giữa ảnh 50) từ các cặp cùng hàng → cặp gương; hạt lẻ 1 bên không ghép
+{
+  const ppm = 10, it = [];
+  for (const y of [20, 26, 32]) for (const dx of [10, 20]) for (const sg of [-1, 1]) it.push({ x: (48 + sg * dx) * ppm, y: y * ppm, dMm: 5, L: 50, a: 60, b: 40 });
+  it.push({ x: 70 * ppm, y: 40 * ppm, dMm: 6, L: 50, a: 60, b: 40 });
+  const t = twinPairs(it, ppm, 100 * ppm, { minMm: 4.5 });
+  ok(t.pairs.length === 6 && t.pairs.every(([i, j, off, ax]) => Math.abs(ax - 48) <= 0.5 && off <= 0.1 && it[i].y === it[j].y) && !t.pairs.some(([i, j]) => i === it.length - 1 || j === it.length - 1),
+    `twinPairs: ${t.pairs.length} cặp (đúng 6), trục ${[...new Set(t.pairs.map((p) => p[3]))]} (đúng 48)`);
 }
 console.log(fail ? `test_kit: ${fail} FAIL` : 'test_kit: OK');
 process.exit(fail ? 1 : 0);

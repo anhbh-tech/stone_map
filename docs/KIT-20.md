@@ -551,3 +551,126 @@ Cả 3 cột: 13 mã (≤ 15), check ok, fb1–4 + captain 0 %, hàng captain `5
   - Phủ ta / DB: 50.6 / 54.2 %. Viên phủ DB trong vùng ta: 54.3 → 69.5 %.
 - **`--sym-force`** (`king/force/`): cặp gương sym 4.6 → 79.6 %, tất cả 2.6 → 37 %.
   - Phủ: recall 50.5, code 3.2. Kín +90, còn 0 lỗ. 2535 viên.
+
+## KIT-27: self-audit by tile; symmetry off by default (captain msg 022)
+
+The captain decided whole-image symmetry is not workable (the no-symmetry run is better). The default is now **off**; `--sym` / `--sym-force` turn the KIT-26 code back on.
+
+The work then focused on the detail/fill split, checked without screenshots from the captain:
+
+1. Split the image into tiles.
+2. Generate one image per tile, source | overlay.
+3. Run automatic checks.
+4. Audit visually (Claude reads the PNGs, $0 API).
+5. Fix by cause group with general rules.
+6. Rerun and audit again.
+
+Full tables are in `outputs/kit/kit27/audit_summary.md`.
+
+### Tools
+
+```
+node tools/kit20.mjs --seg outputs/kit/kit20/seg_sam_all.json --chain outputs/kit/kit20/chain_all.json \
+  --fill-detect --fill-regions outputs/kit/kit27/fill_regions.json --out outputs/kit/kit27
+node tools/kit27_audit.mjs --svg outputs/kit/kit27/queen.svg --review outputs/kit/kit27/review.svg \
+  --fill outputs/kit/kit27/fill_regions.json --out outputs/kit/kit27      # [--tile 30 --overlap 0.1 --px 600 --no-png]
+```
+
+`kit27_audit.mjs` takes ~20 s.
+
+- **Tiles:** 30 mm with 10 % overlap over the bounding box of all stones, written to `tiles/<id>.png`. Each tile is 1256×626 px: left is the source, right is the review overlay, with absolute rulers every 5 mm.
+- **Auto checks:** `tools/kit27_audit.py` (OpenCV, kit20 venv) writes `tiles/index.json` (`pearl-kit-tiles/1`, per-tile items and suspicion rank) and `auto_audit.json`. It runs these checks:
+  - `bigMiss`: a solid SAM object ≥ 4 mm with no stone ≥ 0.55·d nearby.
+  - `shapeMis`: a SAM heart (≥ 4 mm) or teardrop/marquise (≥ 5 mm) whose nearest big stone has a different shape. Pearls are skipped. Smaller SAM teardrops on seed fields are two beads merged.
+  - `colorDE`: a palette code of the same shape and size is ≥ 15 / 25 ΔE closer to the stone's core pixels.
+  - `labelIncons`
+  - `fillHole`
+  - `emptyLarge`
+  - `outside`
+- **Visual verdicts:** `tile_audit.json` (`pearl-kit-tile-audit/1`). It holds `before.entries`, `entries` and `summary.byType` before/after. Error types:
+  - bigMissing
+  - wrongShape
+  - labelInconsistent
+  - fillGap
+  - wrongMaterialColor
+  - wrongSize
+  - outside
+  - misplaced
+  - other
+
+### Pipeline changes (`tools/kit20.mjs`)
+
+All of these are on by default; each has an off flag.
+
+- **Heart cue** (`lib/kit/shapecue.js` `heartCue`, `--heart-min 8`, `--no-heart-cue`). Applies to colour beads ≥ 8 mm that SAM did not call a heart.
+  - On the colour mask (hue ±28°, chroma ≥ 0.45×), take the component touching the centre and cast 180 rays from the bead centre.
+  - Heart = notch ≥ 0.2, notch width ≤ 80°, lobe symmetry ≤ 0.11, tip ≥ 0.95, lobes at ±40° ≥ 0.85.
+  - Rotation = notch + 90°.
+  - Queen: only the crown heart passes. It was round B and is now X039 12 mm, rotation 0.
+- **Twin vote** (`twinPairs` in `lib/kit/symmetry.js`, `--no-twin`, `--twin-min 4.5`).
+  - Local axis per 2 mm band: Gauss-weighted (σ 6 mm) histogram of same-row pair midpoints around the prior. The prior is the mask-flip axis.
+  - Pairs: mutual best mirror match, offset ≤ 0.35·d + 0.8 mm, size ≤ 1.8×, ΔE ≤ 30.
+  - Each pair gets the material of its averaged features and the shape, size and rotation (mirrored) of the larger bead, plus a Potts mirror edge.
+  - Queen: 34 pairs, 8 changed. The crown fleurs, E and J, are now teardrop/teardrop.
+- **Big codes** (`--big-min 5`, `--big-count 5`, `--no-big-codes`).
+  - Round non-pearl beads ≥ 5 mm whose cheapest palette code is ≥ 1.5 mm smaller are clustered by material + ΔE < 15.
+  - A cluster of ≥ 5 gets the catalog code with the lowest Σ weight·stoneCost.
+  - The code is kept hard when the old code is ≤ 60 % of the cluster's median size. A new pearl code with ≥ 20 beads (`--pearl-keep-min`) is also kept hard.
+  - mergeDown also considers the curve's 13-code palette when the curve picked fewer codes. Without that, King lost Q123/L16 to the new codes and detail-zone DB code fell 30.1 → 18.9 %.
+- **Motifs** (`--motif-gap 0.5`, was 0.35).
+  - Ring angles are measured around the petal centroid, because the centre bead can be drawn off-centre.
+  - Motifs of one kind share one petal decision (median ratio, body, rim, touch, outline). The kind = same centre material/size ≤ 1.25×, same petal count, petal size ≤ 1.25×, ΔE ≤ 15.
+  - A short-petal ring becomes all round.
+  - Queen: motifs 4 → 16. The two red flowers on the skirt are both marquise 6×12; before, one was round + 1 marquise and the mirror was teardrop 8×13.
+- **§3g enclosed gaps** (`--no-gap-fill`, `--gap-enclose 12`).
+  - First, each drawn bead ≥ 4 mm whose centre is not covered is placed again at the largest same-material round code that fits, ≥ 0.55× the drawn size (9 beads).
+  - Then, on a 0.5 mm grid in the mask, a 2.8 mm stone goes wherever it fits and ≥ 12 of 16 rays at (clearance + 1.5 mm) hit a stone or the mask edge. Code = nearest 2.8 mm palette code to the local median colour (149 stones).
+  - Drawn beads ≥ 4 mm keep their footprint empty. The collar heart is drawn ~25 mm against a 12 mm catalog heart.
+  - Open printed areas stay open (partial drill).
+- **§3h re-code** (`--recode-gain 20`, `--recode-fill-only`, `--no-recode`).
+  - Fill, gap and single detail stones (not chain / group / motif / petal / twin) switch to a same-size palette code ≥ 20 ΔE closer to the core pixels.
+  - Example: white fill over a narrow red cord. Queen: 25 stones.
+
+### Numbers (Queen, $0 API, ~2 min per run)
+
+Base = the KIT-26 code with symmetry off (`outputs/kit/kit27/base`).
+
+| metric | base | **KIT-27** |
+|---|---|---|
+| visual audit: high errors / tiles with high / ok tiles | 87 / 53 / 11 | **48 / 33 / 14** |
+| auto: bigMiss high+med / fillHole / colorDE high / emptyLarge | 61 / 90 / 37 / 9 | 43 / 49 / 24 / 2 |
+| DB all: recall / prec | 42.7 / 55.6 | 44.3 / 55.4 |
+| DB fill zone: recall / prec / mat / size / code | 51.8 / 55.3 / 87.5 / 97.9 / 70.1 | 53.0 / 55.6 / 88.3 / 97.7 / 70.6 |
+| DB detail zone: recall / prec / mat / size / code | 37.9 / 55.8 / 71.6 / 72.6 / 14.2 | 40.2 / 55.3 / 71.3 / 73.9 / 14.9 |
+| coverage | 47.9 % | 50.7 % |
+| GT KIT-15 ≥ 2 mm stones: recall / prec / mat / size / shape | 43.2 / 50 / 73.7 / 47.4 / 89.5 | 43.2 / 46.3 / 73.7 / 44.7 / 89.5 |
+| GT ≥ 4 mm recall | 57.6 | 60.6 |
+| consistency | 2.6 % (8/308) | 2.8 % (11/388) |
+| stones / codes (Queen uses) | 2480 / 13 (12) | 2583 / 13 (11) |
+| ΔE Queen / Starry | 14.97 / 8.85 | 14.82 / 10.3 |
+
+Both columns: check ok, fb1–4 + captain 0 %, captain row `5 5 - 5 5 5 5`.
+
+GT precision 50 → 46.3: §3g puts stones on drawn red/white beads that the KIT-15 key does not list (cape tile: recall 48.4 → 51.6).
+
+Starry ΔE 8.85 → 10.3: W4 (big red) is kept hard and pearl 6 is kept, so L50 deep blue is merged into L47 for 2439 Starry stones.
+
+**King, same code, no King-specific parameters** (`outputs/kit/kit27/king`):
+
+| metric | KIT-26 | KIT-27 |
+|---|---|---|
+| stones | 2628 | 2762 |
+| DB all recall | 46.4 | 49.1 |
+| detail zone: recall / code | 43.5 / 28.9 | 48.8 / 30.3 |
+| fill zone: recall / code | 51.0 / 2.4 | 49.7 / 2.7 |
+| consistency | 2.3 % (17/744) | 3.0 % (24/803) |
+
+King also: 13 codes, check ok.
+
+### Not fixed (physical or palette limits; details in `audit_summary.md`)
+
+- **Gold rondelles:** 5.3×3.8 mm at a 3.57 mm pitch. A 4 mm round does not fit and the catalog has no oval.
+- **Overlapping drawn pearl rows:** captain row `5 5 - …`. Fixing it needs row re-spacing (`--resample-min`).
+- **8–10 mm red centres:** they are W4 5 mm. A 14th code would push Z16 out.
+- **Odd shapes:** pear pearls and two-lobed leaf crystals have no catalog shape.
+- **6 mm champagne pearls:** classed as gold and size-smoothed to 2.8 by the MRF.

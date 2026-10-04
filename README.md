@@ -17,6 +17,8 @@ Thước đo chính là **bản máy làm phải đúng nhất có thể so vớ
 
 ---
 
+Tổng quan toàn hệ thống: [`docs/STONEMAP-OVERVIEW.md`](docs/STONEMAP-OVERVIEW.md).
+
 ## Trạng thái (`features/initial_approach`)
 
 | Giai đoạn | Nội dung | Trạng thái |

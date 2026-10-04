@@ -463,3 +463,91 @@ Nền tuyết F1 (29 225 mm²): DB chỉ khoan 30.6 % (998 viên), ta khoan kín
    - Phần lớn đã được chuỗi vàng (A) phủ trước: tổng 239 viên, 61.7 %; phủ chỉ thêm 4.
    - Giữ là chi tiết ("cột"), tắt vùng (`enabled: false`), hay để như hiện tại?
 4. **Mã vùng đỏ.** Queen F5 / F17 DB L5, ta L4. Snowman F3 DB L4, ta L77: màu trung vị vùng gần L77 hơn.
+
+## KIT-26 — vùng phủ kín + đối xứng gương (captain msg 021)
+
+### (1) Vùng phủ: bắt thêm, phủ kín
+
+`lib/kit/fill.js` `detectFill`, tổng quát (không toạ độ / màu riêng ảnh):
+
+- **Hạt mầm thưa** (`sparse`): cụm ≥ 6 hạt cách ≤ 2.5 hạt vẽ, ≥ 100 mm² cũng làm mầm. Bắt được cổ áo đỏ quanh ô mặt, vương miện, các dải đỏ áo choàng.
+- **Chặn bởi chuỗi vàng** (`blockPts`): điểm `--chain` (C* ≥ 47 hoặc rộng ≥ 1 mm, không nằm trong hạt khác vàng) chặn vùng nở, để vùng không tràn qua viền vàng.
+- **Bề rộng đo trên lõi đã đóng.** Mask vùng được đóng bán kính ½ hạt, rồi lấy p90 EDT. Vùng hẹp vẫn giữ khi lõi ≥ `coreMin` 2 hạt và bề rộng ≥ `widthLoose` 1.3. Trước đây dải đỏ nở răng cưa bị loại vì 2A/P < 1.6.
+- **Tâm viên luôn trong mask trang phục** (`packRegion` `clip`). Vùng nở có thể phủ lên lỗ mask: King trước có 7 viên ngoài mask, nay 0.
+- **Lượt kín (§3f):** sau mọi viên, `packRegion(…, { holesOnly: true })` lấp mọi lỗ còn chứa được 1 viên cỡ vùng.
+  - Vùng đối xứng: lấp cặp gương. Nếu bản gương không vừa thì đặt 1 viên đơn (kín ưu tiên hơn đối xứng).
+  - `kit26.kin.holesLeft` = số chỗ còn đặt được 1 viên, đã kiểm cùng mask. Queen 0, King 0.
+
+`kit/templates/queen_fill_regions.json` được cập nhật bằng kết quả dò KIT-26: 23 vùng (KIT-25 có 17), `checked: false`.
+
+**Vùng còn sót / lỗi đã biết:**
+
+- Mép phải cổ áo và 2 mép vương miện bị đánh dấu "vật thể" (màu cam trong `symmetry.png`). Lý do: mask lật lệch vài mm ở đó. Các phần này vẫn chạy pipeline cũ, không đối xứng, nhưng vẫn được phủ.
+- Nửa trái vương miện: vùng gốc F20 chỉ có 4 viên. Phần còn lại được phủ bằng bản gương của F14 (nét đứt trong `fill_regions.png`).
+
+### (2) Đối xứng gương (`lib/kit/symmetry.js`)
+
+**Trục.** Chọn x có IoU(mask, mask lật) lớn nhất trong khoảng 90–210 mm, lưới 0.5 mm, nội suy parabol. Có thể chỉnh tay bằng `--sym-axis <mm>`.
+- Queen: 153.75 mm. Trung điểm viền mask theo hàng: vương miện 153.8, áo choàng 154.4–154.7.
+- Hai tuỳ chọn `iouTol` (bình nguyên IoU → chọn ΔE nhỏ nhất) và `refine` (ước lượng lại trên mask trừ vật thể) mặc định tắt. Trên Queen chúng kéo trục về 150.75 mm, lệch 3 mm khỏi viền.
+
+**Phần dư sau lật.** Ảnh Lab được làm mượt ±4 mm. Ô có ΔE > 30 so với ô gương → vẽ lệch (`asym`).
+- Thành phần lòi ra ngoài mask lật ≥ 15 mm², ≥ 2× phần đối diện và ≥ 30 % diện tích của nó → **vật thể** (`obj`, quyền trượng). Không hardcode.
+- `zone(x, y)` trả về `sym` / `asym` / `obj` / `out`.
+- Ảnh duyệt `symmetry.png`: cam = vật thể, xanh = vẽ lệch, xanh lá = trục.
+
+**Tự bật / tắt.** Bật khi có mask, IoU ≥ 0.85 và ≥ 60 % ô (ngoài vật thể) giống ảnh lật.
+- Ảnh không có mask (khung đầy nền) → tắt.
+- `--sym-force` ép bật, `--no-sym` tắt.
+
+**Dùng trong `tools/kit20.mjs`:**
+
+1. **Bằng chứng 2 bên.** Hạt vùng `sym` được ghép cặp gương (`mirrorPairs`: cùng chất liệu, lệch ≤ ½ cỡ). Mỗi cặp là 1 cạnh Potts rất mạnh `--mrf-mirror` 8 (KIT-23), nên 2 bên vote chung nhãn.
+2. **Lượt gương (§3e).** Viên trong `obj` / `asym` giữ nguyên và được đặt trước.
+   - Viên `sym` không thuộc phủ: lấy bên trái trước, rồi bản gương của bên phải lấp chỗ trống (union 2 bên).
+   - Mỗi viên xuất cặp: x' = 2·trục − x, xoay 360 − rot, cùng mã / cỡ / hình.
+   - Viên chạm trục → 1 viên trên trục, xoay 0/180 (hình hạt thêm 90/270).
+   - Bản gương rơi vào vật thể, ra ngoài mask hoặc va chạm → giữ đơn.
+3. **Vùng phủ.** Vùng ∪ bản gương của nó được đóng gói lại đối xứng trên nửa trái (tâm x ≤ trục + ½ viên), rồi gương sang phải.
+4. **Vùng staff.** Giữ pipeline cũ; staff đè lên trên.
+
+**Bằng chứng DB.** Sản phẩm thật không đối xứng gương: tỉ lệ cặp gương cùng mã trong `kit.sqlite` chỉ 7.7 % (Queen) và 7.8 % (King). Chi tiết vẽ bên trong lệch trục khoảng 6–12 mm. Vì vậy đối xứng tuyệt đối làm giảm khớp với DB (bảng dưới). Đây là đánh đổi có chủ ý theo dữ kiện của captain.
+
+### Lệnh
+
+```
+node tools/kit20.mjs --seg outputs/kit/kit20/seg_sam_all.json --chain outputs/kit/kit20/chain_all.json \
+  --fill-detect --fill-regions outputs/kit/kit26/fill_regions.json --out outputs/kit/kit26   # [--no-sym | --sym-force | --sym-axis 153.75 | --no-kin]
+node tools/kit20.mjs --name king --img outputs/kit/kit25/king/up.png --mask outputs/kit/kit25/king/mask.png \
+  --review-bg outputs/kit/kit25/king/input.jpg --seg outputs/kit/kit25/king/seg_sam_all.json --chain outputs/kit/kit25/king/chain_all.json \
+  --fill-detect --fill-regions outputs/kit/kit26/king/fill_regions.json --no-gt --out outputs/kit/kit26/king  # + --sym-force → king/force
+node tools/kit25_score_db.mjs --svg outputs/kit/kit26/queen.svg --regions outputs/kit/kit26/fill_regions.json --product queen
+```
+
+### Số (Queen; $0 API; ~3 phút / chạy)
+
+**Đối xứng.** BẬT: trục 153.75 mm, IoU 0.866, điểm 0.8.
+- Diện tích: vật thể 4806 mm², vẽ lệch 7768 mm², sym 30762 mm².
+- Cặp hạt Potts: 113 (13.8 % hạt).
+- Lượt gương: 518 cặp, 17 trên trục, 94 đơn. Phủ: 316 điểm → 266 cặp, 10 trục, 36 đơn, 4 hỏng.
+- Kín: +56 viên, còn 0 lỗ. Ngoài mask: 0.
+
+| chỉ số | KIT-25 | KIT-26 `--no-sym` | **KIT-26** |
+|---|---|---|---|
+| cặp gương cùng mã, vùng sym / tất cả | — | — | 5.2→**89.6** / 4.2→**71.3** % |
+| GT KIT-15 ≥ 2 mm ngoài phủ: recall / prec / mat / size | 45.1 / 57.1 / 78.1 / 43.8 | 47.8 / 54.1 / 78.8 / 39.4 | 46.4 / 50.0 / 75.0 / 40.6 |
+| DB vùng phủ, cùng vùng KIT-26: recall / prec / mat / size / code | 48.6 / 54.6 / 87.9 / 97.2 / 69.6 | 51.8 / 55.3 / 87.5 / 97.9 / 70.1 | 46.1 / 50.8 / 78.7 / 97.0 / 63.7 |
+| phủ ta / DB (%) | 48.0 / 53.8 | 50.0 / 53.8 | 49.4 / 52.4 |
+| viên phủ DB nằm trong vùng ta dò | 50.6 % (vùng KIT-25) | 63.7 % | 63.7 % |
+| mã vùng đúng | 14/15 | 21/21 | 21/21 |
+| consistency (k) | — | 2.6 % | 4.8 % (9/188) |
+
+Cả 3 cột: 13 mã (≤ 15), check ok, fb1–4 + captain 0 %, hàng captain `5 5 - 5 5 5 5`. KIT-26: 2458 viên.
+
+**King, cùng code.**
+- **Tự tắt:** trục 153.0 mm, IoU 0.854, điểm 0.524 < 0.6. Áo King vẽ lệch nhiều.
+  - 2628 viên, 13 mã, check ok, consistency 2.3 %.
+  - Phủ vs DB: recall 51.3, prec 51.4, mat 91.1, size 93.1, code 2.4 (mã DB nằm ngoài catalog).
+  - Phủ ta / DB: 50.6 / 54.2 %. Viên phủ DB trong vùng ta: 54.3 → 69.5 %.
+- **`--sym-force`** (`king/force/`): cặp gương sym 4.6 → 79.6 %, tất cả 2.6 → 37 %.
+  - Phủ: recall 50.5, code 3.2. Kín +90, còn 0 lỗ. 2535 viên.

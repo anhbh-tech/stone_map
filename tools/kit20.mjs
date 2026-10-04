@@ -14,7 +14,8 @@ import { loadCatalog, entryOf, checkDesign } from '../lib/kit/catalog.js';
 import { normalizeDoc, writeKitSvg } from '../lib/kit/svgio.js';
 import { buildDoc, upscale, materialOf, lab } from '../lib/kit/select.js';
 import { gapMm } from '../lib/kit/shapes.js';
-import { decodePng } from '../lib/png.js';
+import { decodePng, encodePng } from '../lib/png.js';
+import { symmetryOf, mirrorPairs, pairRate } from '../lib/kit/symmetry.js';
 import { jointPalette, stoneCost } from '../lib/kit/palette.js';
 import { scoreStones, mat4Of } from './score_template_gt.mjs';
 import { pottsExpand } from '../lib/kit/potts.js';
@@ -59,6 +60,27 @@ for (const b of cand) {
 const keep0 = cand.filter((b) => !drop.has(b.i)).sort((p, q) => q.score - p.score);
 const beads = [];
 for (const b of keep0) if (!beads.some((k) => Math.hypot(k.x - b.x, k.y - b.y) / PPM < 0.35 * Math.min(k.dMm, b.dMm) && Math.abs(k.dMm - b.dMm) < 0.35 * Math.max(k.dMm, b.dMm))) beads.push(b);
+let upImg0 = null, mk0;
+const upImage = () => (upImg0 ||= decodePng(fs.readFileSync(UP4)));
+const maskInside = () => {
+  if (mk0 === undefined) { const m = MASKF === 'none' ? null : decodePng(fs.readFileSync(path.resolve(ROOT, MASKF))); mk0 = m && ((x, y) => { const j = (Math.min(m.h - 1, Math.round(y)) * m.w + Math.min(m.w - 1, Math.round(x))) * 4; return m.data[j] > 200 && m.data[j + 1] > 200 && m.data[j + 2] > 200; }); }
+  return mk0;
+};
+
+// ── 1b. KIT-26 đối xứng gương (captain msg 021, lib/kit/symmetry.js): trục dọc = IoU lớn nhất giữa mask và mask lật (--sym-axis <mm> chỉnh
+// tay); phần dư sau lật → vật thể 1 phía (quyền trượng, lòi ra ngoài mask lật) + vùng vẽ lệch (ΔE ảnh với ô gương > 30 sau làm mượt ±4 mm,
+// vd cột giữa vẽ lệch trục). Tắt tự động khi mask lật trùng < 0.85 hoặc < 60 % ô (ngoài vật thể) giống ảnh lật, hoặc không có mask.
+// Vùng "sym": cặp gương hạt trái ↔ hạt phải (≤ ½ cỡ sau lật, cỡ ≤ 1.4×, ΔE ≤ 30) = cạnh Potts rất mạnh (1 nhãn chung, §2e); hạt không
+// đổi (bảng mã / GT 1 bên như cũ). Union + xuất 2 bên y hệt ở mức viên (§3e), vùng phủ xếp lại đối xứng, lượt kín (§3f).
+// Vật thể / vẽ lệch: giữ nguyên pipeline cũ
+const symOn = !kit22 && !args.includes('--no-sym'), symInfo = { enabled: symOn };
+let sym = null;
+if (!kit22) {
+  sym = symmetryOf(upImage(), upImage().w / W, maskInside(), W, PPM, { ...(flag('--sym-axis') && { axisMm: +flag('--sym-axis') }), ...(args.includes('--sym-force') && { force: true }) });
+  Object.assign(symInfo, { on: !!sym.on, reason: sym.reason, axisMm: sym.axisMm, axisPx: sym.axisPx && +sym.axisPx.toFixed(1), manualAxis: sym.manualAxis, maskIoU: sym.iou, score: sym.score, objAreaMm2: sym.objAreaMm2, objComps: sym.objComps, params: sym.params && { ...sym.params, axisMm: undefined } });
+  if (sym.grid) { const z = {}; for (let gy = 0; gy < sym.grid.n; gy++) for (let gx = 0; gx < sym.grid.n; gx++) { const k = sym.zone((gx + 0.5) * sym.grid.cp, (gy + 0.5) * sym.grid.cp); z[k] = (z[k] || 0) + 1; } symInfo.zoneMm2 = Object.fromEntries(Object.entries(z).filter(([k]) => k !== 'out').map(([k, v]) => [k, Math.round(v / sym.params.res ** 2)])); }
+}
+const symAct = symOn && !!sym?.on;
 
 // ── 2. vật liệu
 // ngưỡng chỉnh theo trung vị đặc trưng hạt khớp GT (--analyze; ảnh vẽ ấm: ngọc trai C* ~24, pha lê C* ~9 + nhiều cạnh, vàng C* ~79 hue ~72°, đỏ hue ~40°)
@@ -318,9 +340,13 @@ if (fillOn) {
   let doc;
   if (fs.existsSync(FILLF) && !args.includes('--fill-detect')) { doc = readFillRegions(FILLF); fillInfo.source = 'file'; }
   else {
-    const upF = decodePng(fs.readFileSync(UP4)), mkF = MASKF === 'none' ? null : decodePng(fs.readFileSync(path.resolve(ROOT, MASKF)));
-    const inside = mkF && ((x, y) => { const j = (Math.min(mkF.h - 1, Math.round(y)) * mkF.w + Math.min(mkF.w - 1, Math.round(x))) * 4; return mkF.data[j] > 200 && mkF.data[j + 1] > 200 && mkF.data[j + 2] > 200; });
-    const det = detectFill(beads, (m4) => SZ[m4] || [], { ppm: PPM, image: upF, imageK: upF.w / W, inside });
+    const upF = upImage(), inside = maskInside();
+    // KIT-26: đường tâm viền vàng (tools/kit20_chain.py) chặn vùng nở (viền / khung vương miện / quyền trượng không thành vùng phủ);
+    // lọc như §3b: điểm C* ≥ 47 hoặc dải rộng ≥ 1 mm, không nằm trong lòng 1 hạt vẽ không phải vàng (bóng ấm giữa ngọc)
+    const nonGoldB = beads.filter((b) => b.cls.m4 !== 'gold');
+    const blockPts = flag('--chain') ? JSON.parse(fs.readFileSync(path.resolve(ROOT, flag('--chain')), 'utf8')).points.filter((c) => (Math.hypot(c.a, c.b) >= 47 || c.widthMm >= 1) && !nonGoldB.some((b) => Math.hypot(b.x - c.x, b.y - c.y) / PPM < 0.5 * b.dMm)).map((c) => ({ x: c.x, y: c.y, rMm: 1.4 })) : [];
+    const det = detectFill(beads, (m4) => SZ[m4] || [], { ppm: PPM, image: upF, imageK: upF.w / W, inside, blockPts });
+    det.stat.blockPts = blockPts.length;
     fillInfo.stat = det.stat; fillInfo.source = 'detect';
     doc = { schema: FILL_SCHEMA, image: path.relative(ROOT, UP4), canvasPx: W, canvasMm: MM, checked: false,
       note: 'sửa tay: polygon (px canvas 3543 = 300 mm), holes (vòng lỗ bên trong, không đính), material (viên), physMm, code (null = theo bảng mã), angleDeg, packPitchMm (null = đính kín cỡ + 0.15 mm; lớn hơn = khoan thưa), enabled; đặt checked: true khi captain duyệt; rerun đọc file này, --fill-detect dò lại (file checked không bị ghi đè)',
@@ -335,7 +361,7 @@ if (fillOn) {
   for (const r of fillRegions) {
     r.members = beads.filter((b) => !take.has(b) && fillMember(b, r));
     r.members.forEach((b) => take.add(b));
-    r.packed = packRegion(r, { ppm: PPM, gapMm: GAP });
+    r.packed = packRegion(r, { ppm: PPM, gapMm: GAP, clip: maskInside() || undefined });
   }
   fillInfo.beadsRemoved = take.size; fillRemoved = [...take];
   for (let k = beads.length - 1; k >= 0; k--) if (take.has(beads[k])) beads.splice(k, 1);
@@ -622,7 +648,7 @@ const ranked = (r) => palE.map((e, j) => [stoneCost(r, e, palL[j], NOCROSS)[0], 
 //   hạt liền nhau trong chuỗi / cột KIT-21 (½ khi cạnh thu cỡ dần); cánh cùng motif xoay: mọi cặp w_motif (1.5; 5 cánh → 6 / cánh,
 //   hơn phạt hình → tròn 3 + thu cỡ của cánh giọt). Alpha-expansion.
 // Cạnh "mạnh" (cấu trúc hoặc w ≥ β/2) = cặp cùng cấu trúc của chỉ số consistency
-const MRF = { alpha: +flag('--mrf-alpha', 3), beta: +flag('--mrf-beta', 1), gamma: +flag('--mrf-gamma', 2), motif: +flag('--mrf-motif', 1.5), sigma: +flag('--mrf-sigma', 12), scale: 20, kappa: 2, size: +flag('--mrf-size', 1), fam: +flag('--mrf-fam', 1), cap: !args.includes('--no-cap') };
+const MRF = { alpha: +flag('--mrf-alpha', 3), beta: +flag('--mrf-beta', 1), gamma: +flag('--mrf-gamma', 2), motif: +flag('--mrf-motif', 1.5), mirror: +flag('--mrf-mirror', 8), sigma: +flag('--mrf-sigma', 12), scale: 20, kappa: 2, size: +flag('--mrf-size', 1), fam: +flag('--mrf-fam', 1), cap: !args.includes('--no-cap') };
 const mrfOn = !kit22 && !args.includes('--no-mrf'), nudge0 = +flag('--nudge', 0.2);
 const famM = (m) => (m === 'pearl' || m === 'white' ? 'w' : m);
 const graph = new Map(), BI = new Map(beads.map((b, k) => [b, k]));
@@ -653,6 +679,9 @@ const edge = (i, j, kind, w) => {
   for (const m of motifs) for (let p = 0; p < m.ring.length; p++) for (let q = p + 1; q < m.ring.length; q++) if (BI.has(m.ring[p]) && BI.has(m.ring[q])) edge(BI.get(m.ring[p]), BI.get(m.ring[q]), 'motif', MRF.motif);
 }
 const strong = (g) => g.wc > 0 || g.ws >= 0.5 * MRF.beta;
+// KIT-26 cặp gương trên tập hạt cuối (sau láng giềng / chuỗi / vùng phủ): hạt trái ↔ hạt phải
+const symPairs = symAct ? mirrorPairs(beads, sym, PPM, { axisTol: (a) => 0.3 * a.dMm, tol: (a, b) => 0.5 * Math.max(a.dMm, b.dMm), same: (a, b) => Math.max(a.dMm, b.dMm) / Math.min(a.dMm, b.dMm) <= 1.4 && Math.hypot(a.L - b.L, a.a - b.a, a.b - b.b) <= 30 }) : [];
+if (symAct) symInfo.beadPairs = { beads: beads.length, pairs: symPairs.length, pairedPct: +((200 * symPairs.length) / Math.max(1, beads.filter((b) => sym.zone(b.x, b.y) === 'sym').length)).toFixed(1) };
 const nB = beads.length, Lc = palE.length, U = new Float64Array(nB * Lc).fill(Infinity), clsM = [], clsR = [];
 const recFrom = (c) => ({ layer: 'queen', mat: catMat(c), physMm: c.physMm, ...(c.shape !== 'round' && { shape: c.shape, w: c.w, h: c.h }), t: c.t, one: false, gwl: 1, from: 'bead' });
 const capD = new Float64Array(nB).fill(Infinity), R0 = (e) => Math.max(e.physMm, e.physW || 0, e.physH || 0);
@@ -693,7 +722,10 @@ const mrf = { enabled: mrfOn, params: MRF, nodes: nB, edges: graph.size, strongE
 let labels = null;
 if (mrfOn) {
   const init = Int32Array.from({ length: nB }, (_, k) => argmin(k));
-  const r = pottsExpand({ n: nB, L: Lc, unary: U, edges: [...graph.values()].map((g) => [g.i, g.j, Math.max(g.ws, g.wc)]), init });
+  // KIT-26: cặp gương (hạt chủ ↔ bản gương, cùng mid) = cạnh rất mạnh → 1 nhãn (không tính vào consistency)
+  const mirE = symPairs.map(([a, c]) => [a, c, MRF.mirror]);
+  mrf.mirrorEdges = mirE.length;
+  const r = pottsExpand({ n: nB, L: Lc, unary: U, edges: [...[...graph.values()].map((g) => [g.i, g.j, Math.max(g.ws, g.wc)]), ...mirE], init });
   labels = r.labels;
   mrf.energy = { init: +r.history[0].toFixed(1), final: +r.energy.toFixed(1) }; mrf.cycles = r.cycles;
   const by = {};
@@ -842,7 +874,7 @@ for (const [k, r] of fillRegions.entries()) {
   r.result = { code: e?.code ?? null, codeNote: r.code && !palE.some((x) => x.code === r.code) ? `mã sửa tay ${r.code} không có trong bảng` : undefined, points: r.packed.points.length, placed: 0, collision: 0, nudged: 0 };
   if (!e) continue;
   const obstacles = placed.map((t) => ({ x: t.b.x, y: t.b.y, rMm: R(t.e) }));
-  r.packed = packRegion(r, { ppm: PPM, gapMm: GAP, obstacles });
+  r.packed = packRegion(r, { ppm: PPM, gapMm: GAP, obstacles, clip: maskInside() || undefined }); // tâm viên trong mask (vùng nở có thể phủ lỗ mask)
   r.result.points = r.packed.points.length;
   for (const q of r.packed.points) {
     const s = { b: { x: q.x, y: q.y, dMm: r.physMm, score: 0, rotDeg: 0, cls: { m4: r.material, physMm: r.physMm, shape: 'round' }, src: 'fill', fill: r.id }, rec, opts: [e], e, alt: [] };
@@ -853,10 +885,101 @@ for (const [k, r] of fillRegions.entries()) {
   }
 }
 
+// ── 3e. KIT-26 gương lượt cuối: viên vùng "sym" (ngoài vật thể / vẽ lệch) → union trái ∪ gương(phải), rồi xuất 2 bên y hệt.
+// Viên vật thể / vẽ lệch giữ nguyên (đặt trước, thắng va chạm). Ứng viên (trái + gương của phải) theo thứ tự đặt gốc: viên chạm
+// đúng bản gương của chính nó → đặt lên trục (xoay về 0 / 180°, đơn) nếu vừa, không thì bỏ; còn lại cần vừa cả 2 chỗ (bản gương dưới
+// vật thể / ngoài mask → chỉ 1 viên). Vùng phủ hợp nhất theo cùng cách (viên vùng phủ phải → ứng viên trái)
+const symRep = { on: symAct };
+const obstaclesNow = () => placed.map((t) => ({ x: t.b.x, y: t.b.y, rMm: R(t.e) }));
+const fillTargets = () => fillRegions.filter((r) => r.result?.code).flatMap((r) => [{ r, mirrored: false }, ...(symAct ? [{ r: { ...r, id: `${r.id}'`, polygon: r.polygon.map(([x, y]) => [2 * sym.axisPx - x, y]), holes: (r.holes || []).map((hl) => hl.map(([x, y]) => [2 * sym.axisPx - x, y])) }, mirrored: true }] : [])]);
+const mirS = (s) => ({ ...s, b: { ...s.b, x: 2 * sym.axisPx - s.b.x, rotDeg: (360 - ((s.b.rotDeg || 0) % 360)) % 360 } });
+const twin = new Map(); // chỉ số hạt ↔ hạt gương
+for (const [a, c] of symPairs) { twin.set(a, c); twin.set(c, a); }
+const stoneList = () => placed.map((t) => ({ x: t.b.x, y: t.b.y, code: t.e.code }));
+if (sym?.axisPx) symRep.pairRateBefore = pairRate(stoneList(), sym, PPM);
+// đặt cặp (viên trái + bản gương) đối xứng; trả về 'pair' | 'axis' | 'single' | null (không vừa)
+function placeSym(s, mk) {
+  const mi = maskInside(), inM = (t) => sym.zone(t.b.x, t.b.y) !== 'out' && (!mi || mi(t.b.x, t.b.y));
+  if (!inM(s)) return null; // ngoài trang phục (đa giác vùng gương lòi ra ngoài mask bên này)
+  const ax = sym.axisPx, m = mirS(s), zm = inM(m) ? sym.zone(m.b.x, m.b.y) : 'out', A = geo(s, s.e), selfGap = s.e.shape ? gapMm(A, geo(m, m.e), PPM) : (2 * Math.abs(s.b.x - ax)) / PPM - 2 * R(s.e);
+  if (selfGap < GAP - 1e-3) { // chồng lên chính bản gương → 1 viên trên trục
+    const rot = s.e.shape ? [0, 180, ...(s.e.shape === 'marquise' ? [90, 270] : [])].reduce((a, r) => (Math.abs(((s.b.rotDeg - r + 540) % 360) - 180) < Math.abs(((s.b.rotDeg - a + 540) % 360) - 180) ? r : a), 0) : 0;
+    const t = { ...s, b: { ...s.b, x: ax, rotDeg: rot } };
+    if (!fits(t, t.e)) return null;
+    commit(t, { e: t.e }); return 'axis';
+  }
+  if (!fits(s, s.e)) return null;
+  if (zm === 'obj' || zm === 'out') { commit(s, { e: s.e }); return 'single'; }
+  if (!fits(m, m.e)) { commit(s, { e: s.e }); return 'single'; } // bản gương chạm viên vẽ lệch / vật thể bên kia
+  if (mk !== undefined || s.k != null) { m.k = mk !== undefined ? mk : twin.get(s.k); m.b = { ...m.b, i: m.k != null ? beads[m.k].i : undefined }; }
+  commit(s, { e: s.e }); commit(m, { e: m.e }); return 'pair';
+}
+if (symAct) {
+  const ax = sym.axisPx, fixed = [], cand = [];
+  let fillSym = 0;
+  placed.forEach((t, o) => { const z = sym.zone(t.b.x, t.b.y); if (z !== 'sym') fixed.push(t); else if (t.b.src === 'fill') fillSym++; else if (t.b.x <= ax) cand.push({ s: t, from: 'left', o }); else { const sm = mirS(t); sm.k = twin.get(t.k); sm.b = { ...sm.b, i: sm.k != null ? beads[sm.k].i : undefined }; cand.push({ s: sm, from: 'right', orig: t, o: 1e9 + o }); } });
+  placed.length = 0; grid.clear();
+  for (const t of fixed) commit(t, { e: t.e });
+  // trái trước (giữ đúng hạt vẽ 1 bên, mỗi bên theo thứ tự đặt gốc: to / hình → viền vàng → hạt nhỏ), gương của phải chỉ lấp chỗ trống
+  cand.sort((p, q) => p.o - q.o);
+  const st = { fixed: fixed.length, candidates: cand.length, fillRepacked: fillSym, left: 0, fromRight: 0, pair: 0, axis: 0, single: 0, dropped: 0, rightOutside: 0 };
+  for (const c of cand) {
+    if (c.from === 'right' && !sym.inMask(c.s.b.x, c.s.b.y)) { if (fits(c.orig, c.orig.e)) { commit(c.orig, { e: c.orig.e }); st.rightOutside++; } else st.dropped++; continue; }
+    const r = placeSym(c.s, c.from === 'right' ? c.orig.k ?? null : undefined);
+    if (!r) { st.dropped++; continue; }
+    st[r]++; st[c.from === 'left' ? 'left' : 'fromRight']++;
+  }
+  // vùng phủ phần sym: xếp lại đối xứng trên vùng ∪ gương(vùng), tâm nửa trái, viên chi tiết đã đặt là vật cản → đặt cặp gương
+  st.fill = { points: 0, pair: 0, axis: 0, single: 0, failed: 0 };
+  for (const { r } of fillTargets()) {
+    const e = palE.find((x) => x.code === r.result.code), k = fillRegions.findIndex((q) => q.id === r.id.replace(/'$/, ''));
+    const pk = packRegion(r, { ppm: PPM, gapMm: GAP, obstacles: obstaclesNow(), clip: (x, y) => sym.zone(x, y) === 'sym' && x <= ax + 0.5 * R(e) * PPM });
+    st.fill.points += pk.points.length;
+    for (const q of pk.points) {
+      const s = { b: { x: q.x, y: q.y, dMm: r.physMm, score: 0, rotDeg: 0, cls: { m4: r.material, physMm: r.physMm, shape: 'round' }, src: 'fill', fill: fillRegions[k].id }, rec: recF[k], opts: [e], e, alt: [] };
+      const res = placeSym(s); if (res) st.fill[res]++; else st.fill.failed++;
+    }
+  }
+  symRep.final = st;
+}
+// ── 3f. KIT-26 kín: sau mọi viên, lấp mọi lỗ còn chứa được 1 viên cỡ vùng trong vùng phủ (packRegion chỉ lấp lỗ, mọi viên đã đặt là vật
+// cản); đối xứng: vùng + bản gương của vùng (hợp nhất 2 bên), tâm chỉ nửa trái (vùng sym) rồi đặt cặp gương; vùng vẽ lệch chỉ vùng gốc.
+// holesLeft = điểm còn đặt được 1 viên sau lượt này (mục tiêu 0)
+const kin = { added: 0, pair: 0, axis: 0, single: 0, failed: 0, holesLeft: {} };
+if (fillOn && !args.includes('--no-kin')) {
+  for (const { r, mirrored } of fillTargets()) {
+    const e = palE.find((x) => x.code === r.result.code), k = fillRegions.findIndex((q) => q.id === r.id.replace(/'$/, '')), rec = recF[k];
+    const mi = maskInside(), clip = (x, y) => { if (mi && !mi(x, y)) return false; if (!symAct) return true; const z = sym.zone(x, y); return z === 'sym' ? x <= sym.axisPx + 0.5 * R(e) * PPM : z !== 'out' && !mirrored; };
+    const pk = packRegion(r, { ppm: PPM, gapMm: GAP, obstacles: obstaclesNow(), holesOnly: true, clip });
+    for (const q of pk.points) {
+      const s = { b: { x: q.x, y: q.y, dMm: r.physMm, score: 0, rotDeg: 0, cls: { m4: r.material, physMm: r.physMm, shape: 'round' }, src: 'fill', fill: r.id.replace(/'$/, ''), kin: true }, rec, opts: [e], e, alt: [] };
+      if (symAct && sym.zone(q.x, q.y) === 'sym') { const res = placeSym(s); if (res) { kin[res]++; kin.added += res === 'pair' ? 2 : 1; } else kin.failed++; continue; }
+      if (fits(s, e)) { commit(s, { e }); kin.single++; kin.added++; } else kin.failed++;
+    }
+  }
+  // lỗ còn lại (bản gương không vừa: bên kia đã có viên lệch / vật thể) → 1 viên đơn: kín ưu tiên hơn đối xứng tuyệt đối
+  if (symAct) for (const { r, mirrored } of fillTargets()) {
+    const e = palE.find((x) => x.code === r.result.code), k = fillRegions.findIndex((q) => q.id === r.id.replace(/'$/, '')), mi = maskInside();
+    for (const q of packRegion(r, { ppm: PPM, gapMm: GAP, obstacles: obstaclesNow(), holesOnly: true, clip: (x, y) => (mirrored ? sym.zone(x, y) === 'sym' : sym.zone(x, y) !== 'out') && (!mi || mi(x, y)) }).points) {
+      const s = { b: { x: q.x, y: q.y, dMm: r.physMm, score: 0, rotDeg: 0, cls: { m4: r.material, physMm: r.physMm, shape: 'round' }, src: 'fill', fill: fillRegions[k].id, kin: true }, rec: recF[k], opts: [e], e, alt: [] };
+      if (fits(s, e)) { commit(s, { e }); kin.singleAfterSym = (kin.singleAfterSym || 0) + 1; kin.added++; } else kin.failed++;
+    }
+  }
+  for (const { r, mirrored } of fillTargets()) {
+    if (mirrored && !symAct) continue;
+    const mi = maskInside(), clip = (x, y) => (!mi || mi(x, y)) && (!mirrored || sym.zone(x, y) === 'sym'); // như lượt kín: tâm trong mask
+    kin.holesLeft[r.id] = packRegion(r, { ppm: PPM, gapMm: GAP, obstacles: obstaclesNow(), holesOnly: true, clip }).points.length;
+  }
+  kin.holesLeftTotal = Object.values(kin.holesLeft).reduce((a, v) => a + v, 0);
+}
+if (sym?.axisPx) symRep.pairRateAfter = pairRate(stoneList(), sym, PPM);
+
 // ── 3c. KIT-23 consistency: % cặp láng giềng mạnh (cùng cấu trúc: chuỗi / cột, motif, láng giềng cùng chất liệu + cỡ ≤ 1.2× + ΔE nhỏ)
 // mà cả 2 đều có viên nhưng khác mã; missing = cặp chỉ 1 hạt có viên
 const codeAt = new Map();
 for (const s of placed) if (s.k != null) codeAt.set(s.k, s.e.code);
+// KIT-26: viên bên phải phần sym là bản gương của viên trái, chỉ mang chỉ số hạt phải khi cặp gương → consistency chấm trên hạt còn
+// nhận diện được (trái, trục, vẽ lệch, cặp); bên phải = gương bên trái nên không thêm thông tin
 const inBox = (box) => (b) => !box || (b.x >= box[0] && b.y >= box[1] && b.x < box[0] + box[2] && b.y < box[1] + box[3]);
 function consistency(box) {
   const inB = inBox(box), r = { pairs: 0, differ: 0, missing: 0, byKind: {} };
@@ -907,8 +1030,24 @@ function drawFillRegions(png) {
     const d = [r.polygon, ...(r.holes || [])].map((q) => 'M' + q.map(([x, y]) => `${x},${y}`).join('L') + 'Z').join(''), c = col[r.material] || '#00ff00', [cx, cy] = r.polygon.reduce((a, [x, y]) => [a[0] + x / r.polygon.length, a[1] + y / r.polygon.length], [0, 0]);
     const t = `${r.id} ${r.material} ${r.physMm}mm ${rp[k].code ?? '-'} ×${rp[k].placed}`;
     return `<path d="${d}" fill-rule="evenodd" fill="${c}" fill-opacity="0.22" stroke="${c}" stroke-width="5"/><text x="${cx.toFixed(0)}" y="${cy.toFixed(0)}" font-family="Helvetica" font-size="34" font-weight="bold" fill="#000" stroke="#fff" stroke-width="6" paint-order="stroke" text-anchor="middle">${t}</text>`;
-  }).join('\n');
+  }).join('\n') + (symAct ? '\n' + fillRegions.map((r) => { // KIT-26: bản gương của vùng (hợp nhất 2 bên), nét đứt
+    const d = [r.polygon, ...(r.holes || [])].map((q) => 'M' + q.map(([x, y]) => `${(2 * sym.axisPx - x).toFixed(1)},${y}`).join('L') + 'Z').join(''), c = col[r.material] || '#00ff00';
+    return `<path d="${d}" fill-rule="evenodd" fill="none" stroke="${c}" stroke-width="4" stroke-dasharray="14 10"/>`;
+  }).join('\n') + `\n<line x1="${sym.axisPx.toFixed(1)}" y1="0" x2="${sym.axisPx.toFixed(1)}" y2="${W}" stroke="#00ff00" stroke-width="4"/>` : '');
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${W}" width="${W}" height="${W}"><image href="${href}" x="0" y="0" width="${W}" height="${W}" preserveAspectRatio="none"/>\n${body}\n</svg>`;
+  const f = png.replace(/\.png$/, '.svg');
+  fs.writeFileSync(f, svg);
+  try { execFileSync('rsvg-convert', ['-w', '1772', '-h', '1772', '-o', png, f]); fs.rmSync(f); return png; } catch (e) { return `rsvg-convert lỗi: ${String(e.message).slice(0, 80)}`; }
+}
+
+// KIT-26 ảnh đối xứng: trục (xanh lá), vật thể bất đối xứng (cam), vùng vẽ lệch (xanh dương), vùng sym không tô; nhãn số
+function drawSymmetry(png) {
+  const { n, cp } = sym.grid, rgba = Buffer.alloc(n * n * 4), C = { obj: [255, 120, 0, 150], asym: [40, 120, 255, 120] };
+  for (let gy = 0; gy < n; gy++) for (let gx = 0; gx < n; gx++) { const c = C[sym.zone((gx + 0.5) * cp, (gy + 0.5) * cp)]; if (c) rgba.set(c, (gy * n + gx) * 4); }
+  const ov = `data:image/png;base64,${encodePng(n, n, rgba).toString('base64')}`, mime = /\.png$/i.test(reviewBg) ? 'image/png' : 'image/jpeg', href = `data:${mime};base64,${fs.readFileSync(reviewBg).toString('base64')}`;
+  const pr = symRep.pairRateAfter, t = [`trục ${sym.axisMm} mm${sym.manualAxis ? ' (tay)' : ''} · IoU mask ${sym.iou} · điểm ${sym.score} · ${sym.on ? 'BẬT' : 'TẮT: ' + sym.reason}`, `cam = vật thể bất đối xứng ${sym.objAreaMm2} mm² · xanh = vẽ lệch ${symInfo.zoneMm2?.asym ?? 0} mm² · sym ${symInfo.zoneMm2?.sym ?? 0} mm²`, pr ? `cặp gương cùng mã: sym ${pr.sym.pct}% · tất cả ${pr.all.pct}% (trước lượt gương ${symRep.pairRateBefore?.all.pct}%)` : ''];
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${W}" width="${W}" height="${W}"><image href="${href}" x="0" y="0" width="${W}" height="${W}" preserveAspectRatio="none"/><image href="${ov}" x="0" y="0" width="${W}" height="${W}" preserveAspectRatio="none" style="image-rendering:pixelated"/>` +
+    `<line x1="${sym.axisPx.toFixed(1)}" y1="0" x2="${sym.axisPx.toFixed(1)}" y2="${W}" stroke="#00ff00" stroke-width="6"/>` + t.map((s, k) => `<text x="40" y="${80 + 60 * k}" font-family="Helvetica" font-size="48" font-weight="bold" fill="#fff" stroke="#000" stroke-width="8" paint-order="stroke">${s}</text>`).join('') + '</svg>';
   const f = png.replace(/\.png$/, '.svg');
   fs.writeFileSync(f, svg);
   try { execFileSync('rsvg-convert', ['-w', '1772', '-h', '1772', '-o', png, f]); fs.rmSync(f); return png; } catch (e) { return `rsvg-convert lỗi: ${String(e.message).slice(0, 80)}`; }
@@ -951,6 +1090,7 @@ const report = {
   chains: { ...chains },
   kit23: { mrf, paletteMerge, consistency: consist, motifs: motifRep, anchorDropped: lost.anchorDropped || 0, fb: FB },
   kit24: { petal, shapes: shapeCount, petalStones: petalPlaced },
+  kit26: { symmetry: symInfo, mirrorEdges: mrf.mirrorEdges ?? 0, ...symRep, kin },
   kit25: { fill: fillInfo, regions: fillReport(), detailGt2mm: { stones: mapScoreD.total, tiles: tiles(mapScoreD), polygons: evalPolys.length } },
   // vùng ảnh captain gửi (msg 015, outputs/kit/kit20/captain_chain_5EEEE.png, tìm bằng khớp mẫu trên review.svg): hàng hạt to trước
   // (lẽ ra toàn '5') + mã mọi viên ≥ 4 mm trong khung
@@ -985,6 +1125,7 @@ const report = {
 // review: ảnh gốc + viền mảnh + ký hiệu (tools/kit_review_overlay.mjs), crop ô GT
 const reviewBg = path.resolve(ROOT, flag('--review-bg', 'outputs/kit/queen_template/input_upscaled.jpg'));
 if (!args.includes('--no-review') && fillRegions.length) report.kit25.overlay = drawFillRegions(path.join(OUT, 'fill_regions.png'));
+if (!args.includes('--no-review') && sym?.grid) report.kit26.overlay = drawSymmetry(path.join(OUT, 'symmetry.png'));
 if (!args.includes('--no-review')) {
   const bg = reviewBg, rv = path.join(OUT, 'review.svg');
   execFileSync(process.execPath, [path.join(ROOT, 'tools', 'kit_review_overlay.mjs'), path.join(OUT, `${NAME}.svg`), bg, rv], { stdio: 'ignore' });
@@ -1017,6 +1158,7 @@ const T = (s) => `recall ${s.recall} prec ${s.precision} mat ${s.materialOk} siz
 console.log(`${seg.method}/${seg.region}: ${all.length} mask → ${cand.length} giống hạt → ${beads.length} hạt → ${placed.length} viên (va chạm bỏ ${lost.collision}, thu cỡ ${lost.shrunk}, không mã ${noCode.length}); ${codes.length} mã chung [${codes.join(' ')}] pha lê ${pal.crystal}, Queen dùng ${Object.keys(byCode).length}; chuỗi vàng ${chain.placed}/${chain.points}; phủ ${report.coverage.pct}%; check ${check.ok ? 'ok' : 'LỖI'}`);
 for (const c of report.codeCurve) console.log(`  mã ${c.union} (+pet ${c.product}) +[${c.added.join(' ')}]: sai vật liệu ${c.material}, hình ${c.shape}, cỡ ${c.size}, không mã ${c.noCode}, ΔE ${c.dE}, Starry ΔE ${c.starryDE}`);
 console.log(`  KIT-25: vùng phủ ${fillOn ? `${fillInfo.source} ${fillRegions.length} vùng, thay ${fillInfo.beadsRemoved} hạt` : 'tắt'}; ` + report.kit25.regions.map((r) => `${r.id} ${r.material} ${r.drawnMm}→${r.physMm}mm ${r.code} ${r.placed}/${r.points} phủ ${r.coveragePct}% (tất cả ${r.allStones} viên ${r.allCoveragePct}%)`).join('; ') + (gtOn ? `; GT chi tiết ≥ 2 mm (ngoài vùng phủ) ${T(mapScoreD.total)}` : ''));
+console.log(`  KIT-26: đối xứng ${symAct ? 'BẬT' : 'tắt'} (${sym?.reason ?? 'kit22'}) trục ${sym?.axisMm} mm IoU ${sym?.iou} điểm ${sym?.score} vật thể ${sym?.objAreaMm2} mm²; cặp hạt ${JSON.stringify(symInfo.beadPairs || {})}; lượt gương ${JSON.stringify(symRep.final || {})}; kín +${kin.added} (cặp ${kin.pair}, trục ${kin.axis}, đơn ${kin.single}, hỏng ${kin.failed}) lỗ còn ${kin.holesLeftTotal ?? '-'}; cặp gương cùng mã ${symRep.pairRateBefore?.sym.pct ?? '-'}→${symRep.pairRateAfter?.sym.pct ?? '-'}% (sym), ${symRep.pairRateBefore?.all.pct ?? '-'}→${symRep.pairRateAfter?.all.pct ?? '-'}% (tất cả)`);
 console.log(`  KIT-24: cánh ${petal.motifs.map((m) => `[${m.centre}] ${m.shape} tỉ lệ ${m.ratio}${m.after ? ' → ' + m.after[0] : ''}`).join('; ')}; đặt ${petalPlaced.length} cánh ${petalPlaced.map((q) => q.code).join(' ')}; hình ` + JSON.stringify(shapeCount));
 console.log(`  KIT-23: MRF ${mrf.enabled ? `đổi ${mrf.changed} nhãn, chất liệu ${mrf.relabeledMaterial}` : 'tắt'}; motif ${motifs.length}; bảng thử +[${pearlAdd.join(' ')}] gộp −[${merged.history.map((h) => h.removed).join(' ')}]; neo bỏ ${lost.anchorDropped || 0}; consistency ${consist.all.pct}% (${consist.all.differ}/${consist.all.pairs}, thiếu 1 bên ${consist.all.missing}); ` + Object.entries(consist.regions).map(([k, v]) => `${k} ${v.pct}%`).join(' ') + `; hàng captain ${report.captainRegion.rowCodes}`);
 console.log(`  hạt:  ${T(detScore.total)}`);

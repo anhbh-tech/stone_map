@@ -15,6 +15,7 @@ import { assignSymbols, loadCatalog, checkDesign, LETTERS } from '../lib/kit/cat
 import { gapMm, stonePoly, sdPoly } from '../lib/kit/shapes.js';
 import { pottsExpand, pottsICM, pottsEnergy } from '../lib/kit/potts.js';
 import { detectFill, packRegion, polyAreaMm2, readFillRegions, writeFillRegions, FILL_SCHEMA } from '../lib/kit/fill.js';
+import { symmetryOf, mirrorPairs, pairRate } from '../lib/kit/symmetry.js';
 
 let fail = 0;
 const ok = (cond, msg) => { if (!cond) { fail++; console.log('FAIL', msg); } };
@@ -679,6 +680,27 @@ ok(vlm.mat4('pearl', 'gold') === 'gold' && vlm.mat4('pearl', 'white') === 'pearl
   writeFillRegions(f, { schema: FILL_SCHEMA, checked: false, regions });
   const back = readFillRegions(f); fs.unlinkSync(f);
   ok(back.regions.length === 1 && JSON.stringify(back.regions[0].polygon) === JSON.stringify(regions[0].polygon), 'fill file: ghi / đọc lại y nguyên');
+}
+// KIT-26 đối xứng: ảnh tổng hợp đối xứng qua x = 160 px (sọc theo |x − trục|) + 1 thanh "quyền trượng" lòi ra ngoài mask bên phải →
+// trục, vật thể, vùng sym, cặp gương, tỉ lệ cặp; packRegion chỉ lấp lỗ / cắt nửa
+{
+  const ppm = 2, Wpx = 320, K = 2, w = Wpx * K, img = { w, h: w, data: new Uint8Array(w * w * 4) }, ax = 160;
+  const staff = (x, y) => x >= 250 && x <= 268 && y >= 150 && y <= 270, inM = (x, y) => (Math.abs(x - ax) <= 100 && y >= 40 && y <= 280) || staff(x, y);
+  const col = (x, y) => (staff(x, y) ? [230, 180, 40] : Math.floor(Math.abs(x - ax) / 20) % 2 ? [200, 30, 40] : [240, 230, 220]);
+  for (let y = 0; y < w; y++) for (let x = 0; x < w; x++) img.data.set([...(inM(x / K, y / K) ? col(x / K, y / K) : [0, 0, 0]), 255], (y * w + x) * 4);
+  const s = symmetryOf(img, K, inM, Wpx, ppm, { rangeMm: [40, 120] });
+  ok(s.on && Math.abs(s.axisPx - ax) <= 1 && s.zone(265, 200) === 'obj' && s.zone(100, 150) === 'sym' && s.zone(5, 5) === 'out', `sym: trục ${s.axisPx?.toFixed(1)} px (đúng ${ax}), IoU ${s.iou}, điểm ${s.score}, vật thể ${s.objAreaMm2} mm², bật ${s.on}`);
+  const noMask = symmetryOf(img, K, null, Wpx, ppm, { rangeMm: [40, 120] });
+  ok(!noMask.on, `sym: không mask → tắt (${noMask.reason})`);
+  const it = [{ x: 120, y: 100, dMm: 3 }, { x: 200.5, y: 100.2, dMm: 3 }, { x: 110, y: 200, dMm: 3 }, { x: 160.2, y: 150, dMm: 3 }, { x: 265, y: 200, dMm: 3 }];
+  const pairs = mirrorPairs(it, s, ppm, { axisTol: (a) => 0.3 * a.dMm, tol: (a, b) => 0.5 * Math.max(a.dMm, b.dMm), same: () => true });
+  ok(pairs.length === 1 && pairs[0][0] === 0 && pairs[0][1] === 1, `sym: cặp gương ${JSON.stringify(pairs)} (đúng [0, 1])`);
+  const pr = pairRate([{ x: 120, y: 100, code: 'A' }, { x: 200, y: 100, code: 'A' }, { x: 110, y: 200, code: 'A' }, { x: 210, y: 200, code: 'B' }, { x: 265, y: 200, code: 'A' }], s, ppm);
+  ok(pr.sym.stones === 4 && pr.sym.pct === 50, `sym: tỉ lệ cặp cùng mã ${JSON.stringify(pr.sym)} (đúng 2/4, vật thể không tính)`);
+  const P = 11.81, sq = { physMm: 2.8, polygon: [[0, 0], [30 * P, 0], [30 * P, 20 * P], [0, 20 * P]].map(([x, y]) => [x + 100, y + 100]) };
+  const full = packRegion(sq, { ppm: P }), again = packRegion(sq, { ppm: P, holesOnly: true, obstacles: full.points.map((q) => ({ x: q.x, y: q.y, rMm: 1.4 })) });
+  const half = packRegion(sq, { ppm: P, clip: (x) => x <= 100 + 15 * P });
+  ok(again.points.length === 0 && half.points.length > 0.4 * full.points.length && half.points.every((q) => q.x <= 100 + 15 * P + 1e-6), `fill kín: lấp lỗ sau xếp đủ ${again.points.length} điểm (đúng 0); cắt nửa ${half.points.length}/${full.points.length}`);
 }
 console.log(fail ? `test_kit: ${fail} FAIL` : 'test_kit: OK');
 process.exit(fail ? 1 : 0);

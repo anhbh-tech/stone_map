@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { loadCatalog, entryOf, checkDesign } from '../lib/kit/catalog.js';
 import { normalizeDoc, writeKitSvg } from '../lib/kit/svgio.js';
 import { buildDoc, upscale, materialOf, lab } from '../lib/kit/select.js';
-import { gapMm } from '../lib/kit/shapes.js';
+import { gapMm, outline } from '../lib/kit/shapes.js';
 import { decodePng, encodePng } from '../lib/png.js';
 import { heartCue } from '../lib/kit/shapecue.js';
 import { symmetryOf, mirrorPairs, pairRate, twinPairs } from '../lib/kit/symmetry.js';
@@ -717,7 +717,9 @@ const pearlKeep = args.includes('--pearl-keep') ? pearlAdd : pearlAdd.filter((c)
 // KIT-27: bảng đầu < maxCodes (đường cong chọn ít mã) mà có mã thêm → mã của bảng maxCodes trên đường cong cũng vào xét, để mã to mới
 // không chiếm chỗ trống mà mã đường cong lợi hơn (King: Q113/D50 lấy 2 chỗ của Q123/L16, mã DB vùng chi tiết 30.1 → 18.9 %)
 const curveMore = pal0.codes.length < maxCodes ? (curve.find((c) => c.union === maxCodes)?.codes || []).filter((c) => !pal0.codes.includes(c)) : [];
-const merged = pearlAdd.length || bigAdd.length ? mergeDown([...new Set([...pal0.codes, ...pearlAdd, ...bigAdd, ...curveMore])], [pal0.crystal, ...pal0.codes.filter((c) => cat.codes[c]?.kind === 'pearl'), ...pearlKeep, ...bigKeep], maxCodes) : { codes: pal0.codes, history: [] };
+// KIT-28 (captain: 13 mã hay 14 mã có đỏ 8–10 mm?): --force-codes a,b,… = đúng bảng này (bỏ đường cong + gộp), để so 2 phương án cùng mọi bước khác
+const forceCodes = flag('--force-codes', null)?.split(',').filter(Boolean);
+const merged = forceCodes ? { codes: forceCodes, history: [], forced: true } : pearlAdd.length || bigAdd.length ? mergeDown([...new Set([...pal0.codes, ...pearlAdd, ...bigAdd, ...curveMore])], [pal0.crystal, ...pal0.codes.filter((c) => cat.codes[c]?.kind === 'pearl'), ...pearlKeep, ...bigKeep], maxCodes) : { codes: pal0.codes, history: [] };
 const pal = merged.codes.join() !== pal0.codes.join() ? { ...jointPalette([...recQ, ...recF, ...recS], cat, { maxCodes: merged.codes.length, cands: merged.codes, fixed: merged.codes, ...NOCROSS }), crystal: pal0.crystal } : pal0;
 const codes = pal.codes, palE = codes.map((c) => entryOf(c, cat)), palL = palE.map((e) => lab(hex2(e.fill)));
 const paletteMerge = { pearlHist, pearlMin, before: pal0.codes, added: pearlAdd, bigAdded: bigReport, history: merged.history, after: codes, errorsBefore: errorsOf(pal0.codes), errorsAfter: errorsOf(codes) };
@@ -847,7 +849,9 @@ beads.forEach((b, i) => {
 });
 // ── 3. va chạm vật lý: to trước, rõ trước; chồng → thử mã sau (thường nhỏ hơn) cùng tâm, không thì bỏ
 const geo = (s, e) => (e.shape ? { x: s.b.x, y: s.b.y, shape: e.shape, w: e.physW, h: e.physH, rot: s.b.rotDeg } : { x: s.b.x, y: s.b.y, w: e.physMm, h: e.physMm });
-const R = (e) => Math.max(e.physMm, e.physW || 0, e.physH || 0) / 2;
+// bán kính bao = xa nhất của đường viền (KIT-28: tim 12×12 thuỳ ra ~7.1 mm > nửa khung 6 → lọc 'far' + vật cản fill bỏ sót 3 viên chồng tim vương miện)
+const Rc = new Map(), circR = (e) => Math.max(...outline(e.shape, e.physW, e.physH).map(([u, v]) => Math.hypot(u, v)));
+const R = (e) => (e.shape ? (Rc.has(e.code) ? Rc.get(e.code) : Rc.set(e.code, Math.max(Math.max(e.physW, e.physH) / 2, circR(e))).get(e.code)) : e.physMm / 2);
 stones.sort((p, q) => q.b.dMm - p.b.dMm || q.b.score - p.b.score); // hạt vẽ to / rõ trước (không theo cỡ catalog)
 const placed = [], lost = { collision: 0, shrunk: 0 };
 const cellPx = 16 * PPM, grid = new Map(), keyOf = (x, y) => `${Math.floor(x / cellPx)},${Math.floor(y / cellPx)}`;

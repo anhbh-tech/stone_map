@@ -674,3 +674,76 @@ King also: 13 codes, check ok.
 - **8–10 mm red centres:** they are W4 5 mm. A 14th code would push Z16 out.
 - **Odd shapes:** pear pearls and two-lobed leaf crystals have no catalog shape.
 - **6 mm champagne pearls:** classed as gold and size-smoothed to 2.8 by the MRF.
+
+## KIT-28 — 3-layer product (Starry + Queen KIT-27 + pet), palette P13 vs P14
+
+Captain question: add a 14th shared code (red 8–10 mm), which leaves the pet only 1 code of its own (15 − 14)? $0 API; outputs in `outputs/kit/kit28/`; numbers in `summary.md` and `eval.json` there.
+
+### Tools
+
+```
+~/.cache/kit20/venv/bin/python tools/kit28_flat.py                     # (a) v3 finals vs the template
+node tools/kit20.mjs --seg outputs/kit/kit20/seg_sam_all.json --chain outputs/kit/kit20/chain_all.json \
+  --fill-regions outputs/kit/kit28/fill_regions.json --out outputs/kit/kit28/costume_P13           # = KIT-27
+node tools/kit20.mjs … --max-codes 14 --force-codes D1,Z16,L47,S057,X039,L23,5,L37,L4,M063,L94,6,W4,Q114 \
+  --out outputs/kit/kit28/costume_P14                                   # same steps, palette forced
+node tools/kit28_compose.mjs --pet corgi --opt P13|P14 [--src img --face x0,y0,x1,y1] [--big-max-de 30 --tag g]
+~/.cache/kit20/venv/bin/python tools/kit28_eval.py                     # eval.json + summary.md
+```
+
+- **`kit28_compose.mjs` layers come from the template, not from an image.** It reads `kit/templates/queen_mask.png`:
+  - **background:** `starry_background.svg`, keeping only stones whose centre is black in the mask. These are re-coded to the shared palette (stoneCost on the KIT-18 records, which are in svg order: offset 0 gives ΔE 23.8 vs 29.6 at ±1). Stones closer than 0.15 mm to the costume or pet are dropped.
+  - **costume:** the kit20 `queen.svg`, locked.
+  - **pet:** the KIT-19 path. The face box is fitted into the red slot and run through `petMap`, forced to the palette plus (15 − |palette|) new codes, then `keepOut` 0.15 mm against the costume.
+- **Outputs per run:** `<pet>_<opt>/{map.svg (stonemap-svg/1, layers bg/costume/pet), map.kit.svg, review.svg, mockup.png, face.png, bom.json, qc.json, report.json}`.
+- **`--force-codes`** (kit20) skips the code curve and merge and uses exactly the given palette.
+- **`--big-max-de N`** (compose) stops a pet stone ≥ 5 mm from taking a code more than N ΔE from the image. It moves to a smaller code instead, the closest 2.8 mm when nothing is within N.
+
+### Fix found by the full-product QC
+
+stonemap QC flagged 3 costume stones overlapping the KIT-27 crown heart X039, by up to 0.79 mm. The kit20 `checkDesign` had not caught them.
+- **Cause:** kit20 `R(e)` used half the bounding box. For a 12×12 heart that is 6 mm, but the lobes reach about 7.1 mm. Both the `fits` far-filter and the fill/gap obstacles skipped the exact test.
+- **Fix:** `R` is now the outline circumradius.
+- **Effect on Queen:** 0 overlaps, stones 2583 → 2580, GT ≥ 2 mm precision 46.3 → 45.8. Other scores are unchanged.
+
+### (a) Layer split
+
+- **The v2/v3 final cannot be split back into layers.** The 13 v3 royal-starry finals were checked: frame quad → rectangle → cover-fit square, compared through the mask.
+  - Costume: ΔE76 69.8 median, 94.6 % of px off by > 20.
+  - Red: 0.1 % vs 33 % in the template. Blue: 16.7 % vs 0 %.
+  - Background vs BG.png: ΔE 60.2.
+  - The painting is portrait (0.70), so a square crop loses 30 % of the height.
+  - The AI repaints the whole costume (blue robe, crown moved, head larger than the slot).
+- **KIT compose results (all 4 pets × both options):**
+  - Pet centres outside the slot: 0.
+  - Costume centres inside the slot: 0.
+  - Pet discs crossing the slot edge: 20–29, by at most 1.27 mm. Their centres are inside and they keep ≥ 0.15 mm from stones.
+  - Pet stones removed by keepOut: 8–11 dropped, 0–3 shrunk.
+  - Min gap: pet↔costume 0.164–0.322 mm, pet↔background 0.173–0.425 mm.
+  - Background stones dropped as too close: 163–173.
+  - QC: overlap pass, code-count warn (15), gap warn (only < 0.15 but not overlapping, as in KIT-27).
+
+### Costume P14 vs P13
+
+- 17 W4 5 mm + 1 L4 → Q114 8 mm.
+- −12 M063 marquise petals (the 2 mirrored red flowers): the 8 mm centre now collides with the petals, which are placed after big beads.
+- −3 D1.
+- 2580 → 2570 stones. Starry is unchanged (ΔE 10.3).
+
+### (b)(c) Pet
+
+Image ΔE76, area-weighted. Pets: corgi = `Mẫu Queen.png`, white / grey cat = v3 `.cut.png`, pug = `B2_pet_pearl.png`.
+
+| pet | P13 (new codes) | P14 (new code) | Δ |
+|---|---|---|---|
+| corgi (brown/gold) | 21.34 (L17 L16) | 24.04 (L16); 22.08 with `--big-max-de 30` | +2.70 / +0.74 |
+| white cat | 14.80 (Q081 L17) | 15.26 (L17) | +0.46 |
+| grey cat | 28.21 (L26 L77) | 25.39 (L77) | −2.82 |
+| pug (black mask) | 25.80 (L77 L25) | 24.11 (L77) | −1.69 |
+
+- **P14 worsens a pet in 2 ways:**
+  - **A pet that needs 2 fur codes loses one.** For the corgi, L17 is merged into L16/L94; changed stones average +9.5 ΔE.
+  - **The shared Q114 attracts the pet's big dark stones.** The corgi's black nose and eye become 2 red 8 mm stones (ΔE 75 / 65), because a same-size code beats shrinking and the palette has no black. `--big-max-de 30` brings them back to 2.8 mm, as in P13.
+- **Grey and black pets get better under P14, but not because of Q114.** Under P13 their 2nd new code is a green (L26/L25): the KIT-17 k-NN target turns dark grey fur green because the 2.8 mm catalog has no grey. The model ΔE is low (11.9–22.0) while the image ΔE is high; P14 removes that code.
+- **The ΔE of the model target is not the image ΔE.** Model ΔE rises in all 4 pets (e.g. pug 11.89 → 13.89) while image ΔE falls for 2 of them.
+- **Dark features are bad in every option.** No black code is chosen (L93 exists): fitPalette ranks new codes by total ΔE gain, and 5 dark stones lose to the fur. The nose/eyes are off by ΔE ≥ 60.

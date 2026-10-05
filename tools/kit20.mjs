@@ -853,7 +853,7 @@ const geo = (s, e) => (e.shape ? { x: s.b.x, y: s.b.y, shape: e.shape, w: e.phys
 const Rc = new Map(), circR = (e) => Math.max(...outline(e.shape, e.physW, e.physH).map(([u, v]) => Math.hypot(u, v)));
 const R = (e) => (e.shape ? (Rc.has(e.code) ? Rc.get(e.code) : Rc.set(e.code, Math.max(Math.max(e.physW, e.physH) / 2, circR(e))).get(e.code)) : e.physMm / 2);
 stones.sort((p, q) => q.b.dMm - p.b.dMm || q.b.score - p.b.score); // hạt vẽ to / rõ trước (không theo cỡ catalog)
-const placed = [], lost = { collision: 0, shrunk: 0 };
+const placed = [], lost = { collision: 0, shrunk: 0 }, droppedBig = [];
 const cellPx = 16 * PPM, grid = new Map(), keyOf = (x, y) => `${Math.floor(x / cellPx)},${Math.floor(y / cellPx)}`;
 const fits = (s, e) => {
   const gx = Math.floor(s.b.x / cellPx), gy = Math.floor(s.b.y / cellPx), A = geo(s, e);
@@ -897,13 +897,53 @@ function placeBead(s) {
   const tryE = s.anchor ? [s.e] : s.b.group ? [s.e, ...smaller.filter((e) => e.kind === s.e.kind && mat4Of(e.code) === mat4Of(s.e.code)).slice(0, 1)] : [s.e, ...smaller, ...s.alt.filter((e) => sameMat(s, e))];
   const got = placeOne(s, tryE);
   if (args.includes('--debug') && CAPTAIN.row.some(([x, y]) => Math.hypot(x - s.b.x, y - s.b.y) < 12)) console.error('placeC', Math.round(s.b.x), Math.round(s.b.y), s.b.cls.m4, 'try', tryE.map((x) => x.code).join(','), '→', got?.e.code, got?.r ?? 0, 'group', !!s.b.group);
-  if (!got) { lost.collision++; if (s.anchor) lost.anchorDropped = (lost.anchorDropped || 0) + 1; return; }
+  if (!got) { lost.collision++; if (s.anchor) lost.anchorDropped = (lost.anchorDropped || 0) + 1; droppedBig.push(s); return; }
   if (got.e !== s.e) lost.shrunk++;
   commit(s, got);
 }
 const bigFirst = (s) => s.b.dMm >= 4 || !!s.e.shape;
 const borderLast = args.includes('--border-last');
-for (const s of stones) if (bigFirst(s)) placeBead(s);
+// KIT-29 (captain: thêm mã không được làm đổi chỗ khác vô lý — P14 Q114 8 mm ở tâm 2 hoa làm rơi 12 cánh M063): lượt 1 đặt hạt to;
+// viên đã đặt (t) chặn viên to / hình bị bỏ (d) → hạ t xuống cỡ nhỏ hơn cùng vật liệu (lớn nhất) mà không còn chặn các d đó, nếu diện tích
+// các d được giải phóng > diện tích t mất; rồi đặt lại cả lượt hạt to với t ép cỡ (≤ 2 vòng, để d được đặt trước viên khác chiếm chỗ).
+// --no-rescue tắt
+const rescueRep = { rounds: 0, forced: [], droppedBefore: 0, droppedAfter: 0 };
+for (const s of stones) { s.e0 = s.e; s.b0 = s.b; }
+const force = new Map();
+const bigPass = () => {
+  placed.length = 0; grid.clear(); droppedBig.length = 0; lost.collision = 0; lost.shrunk = 0; delete lost.anchorDropped; lost2.nudged = 0; lost2.nudgeMm.length = 0;
+  for (const s of stones) { s.e = force.get(s) || s.e0; s.b = s.b0; }
+  for (const s of stones) if (bigFirst(s)) placeBead(s);
+};
+bigPass();
+rescueRep.droppedBefore = droppedBig.length;
+if (!kit22 && !args.includes('--no-rescue')) {
+  const area = (e) => (e.shape ? (Math.PI / 4) * e.physW * e.physH * 0.8 : (Math.PI / 4) * e.physMm ** 2);
+  const clash = (t, e, d) => { if (Math.hypot(t.b.x - d.b0.x, t.b.y - d.b0.y) / PPM - R(e) - R(d.e0) >= GAP) return false;
+    const dd = { ...d, b: d.b0 }; return (!e.shape && !d.e0.shape) || gapMm(geo(t, e), geo(dd, d.e0), PPM) < GAP - 1e-3; };
+  for (let round = 0; round < 2 && droppedBig.length; round++) {
+    const by = new Map();
+    for (const d of droppedBig) for (const t of placed) if (t !== d && Math.abs(t.b.x - d.b0.x) < 20 * PPM && Math.abs(t.b.y - d.b0.y) < 20 * PPM && clash(t, t.e, d)) (by.get(t) || by.set(t, []).get(t)).push(d);
+    let n = 0;
+    for (const [t, ds] of by) {
+      if (force.has(t)) continue;
+      const alts = [...t.opts.slice(1), ...(t.alt || [])].filter((e) => R(e) < R(t.e) - 1e-6 && !e.shape === !t.e.shape && (e.kind === 'pearl') === (t.e.kind === 'pearl') && sameMat(t, e)).sort((a, b) => R(b) - R(a));
+      for (const e2 of alts) {
+        // chỉ va chạm do đổi mã/cỡ (≥ 2 viên khác mã được giải phóng); 2 hạt vẽ cùng mã chồng nhau là chuyện vẽ, hạ 1 bên chỉ phá nhất quán
+        const freed = ds.filter((d) => !clash(t, e2, d) && d.e0.code !== t.e.code);
+        if (freed.length >= 2 && freed.reduce((a, d) => a + area(d.e0), 0) > area(t.e) - area(e2)) {
+          force.set(t, e2); n++;
+          rescueRep.forced.push({ x: Math.round(t.b.x), y: Math.round(t.b.y), from: t.e.code, to: e2.code, frees: freed.map((d) => d.e0.code) });
+          break;
+        }
+      }
+    }
+    if (!n) break;
+    rescueRep.rounds++;
+    bigPass();
+  }
+}
+rescueRep.droppedAfter = droppedBig.length;
 if (borderLast) for (const s of stones) if (!bigFirst(s)) placeBead(s);
 
 // ── 3b. viền vàng li ti (tools/kit20_chain.py: vùng vàng → đường tâm → điểm cách 2.95 mm): viên vàng 2.8 sau hạt to, TRƯỚC hạt nhỏ
@@ -1239,6 +1279,7 @@ const report = {
   chain: chainF ? { file: chainF, ...chain } : undefined,
   chains: { ...chains },
   kit27: { hearts: heartRep, twins: twinRep, gapFill: gapRep, recode: recodeRep },
+  kit29: { rescue: rescueRep },
   kit23: { mrf, paletteMerge, consistency: consist, motifs: motifRep, anchorDropped: lost.anchorDropped || 0, fb: FB },
   kit24: { petal, shapes: shapeCount, petalStones: petalPlaced },
   kit26: { symmetry: symInfo, mirrorEdges: mrf.mirrorEdges ?? 0, ...symRep, kin },

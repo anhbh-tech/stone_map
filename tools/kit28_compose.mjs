@@ -9,6 +9,9 @@
 //               (15 − số mã bảng) mã mới (P13 → 2, P14 → 1), keepOut 0.15 mm với trang phục (viên to sát → 2.8 mm, vẫn sát → bỏ)
 // Ra outputs/kit/kit28/<pet>_<opt>/: map.svg (stonemap-svg/1, 3 layer), map.kit.svg (pearl-kit-map/1), review.svg (ký hiệu trên ảnh ghép),
 //   mockup.png (viên cỡ vật lý trên ảnh ghép, 1772 px), face.png (zoom ô mặt: ảnh | viên), bom.json, qc.json, report.json.
+// KIT-29 (--rules kit29, mặc định; --rules kit28 = luật cũ, ra outputs/kit/kit28): pet chỉ cỡ ≤ 4 mm (petMap maxMm), mã thêm của pet chọn
+//   theo ΔE tới ẢNH × diện tích + chỉ mã có hỗ trợ màu (fitPalette select 'image'), px nền chroma xanh / alpha / ngoài ảnh (+ nới 1 mm)
+//   bỏ khỏi mask pet → ô mặt ở đó lấy BG.png và viên nền Starry. Ra outputs/kit/kit29/<pet>_<opt>/, trang phục outputs/kit/kit29/costume_<opt>.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -33,7 +36,8 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2), flag = (n, d = null) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
 const REQ = process.env.KIT_REQ || path.join(os.homedir(), 'pearl_compare', 'requirements'), TPL = path.join(ROOT, 'kit', 'templates');
 const PET = flag('--pet', 'corgi'), SRC = flag('--src', path.join(REQ, 'Mẫu Queen.png')), OPT = flag('--opt', 'P13'), upForce = flag('--upscale');
-const COST = path.resolve(ROOT, flag('--costume', `outputs/kit/kit28/costume_${OPT}`)), OUT = path.join(ROOT, 'outputs', 'kit', 'kit28', `${PET}_${OPT}${flag('--tag', '')}`);
+const RULES = flag('--rules', 'kit29'), K29 = RULES === 'kit29';
+const COST = path.resolve(ROOT, flag('--costume', `outputs/kit/${RULES}/costume_${OPT}`)), OUT = path.join(ROOT, 'outputs', 'kit', RULES, `${PET}_${OPT}${flag('--tag', '')}`);
 // --big-max-de N: viên pet ≥ 5 mm mà mã ép lệch màu ẢNH > N ΔE76 (mũi đen → Q114 đỏ 8 mm khi bảng có đỏ to) → mã nhỏ hơn rẻ nhất trong bảng (ΔE + 2/mm)
 const bigMaxDE = flag('--big-max-de') ? +flag('--big-max-de') : null;
 const MM = 300, MAP = 3543, GAP = 0.15, HARD_MAX = 15, KPX = MAP / MM;
@@ -70,9 +74,27 @@ const FACE = (flag('--face') || '348,306,850,697').split(',').map(Number), fs4 =
 const scl = Math.min((bx1 - bx0) / (fs4[2] - fs4[0]), (by1 - by0) / (fs4[3] - fs4[1])), cs = [(fs4[0] + fs4[2]) / 2, (fs4[1] + fs4[3]) / 2], ct = [(bx0 + bx1) / 2, (by0 + by1) / 2];
 const costumeImg = lanczos(decodePng(fs.readFileSync(path.join(REQ, 'Trang phục Queen.png'))), W / 1254), bgImg = lanczos(decodePng(fs.readFileSync(path.join(REQ, 'BG.png'))), W / 1254);
 const work = { w: W, h: H, data: new Uint8Array(W * H * 4) }, UW = up.img.w, UH = up.img.h;
+// KIT-29: px ô mặt không phải pet = nguồn chroma xanh (nền cutout), alpha < 128 hoặc ngoài ảnh; nới CHROMA_MM → bỏ khỏi mask pet (petM)
+const CHROMA_MM = 1, petM = Uint8Array.from(mask), srcAt = (x, y) => [cs[0] + (x - ct[0]) / scl, cs[1] + (y - ct[1]) / scl];
+let chromaPx = 0;
+if (K29) {
+  const notPet = new Uint8Array(W * H);
+  for (let y = by0; y <= by1; y++) for (let x = bx0; x <= bx1; x++) {
+    if (!mask[y * W + x]) continue;
+    const [u, v] = srcAt(x, y), ui = Math.round(u), vi = Math.round(v);
+    if (ui < 0 || vi < 0 || ui >= UW || vi >= UH) { notPet[y * W + x] = 1; continue; }
+    const q = (vi * UW + ui) * 4, [r, g, b, a] = up.img.data.subarray(q, q + 4);
+    if (a < 128 || (g > 90 && g - Math.max(r, b) > 40)) notPet[y * W + x] = 1;
+  }
+  const R = Math.round((CHROMA_MM * W) / MM), bw = bx1 - bx0 + 1, bh = by1 - by0 + 1, tmp = new Uint8Array(bw * bh), ps = new Int32Array(Math.max(bw, bh) + 1);
+  const any = (lo, hi, n) => ps[Math.min(n, hi + 1)] - ps[Math.max(0, lo)] > 0; // nới vuông R px (tách hàng / cột, tổng tiền tố)
+  for (let y = 0; y < bh; y++) { for (let x = 0; x < bw; x++) ps[x + 1] = ps[x] + notPet[(y + by0) * W + x + bx0]; for (let x = 0; x < bw; x++) tmp[y * bw + x] = any(x - R, x + R, bw); }
+  for (let x = 0; x < bw; x++) { for (let y = 0; y < bh; y++) ps[y + 1] = ps[y] + tmp[y * bw + x];
+    for (let y = 0; y < bh; y++) { const j = (y + by0) * W + x + bx0; if (petM[j] && any(y - R, y + R, bh)) { petM[j] = 0; chromaPx++; } } }
+}
 for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
   const j = (y * W + x) * 4;
-  if (!mask[y * W + x]) { work.data.set((at(x, y) === 'bg' ? bgImg : costumeImg).data.subarray(j, j + 4), j); work.data[j + 3] = 255; continue; }
+  if (!petM[y * W + x]) { work.data.set((at(x, y) === 'bg' ? bgImg : costumeImg).data.subarray(j, j + 4), j); work.data[j + 3] = 255; continue; }
   const u = cs[0] + (x - ct[0]) / scl, v = cs[1] + (y - ct[1]) / scl, x0 = Math.floor(u), y0 = Math.floor(v), a = u - x0, b = v - y0;
   for (let c = 0; c < 3; c++) { const g = (xx, yy) => up.img.data[(Math.min(UH - 1, Math.max(0, yy)) * UW + Math.min(UW - 1, Math.max(0, xx))) * 4 + c];
     work.data[j + c] = Math.round((1 - a) * (1 - b) * g(x0, y0) + a * (1 - b) * g(x0 + 1, y0) + (1 - a) * b * g(x0, y0 + 1) + a * b * g(x0 + 1, y0 + 1)); }
@@ -82,7 +104,9 @@ for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
 // ── pet: petMap trong ô đỏ, ép bảng chung + maxNew; ΔE76 tự do / ép +maxNew / ép +0 (fitPalette)
 const bom = Object.values(kcat.codes).filter((e) => e.kind === 'stone').map((e) => ({ code: e.code, physMm: e.physMm, lab: labP(hex2(e.fill)) }));
 const model = codeModel(['snowman', 'dachshund']), base = { canvasWmm: MM, mask, model, bom, noOverlap: true, minGapMm: -0.05 };
-const forced = petMap(work, { ...base, palette: { codes, maxNew } }), forced0 = petMap(work, { ...base, palette: { codes, maxNew: 0 } });
+if (K29) Object.assign(base, { mask: petM, maxMm: 4 });
+const sel = K29 ? { select: 'image' } : {};
+const forced = petMap(work, { ...base, palette: { codes, maxNew, ...sel } }), forced0 = petMap(work, { ...base, palette: { codes, maxNew: 0, ...sel } });
 const byCode = new Map(bom.map((b) => [b.code, b])), kept = new Set([...forced.work.palette.base, ...forced.work.palette.added]);
 const L28 = bom.filter((b) => b.physMm === 2.8 && kept.has(b.code)), de = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 const shrink = (s) => { const L = byCode.get(s.code).lab, c = L28.reduce((a, b) => (de(L, b.lab) < de(L, a.lab) ? b : a)); return { ...s, code: c.code, phys_mm: 2.8, ref_mm: refOf(2.8, scat), shrunkFrom: s.code }; };
@@ -109,7 +133,10 @@ const cheapest = (r, list) => list.reduce((a, c) => { const e = entryOf(c, kcat)
 // thứ tự bản ghi = thứ tự viên svg? kiểm: mã rẻ nhất trong bảng riêng của Starry = mã svg
 const own = sDoc.palette.map((p) => p.code), agree = recS.filter((r, i) => cheapest(r, own).c === sDoc.stones[i].code).length;
 const sRe = sDoc.stones.map((s, i) => { const b = cheapest(recS[i], codes); return { s, code: b.c, d: b.d }; });
-const sWhere = tally(sRe, (x) => cls(x.s.x, x.s.y)), sBg = sRe.filter((x) => cls(x.s.x, x.s.y) === 'bg' && x.code);
+// KIT-29: viên nền cũng ở ô mặt chỗ pet không phủ (petM = 0: nền chroma của pug)
+const petAt = (xp, yp) => petM[Math.min(H - 1, Math.round(((yp + 0.5) * H) / MAP - 0.5)) * W + Math.min(W - 1, Math.round(((xp + 0.5) * W) / MAP - 0.5))];
+const sWhere = tally(sRe, (x) => cls(x.s.x, x.s.y)), sBg = sRe.filter((x) => x.code && (cls(x.s.x, x.s.y) === 'bg' || (K29 && cls(x.s.x, x.s.y) === 'face' && !petAt(x.s.x, x.s.y))));
+const sInSlot = sBg.filter((x) => cls(x.s.x, x.s.y) === 'face').length;
 const sMm = sBg.map((x, i) => ({ id: `S${i}`, code: x.code, shape: 'round', x_mm: x.s.x / KPX, y_mm: x.s.y / KPX, phys_mm: entryOf(x.code, kcat).physMm, ref_mm: refOf(entryOf(x.code, kcat).physMm, scat), rot_deg: 0, d: x.d }));
 const koS = keepOut(sMm, [...costume, ...pet], { gapMm: GAP, cat: scat });
 const starry = koS.stones, starryDE = r2(sRe.reduce((a, x) => a + x.d, 0) / sRe.length);
@@ -199,6 +226,7 @@ const report = {
     pet: { detected: forced.work.detected, beforeKeepOut: petMm.length, dropped: koPet.dropped, shrunk: koPet.shrunk, stones: pet.length, codes: petCodes, byCode: tally(pet, (s) => s.code), sizes: tally(pet, (s) => s.phys_mm) },
   },
   bigGuard: bigMaxDE ? { maxDE: bigMaxDE, changed: guard } : null,
+  kit29: K29 ? { maxPetMm: 4, select: forced.work.select, chroma: { mm: CHROMA_MM, slotPx: maskN, removedPx: chromaPx, pct: r2((100 * chromaPx) / maskN), starryInSlotCand: sInSlot, starryInSlotKept: starry.filter((s) => cls(s.x_mm * KPX, s.y_mm * KPX) === 'face').length } } : null,
   petCodes: { shared: petCodes.filter((c) => codes.includes(c)).map((c) => ({ code: c, from: [usedC.has(c) && 'costume', usedS.has(c) && 'background'].filter(Boolean).join('+') || 'palette-only', n: pet.filter((s) => s.code === c).length })),
     new: petCodes.filter((c) => !codes.includes(c)), mergedFreeToForced: merged, changedStones: forced.work.palette.changed, resized: forced.work.palette.resized },
   deltaE76: { free: forced.work.palette.deFree, forced: forced.work.palette.deForced, forced0: forced0.work.palette.deForced, freeCodes: forced.work.palette.freeCodes },

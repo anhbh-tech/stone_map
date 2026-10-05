@@ -747,3 +747,81 @@ Image ΔE76, area-weighted. Pets: corgi = `Mẫu Queen.png`, white / grey cat = 
 - **Grey and black pets get better under P14, but not because of Q114.** Under P13 their 2nd new code is a green (L26/L25): the KIT-17 k-NN target turns dark grey fur green because the 2.8 mm catalog has no grey. The model ΔE is low (11.9–22.0) while the image ΔE is high; P14 removes that code.
 - **The ΔE of the model target is not the image ΔE.** Model ΔE rises in all 4 pets (e.g. pug 11.89 → 13.89) while image ΔE falls for 2 of them.
 - **Dark features are bad in every option.** No black code is chosen (L93 exists): fitPalette ranks new codes by total ΔE gain, and 5 dark stones lose to the fur. The nose/eyes are off by ΔE ≥ 60.
+
+## KIT-29 — pet code rules + P14 costume keeps its petals (captain msg 024)
+
+From the review of the KIT-28 `compare_P13_P14.png`: the errors came from the pet code rules, not from 13 vs 14 codes. $0 API. Outputs are in `outputs/kit/kit29/`:
+- `compare_P13_P14.png`: face slot of the mockup, 4 pets × (P13 | P14).
+- `compare_kit28_kit29.png`
+- `summary.md` and `eval.json` (`tools/kit29_eval.py`)
+- `<pet>_<opt>/` and `costume_P13|P14/`
+
+```
+node tools/kit20.mjs … --fill-regions outputs/kit/kit29/fill_regions.json --out outputs/kit/kit29/costume_P13
+node tools/kit20.mjs … --max-codes 14 --force-codes D1,Z16,L47,S057,X039,L23,5,L37,L4,M063,L94,6,W4,Q114 --out outputs/kit/kit29/costume_P14
+node tools/kit28_compose.mjs --pet <n> --src <img> --face <box> --opt P13|P14     # --rules kit29 (default); --rules kit28 = old rules
+~/.cache/kit20/venv/bin/python tools/kit29_eval.py
+```
+
+### (4) Why P14 lost 12 M063 petals and 3 D1 — and the fix
+
+- **Cause:** P14 turns the 8–10 mm drawn flower centres from W4 5 mm into Q114 8 mm. Big beads are placed first, so each 8 mm centre now covers the inner ends of its 6 marquise petals. A petal has no smaller option of the same shape (motif ring), so it is dropped. The same happens to 3 D1 near an 8 mm red bead.
+- **Fix: `tools/kit20.mjs` rescue** (on by default, `--no-rescue` turns it off).
+  1. After the big-bead pass, take each blocker that collides with dropped beads.
+  2. Try its smaller same-material, same-shape options.
+  3. If the smaller option frees ≥ 2 dropped beads of a *different* code, and the freed area is larger than the area lost, force it and re-run the big pass (≤ 2 rounds).
+  - Same-code peers do not count. Counting them swapped Z16→L23 and raised label inconsistency from 2.8 % to 5.8 %.
+- **Forced in P14** (`report.json` `kit29.rescue`):
+  - Q114→W4 at the two flower centres, (174, 227) and (110, 227) mm: each frees 6 M063.
+  - Q114→W4 at (59, 236) mm: frees 2 D1.
+  - Dropped big beads 44 → 32.
+- **P13 vs P14 after the fix:**
+  - M063 34 = 34, D1 26 → 25, W4 29 → 15 + Q114 15.
+  - Consistency 2.8 % vs 3.1 %.
+  - GT ≥ 2 mm stone recall 43.2 = 43.2. It was 39.8 in KIT-28 P14; cape ≥ 4 mm recall is back from 45.5 to 81.8.
+  - P13 is the same as KIT-28 (GT/DB lines identical).
+- **The remaining P14 −25 stones are physical, not re-coding.** These are 2.8 mm L23/L94/L4 stones in the ring 4–5 mm around each Q114: an 8 mm stone needs 1.5 mm more radius than a 5 mm one. Plus a few fill stones that moved more than 1.5 mm when the fill was re-packed.
+  - No stone changes code without a geometric reason. Same-position changes are only W4/L4→Q114 (15) and one 5→L94.
+
+### (1) Pet only small stones
+
+- **DB evidence (`kit.sqlite`):**
+  - The Queen sample face (x 83–203, y 73–167 mm) is all 2.8 mm, apart from crown/collar D16 6 mm.
+  - The dachshund pet has no black or brown stone ≥ 4 mm. Its big stones are red/white/gold decorations.
+- **Rule:** `petMap({ maxMm: 4 })` turns off big-bead detection and limits the bom to ≤ 4 mm, so eyes and nose are made of 2.8 mm stones.
+- **Effect:** all 8 runs have 0 pet stones > 4 mm. In KIT-28, corgi P14 had 2 Q114 8 mm on the eye and nose.
+
+### (2) Pet's own codes by the pet's real colour
+
+- **Rule:** `fitPalette(…, { select: 'image' })`. Each extra code is the one with the largest area-weighted image-ΔE76 reduction (dark stones L < 25 count ×3), counted only over stones the code *fits*:
+  - **Hue:** a code with chroma ≥ 15 fits only pixels with chroma ≥ 6 within ±50° hue. Grey pixels take only neutral codes.
+  - **ΔE:** within 12 of the closest catalog code at that size.
+  - **Support:** a code needs ≥ 2 % (weighted) support.
+- **Assignment** still uses the KIT-17 k-NN target, but only among fitting codes. With no fitting code, the stone takes the code closest to the image.
+- **Dark-feature reservation:** when ≥ 5 dark stones have no fitting code and ≥ 2 slots are free, round 1 considers only dark stones (→ L93).
+- **Result:** no green on any pet. KIT-28 P13 had L26 ×64 on the grey cat and L25 ×38 on the pug.
+
+| pet | opt | KIT-28 new codes / image ΔE | KIT-29 new codes / image ΔE | dark-area ΔE K28→K29 |
+|---|---|---|---|---|
+| corgi | P13 | L16 L17 / 21.34 | L93 L16 / 21.08 | → 17.4 (black nose/eyes) |
+| corgi | P14 | L16 / 24.04 | L16 / 22.34 | 65.0 (no slot for black) |
+| white cat | P13 | L17 Q081 / 14.80 | L17 Q138 / 12.91 | 24.2 |
+| white cat | P14 | L17 / 15.26 | L17 / 13.23 | 24.2 |
+| grey cat | P13 | L77 L26 / 28.21 | L93 Q138 / 26.28 | 20.6 |
+| grey cat | P14 | L77 / 25.39 | L93 / 27.08 | 20.6 |
+| pug | P13 | L77 L25 / 25.80 | L93 L17 / 16.56 | 12.6 |
+| pug | P14 | L77 / 24.11 | L93 / 22.03 | 12.5 |
+
+- **The grey cat has no 2.8 mm grey in the catalog.** It is now black/white (+ silver Q138 4 mm) instead of brown/green. Image ΔE is +1.7 in P14, but there is no off-hue colour. L37 light blue stays only where the image is blue (eyes).
+- **P14 costs the pet its 2nd code:**
+  - corgi: no black, so the nose goes dark blue L47/red L4, dark ΔE 65;
+  - pug: no L17 fawn, ΔE 16.6 → 22.0.
+  - These are the cases for the captain's 13 vs 14 decision.
+
+### (3) Pug chroma
+
+- **Rule:** source pixels in the slot that are chroma green (G − max(R, B) > 40), alpha < 128, or outside the source image are taken out of the pet mask, dilated by 1 mm.
+- **Work image:** there it is BG.png, and Starry background stones are allowed in that part of the slot. They are kept only if they keep ≥ 0.15 mm from pet and costume stones.
+- **Pug:** 14.0 % of the slot is removed; 92 Starry stones are added inside the slot.
+- **Green pixels in the slot:** 10.54 % (KIT-28) → 0.01 %. The other pets remove 0 % (opaque `.cut.png` / `Mẫu Queen.png`).
+- **All 8 runs:** QC overlap pass, code-count warn (15 codes).
